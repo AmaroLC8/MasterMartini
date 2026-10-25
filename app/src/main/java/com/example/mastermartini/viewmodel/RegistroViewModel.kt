@@ -65,12 +65,82 @@ class RegistroViewModel(application: Application) : AndroidViewModel(application
         revisarValidez()
     }
 
+    // El RUT se revisa en 3 niveles, de lo más simple a lo más completo,
+    // para que el mensaje le diga al usuario exactamente qué corregir.
     fun onRutChange(nuevoTexto: String) {
-        val error = if (nuevoTexto.length < 8 || !nuevoTexto.contains("-")) {
-            "El RUT debe incluir guion (Ej: 12345678-9)"
+        val error = if (nuevoTexto.isBlank()) {
+            "Ingresa el RUT de la empresa"
+        } else if (!tieneFormatoRut(nuevoTexto)) {
+            "Formato incorrecto: usa números, guion y dígito (Ej: 12345678-5)"
+        } else if (!esRutValido(nuevoTexto)) {
+            "Dígito verificador incorrecto, revisa el RUT"
         } else null
         _uiState.update { it.copy(rut = nuevoTexto, errorRut = error) }
         revisarValidez()
+    }
+
+    // Deja el RUT "limpio" para revisarlo: sin puntos, sin espacios y con la k en mayúscula.
+    // Ej: " 12.345.678-k " -> "12345678-K"
+    private fun limpiarRut(rut: String): String {
+        return rut.replace(".", "").replace(" ", "").uppercase()
+    }
+
+    // Revisa solo la FORMA del RUT (no si es real):
+    // cuerpo de 7 u 8 números + guion + un dígito o K.
+    // Acepta "12345678-5" y "12.345.678-5" porque primero se limpian los puntos.
+    private fun tieneFormatoRut(rut: String): Boolean {
+        val limpio = limpiarRut(rut)
+        val partes = limpio.split("-")
+
+        // Debe haber exactamente un guion (2 partes: cuerpo y dígito)
+        if (partes.size != 2) return false
+
+        val cuerpo = partes[0]
+        val dv = partes[1]
+
+        val cuerpoCorrecto = cuerpo.length in 7..8 && cuerpo.all { it.isDigit() }
+        val dvCorrecto = dv.length == 1 && (dv[0].isDigit() || dv[0] == 'K')
+        return cuerpoCorrecto && dvCorrecto
+    }
+
+    // Revisa si el RUT es VÁLIDO calculando su dígito verificador con el algoritmo módulo 11.
+    // Ejemplo resuelto: 12345678 -> dígito 5 (ver ESTUDIO.md).
+    private fun esRutValido(rut: String): Boolean {
+        // Paso 1: limpiar y revisar la forma. Si la forma está mal, no tiene sentido calcular.
+        val limpio = limpiarRut(rut)
+        if (!tieneFormatoRut(limpio)) return false
+
+        // Paso 2: separar el cuerpo ("12345678") del dígito verificador ingresado ("5" o "K")
+        val cuerpo = limpio.substringBefore("-")
+        val dvIngresado = limpio.substringAfter("-")
+
+        // Paso 3: recorrer el cuerpo de DERECHA a IZQUIERDA multiplicando cada número
+        // por 2, 3, 4, 5, 6, 7 y volver a empezar en 2 cuando se pasa de 7. Se suman los resultados.
+        var suma = 0
+        var multiplicador = 2
+        for (i in cuerpo.length - 1 downTo 0) {
+            val digito = cuerpo[i].digitToInt() // convierte el carácter '8' en el número 8
+            suma += digito * multiplicador
+            multiplicador++
+            if (multiplicador > 7) {
+                multiplicador = 2
+            }
+        }
+
+        // Paso 4: módulo 11. Se resta a 11 el resto de dividir la suma por 11.
+        val resultado = 11 - (suma % 11)
+
+        // Paso 5: convertir el resultado en dígito. 11 se escribe "0" y 10 se escribe "K".
+        val dvCalculado = if (resultado == 11) {
+            "0"
+        } else if (resultado == 10) {
+            "K"
+        } else {
+            resultado.toString()
+        }
+
+        // Paso 6: el RUT es válido si el dígito calculado es igual al que escribió el usuario
+        return dvCalculado == dvIngresado
     }
 
     fun onCorreoChange(nuevoTexto: String) {

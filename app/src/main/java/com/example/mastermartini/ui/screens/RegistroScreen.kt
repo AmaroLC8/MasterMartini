@@ -236,7 +236,7 @@ fun RegistroScreen(
             OutlinedTextField(
                 value = uiState.rut,
                 onValueChange = { viewModel.onRutChange(it) },
-                label = { Text("RUT Empresa (Ej: 12345678-9)") },
+                label = { Text("RUT Empresa (Ej: 12345678-5)") },
                 leadingIcon = { Icon(Icons.Filled.Badge, contentDescription = "RUT") },
                 trailingIcon = { IconoValidacion(valor = uiState.rut, error = uiState.errorRut) },
                 isError = uiState.errorRut != null,
