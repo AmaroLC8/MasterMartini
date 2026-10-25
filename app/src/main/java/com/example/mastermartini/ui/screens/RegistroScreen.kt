@@ -19,6 +19,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Badge
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Store
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -214,6 +218,9 @@ fun RegistroScreen(
                 value = uiState.nombre,
                 onValueChange = { viewModel.onNombreChange(it) },
                 label = { Text("Nombre del Local o Dueño") },
+                // ÍCONOS (IE 2.1.2): a la izquierda indica qué dato va; a la derecha, si está bien o mal
+                leadingIcon = { Icon(Icons.Filled.Store, contentDescription = "Nombre del local") },
+                trailingIcon = { IconoValidacion(valor = uiState.nombre, error = uiState.errorNombre) },
                 isError = uiState.errorNombre != null,
                 supportingText = {
                     // ANIMACIÓN (IE 2.2.2): Transición suave para el mensaje de error
@@ -230,6 +237,8 @@ fun RegistroScreen(
                 value = uiState.rut,
                 onValueChange = { viewModel.onRutChange(it) },
                 label = { Text("RUT Empresa (Ej: 12345678-9)") },
+                leadingIcon = { Icon(Icons.Filled.Badge, contentDescription = "RUT") },
+                trailingIcon = { IconoValidacion(valor = uiState.rut, error = uiState.errorRut) },
                 isError = uiState.errorRut != null,
                 supportingText = {
                     AnimatedVisibility(visible = uiState.errorRut != null) {
@@ -245,6 +254,8 @@ fun RegistroScreen(
                 value = uiState.correo,
                 onValueChange = { viewModel.onCorreoChange(it) },
                 label = { Text("Correo Electrónico de Contacto") },
+                leadingIcon = { Icon(Icons.Filled.Email, contentDescription = "Correo") },
+                trailingIcon = { IconoValidacion(valor = uiState.correo, error = uiState.errorCorreo) },
                 isError = uiState.errorCorreo != null,
                 supportingText = {
                     AnimatedVisibility(visible = uiState.errorCorreo != null) {
@@ -315,5 +326,28 @@ fun RegistroScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
         }
+    }
+}
+
+// ÍCONO DE VALIDACIÓN AL FINAL DE CADA CAMPO (IE 2.1.2)
+// No valida nada: solo muestra lo que el ViewModel ya decidió en el estado.
+// - Si hay mensaje de error  -> ícono de advertencia rojo.
+// - Si el campo tiene texto y no hay error -> ícono de check verde.
+// - Si el campo está vacío -> no muestra nada (el usuario aún no escribe).
+// Se usa en los 3 campos para no repetir el mismo código tres veces.
+@Composable
+private fun IconoValidacion(valor: String, error: String?) {
+    if (error != null) {
+        Icon(
+            imageVector = Icons.Filled.Warning,
+            contentDescription = "Dato con error",
+            tint = MaterialTheme.colorScheme.error
+        )
+    } else if (valor.isNotBlank()) {
+        Icon(
+            imageVector = Icons.Filled.CheckCircle,
+            contentDescription = "Dato correcto",
+            tint = Color(0xFF008C45) // Verde italiano, el mismo del botón de registro
+        )
     }
 }
