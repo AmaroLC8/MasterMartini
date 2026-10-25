@@ -33,6 +33,30 @@ class RegistroViewModel(application: Application) : AndroidViewModel(application
     private val _uiState = MutableStateFlow(RegistroUiState())
     val uiState: StateFlow<RegistroUiState> = _uiState.asStateFlow()
 
+    // init se ejecuta una sola vez, cuando se crea el ViewModel (al abrir la app).
+    // Va DESPUÉS de _uiState porque Kotlin inicializa las propiedades en orden:
+    // si estuviera antes, _uiState todavía no existiría.
+    init {
+        cargarPerfilGuardado()
+    }
+
+    // Si ya hay un perfil en SharedPreferences, lo copia al formulario (queda precargado al editar).
+    // Usa las mismas funciones onXChange() que el usuario al escribir, así los datos
+    // pasan por las mismas validaciones y revisarValidez() habilita el botón.
+    private fun cargarPerfilGuardado() {
+        if (almacenamiento.existePerfil()) {
+            onNombreChange(almacenamiento.obtenerNombre())
+            onRutChange(almacenamiento.obtenerRut())
+            onCorreoChange(almacenamiento.obtenerCorreo())
+            onRubroChange(almacenamiento.obtenerRubro())
+        }
+    }
+
+    // MainActivity la usa para decidir la pantalla inicial ("home" o "registro")
+    fun hayPerfilGuardado(): Boolean {
+        return almacenamiento.existePerfil()
+    }
+
     // --- REGLAS DE NEGOCIO DESACOPLADAS (IE 2.2.1) ---
 
     fun onNombreChange(nuevoTexto: String) {

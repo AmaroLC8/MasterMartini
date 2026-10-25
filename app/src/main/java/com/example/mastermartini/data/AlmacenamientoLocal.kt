@@ -40,4 +40,11 @@ class AlmacenamientoLocal(context: Context) {
     fun obtenerRubro(): String {
         return preferences.getString("KEY_RUBRO", "Panadería") ?: "Panadería"
     }
+
+    // 4. ¿YA HAY UN PERFIL GUARDADO?
+    // contains() revisa si la clave existe en el archivo, sin leer su valor.
+    // Basta con revisar KEY_NOMBRE porque guardarPerfil() siempre guarda los 4 datos juntos.
+    fun existePerfil(): Boolean {
+        return preferences.contains("KEY_NOMBRE")
+    }
 }

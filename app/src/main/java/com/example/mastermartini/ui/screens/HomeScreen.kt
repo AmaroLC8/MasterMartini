@@ -35,7 +35,7 @@ fun HomeScreen(
     rubroUsuario: String,
     rutUsuario: String,
     correoUsuario: String,
-    onCerrarSesion: () -> Unit
+    onEditarDatos: () -> Unit // MainActivity decide a dónde navegar (abre "registro")
 ) {
     // Colores estilo bandera italiana de Master Martini
     val verdeItaliano = Color(0xFF008C45)
@@ -190,7 +190,7 @@ fun HomeScreen(
             item {
                 Spacer(modifier = Modifier.height(8.dp))
                 OutlinedButton(
-                    onClick = onCerrarSesion,
+                    onClick = onEditarDatos,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(52.dp),
