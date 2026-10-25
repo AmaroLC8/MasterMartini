@@ -19,6 +19,8 @@ data class RegistroUiState(
     val errorCorreo: String? = null,
     val rubro: String = "Panadería",
     val tieneFoto: Boolean = false,
+    // Mensaje que se muestra si no se pudo usar la cámara (null = no hay aviso)
+    val avisoCamara: String? = null,
     val esFormularioValido: Boolean = false
 )
 
@@ -60,7 +62,23 @@ class RegistroViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun registrarFotoCapturada() {
-        _uiState.update { it.copy(tieneFoto = true) }
+        // Si la foto se tomó bien, se borra cualquier aviso anterior de la cámara
+        _uiState.update { it.copy(tieneFoto = true, avisoCamara = null) }
+    }
+
+    // Se llama cuando el usuario rechaza el permiso de cámara.
+    // La foto es opcional, así que solo avisamos y el registro sigue funcionando.
+    fun onPermisoCamaraDenegado() {
+        _uiState.update {
+            it.copy(avisoCamara = "Sin permiso de cámara no podemos tomar la foto. Puedes registrarte igual.")
+        }
+    }
+
+    // Se llama si el celular no tiene una app de cámara para abrir (evita que la app se caiga)
+    fun onCamaraNoDisponible() {
+        _uiState.update {
+            it.copy(avisoCamara = "No se encontró una cámara en este dispositivo. Puedes registrarte igual.")
+        }
     }
 
     // Equivalente directo a perfilCompleto() de tu diapositiva de clase
