@@ -1,6 +1,9 @@
 package com.example.mastermartini.ui.screens
 
+import android.Manifest
+import android.content.ActivityNotFoundException
 import android.content.Context
+import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.os.Vibrator
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -15,6 +18,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -26,6 +31,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import com.example.mastermartini.viewmodel.RegistroViewModel
 import androidx.compose.ui.res.painterResource
 import com.example.mastermartini.R
@@ -51,6 +57,29 @@ fun RegistroScreen(
         if (foto != null) {
             fotoBitmap = foto
             viewModel.registrarFotoCapturada()
+        }
+    }
+
+    // Abre la cámara. El try/catch evita que la app se caiga si el
+    // dispositivo no tiene una app de cámara instalada.
+    fun abrirCamara() {
+        try {
+            camaraLauncher.launch(null)
+        } catch (e: ActivityNotFoundException) {
+            viewModel.onCamaraNoDisponible()
+        }
+    }
+
+    // PERMISO DE CÁMARA EN TIEMPO DE EJECUCIÓN (IE 2.4.1)
+    // Desde Android 6 los permisos "peligrosos" como CAMERA se piden mientras la app se usa.
+    // Este launcher muestra el diálogo del sistema y nos devuelve true (aceptó) o false (rechazó).
+    val permisoCamaraLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { concedido ->
+        if (concedido) {
+            abrirCamara()
+        } else {
+            viewModel.onPermisoCamaraDenegado()
         }
     }
 
@@ -142,10 +171,42 @@ fun RegistroScreen(
 
             // BOTÓN DE ACCESO NATIVO A LA CÁMARA
             OutlinedButton(
-                onClick = { camaraLauncher.launch(null) },
+                onClick = {
+                    // Si el permiso ya fue aceptado antes, abrimos la cámara directo;
+                    // si no, primero lo pedimos con el diálogo del sistema.
+                    val tienePermiso = ContextCompat.checkSelfPermission(
+                        context, Manifest.permission.CAMERA
+                    ) == PackageManager.PERMISSION_GRANTED
+
+                    if (tienePermiso) {
+                        abrirCamara()
+                    } else {
+                        permisoCamaraLauncher.launch(Manifest.permission.CAMERA)
+                    }
+                },
                 modifier = Modifier.height(48.dp)
             ) {
                 Text("Tomar foto del local")
+            }
+
+            // AVISO DE CÁMARA: aparece con animación si se negó el permiso o no hay cámara
+            AnimatedVisibility(visible = uiState.avisoCamara != null) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Warning,
+                        contentDescription = "Aviso",
+                        tint = MaterialTheme.colorScheme.error
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = uiState.avisoCamara ?: "",
+                        color = MaterialTheme.colorScheme.error,
+                        fontSize = 16.sp
+                    )
+                }
             }
 
             // CAMPO 1: NOMBRE DEL LOCAL O DUEÑO
