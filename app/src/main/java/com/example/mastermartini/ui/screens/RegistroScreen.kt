@@ -347,7 +347,7 @@ private fun IconoValidacion(valor: String, error: String?) {
         Icon(
             imageVector = Icons.Filled.CheckCircle,
             contentDescription = "Dato correcto",
-            tint = Color(0xFF008C45) // Verde italiano, el mismo del botón de registro
+            tint = MaterialTheme.colorScheme.primary // Verde italiano, viene del tema (Theme.kt)
         )
     }
 }

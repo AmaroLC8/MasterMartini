@@ -31,8 +31,10 @@ private val LightColorScheme = lightColorScheme(
 @Composable
 fun MasterMartiniTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color is available on Android 12+
-    dynamicColor: Boolean = true,
+    // Color dinámico (Android 12+): toma los colores del fondo de pantalla del usuario.
+    // Lo dejamos en false para que la app use siempre la paleta de Master Martini
+    // (verde y rojo italiano), sin importar el celular o el fondo que tenga la persona.
+    dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
     val colorScheme = when {
