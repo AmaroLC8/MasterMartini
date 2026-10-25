@@ -18,10 +18,13 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Badge
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.Store
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
@@ -266,6 +269,25 @@ fun RegistroScreen(
                 shape = RoundedCornerShape(10.dp)
             )
 
+            // CAMPO 4: TELÉFONO CELULAR
+            OutlinedTextField(
+                value = uiState.telefono,
+                onValueChange = { viewModel.onTelefonoChange(it) },
+                label = { Text("Celular (Ej: 9 1234 5678)") },
+                leadingIcon = { Icon(Icons.Filled.Phone, contentDescription = "Teléfono") },
+                trailingIcon = { IconoValidacion(valor = uiState.telefono, error = uiState.errorTelefono) },
+                // Abre el teclado numérico del celular: más fácil para usuarios mayores
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                isError = uiState.errorTelefono != null,
+                supportingText = {
+                    AnimatedVisibility(visible = uiState.errorTelefono != null) {
+                        Text(uiState.errorTelefono ?: "", color = MaterialTheme.colorScheme.error)
+                    }
+                },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(10.dp)
+            )
+
             // SELECTOR DE ESPECIALIDAD TÉCNICA (FilterChips)
             Text(
                 text = "Especialidad Técnica:",
@@ -281,6 +303,25 @@ fun RegistroScreen(
                         selected = uiState.rubro == rubroOpcion,
                         onClick = { viewModel.onRubroChange(rubroOpcion) },
                         label = { Text(rubroOpcion) }
+                    )
+                }
+            }
+
+            // SELECTOR DE TAMAÑO DEL NEGOCIO (FilterChips, igual que la especialidad)
+            Text(
+                text = "Tamaño del Negocio:",
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.align(Alignment.Start)
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                listOf("Micro", "Pequeño", "Mediano").forEach { tamanoOpcion ->
+                    FilterChip(
+                        selected = uiState.tamanoNegocio == tamanoOpcion,
+                        onClick = { viewModel.onTamanoNegocioChange(tamanoOpcion) },
+                        label = { Text(tamanoOpcion) }
                     )
                 }
             }
@@ -334,7 +375,7 @@ fun RegistroScreen(
 // - Si hay mensaje de error  -> ícono de advertencia rojo.
 // - Si el campo tiene texto y no hay error -> ícono de check verde.
 // - Si el campo está vacío -> no muestra nada (el usuario aún no escribe).
-// Se usa en los 3 campos para no repetir el mismo código tres veces.
+// Se usa en los 4 campos para no repetir el mismo código en cada uno.
 @Composable
 private fun IconoValidacion(valor: String, error: String?) {
     if (error != null) {

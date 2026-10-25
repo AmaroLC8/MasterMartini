@@ -18,6 +18,10 @@ data class RegistroUiState(
     val correo: String = "",
     val errorCorreo: String? = null,
     val rubro: String = "Panadería",
+    val telefono: String = "",
+    val errorTelefono: String? = null,
+    // Tamaño del negocio: "Micro", "Pequeño" o "Mediano" (se elige con FilterChips)
+    val tamanoNegocio: String = "Micro",
     val tieneFoto: Boolean = false,
     // Mensaje que se muestra si no se pudo usar la cámara (null = no hay aviso)
     val avisoCamara: String? = null,
@@ -49,6 +53,10 @@ class RegistroViewModel(application: Application) : AndroidViewModel(application
             onRutChange(almacenamiento.obtenerRut())
             onCorreoChange(almacenamiento.obtenerCorreo())
             onRubroChange(almacenamiento.obtenerRubro())
+            // Si el perfil se guardó antes de existir el teléfono, llega "" y el campo
+            // muestra "Ingresa tu número de celular" para que el usuario lo complete.
+            onTelefonoChange(almacenamiento.obtenerTelefono())
+            onTamanoNegocioChange(almacenamiento.obtenerTamanoNegocio())
         }
     }
 
@@ -155,6 +163,32 @@ class RegistroViewModel(application: Application) : AndroidViewModel(application
         _uiState.update { it.copy(rubro = nuevoRubro) }
     }
 
+    // Celular chileno: 9 dígitos y empieza con 9 (Ej: 9 1234 5678).
+    // Se revisa en orden y se muestra el primer error que se encuentre.
+    fun onTelefonoChange(nuevoTexto: String) {
+        // Se ignoran los espacios: "9 1234 5678" se revisa como "912345678"
+        val soloNumeros = nuevoTexto.replace(" ", "")
+
+        val error = if (soloNumeros.isEmpty()) {
+            "Ingresa tu número de celular"
+        } else if (!soloNumeros.all { it.isDigit() }) {
+            "El teléfono solo debe tener números"
+        } else if (!soloNumeros.startsWith("9")) {
+            "El celular debe empezar con 9"
+        } else if (soloNumeros.length != 9) {
+            "El celular debe tener 9 dígitos (Ej: 912345678)"
+        } else null
+
+        // Se guarda el texto tal como lo escribió el usuario (con espacios), para no cambiarle lo que ve
+        _uiState.update { it.copy(telefono = nuevoTexto, errorTelefono = error) }
+        revisarValidez()
+    }
+
+    // El tamaño se elige con chips, así que no puede venir mal escrito: no necesita validación
+    fun onTamanoNegocioChange(nuevoTamano: String) {
+        _uiState.update { it.copy(tamanoNegocio = nuevoTamano) }
+    }
+
     fun registrarFotoCapturada() {
         // Si la foto se tomó bien, se borra cualquier aviso anterior de la cámara
         _uiState.update { it.copy(tieneFoto = true, avisoCamara = null) }
@@ -180,7 +214,8 @@ class RegistroViewModel(application: Application) : AndroidViewModel(application
         val actual = _uiState.value
         val valido = actual.nombre.isNotBlank() && actual.errorNombre == null &&
                 actual.rut.isNotBlank() && actual.errorRut == null &&
-                actual.correo.isNotBlank() && actual.errorCorreo == null
+                actual.correo.isNotBlank() && actual.errorCorreo == null &&
+                actual.telefono.isNotBlank() && actual.errorTelefono == null
 
         _uiState.update { it.copy(esFormularioValido = valido) }
     }
@@ -189,7 +224,14 @@ class RegistroViewModel(application: Application) : AndroidViewModel(application
     fun guardarPerfil(onExito: () -> Unit) {
         val actual = _uiState.value
         if (actual.esFormularioValido) {
-            almacenamiento.guardarPerfil(actual.nombre, actual.rut, actual.correo, actual.rubro)
+            almacenamiento.guardarPerfil(
+                nombre = actual.nombre,
+                rut = actual.rut,
+                correo = actual.correo,
+                rubro = actual.rubro,
+                telefono = actual.telefono,
+                tamanoNegocio = actual.tamanoNegocio
+            )
             onExito() // Dispara la navegación hacia el catálogo
         }
     }

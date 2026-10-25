@@ -11,7 +11,14 @@ class AlmacenamientoLocal(context: Context) {
         context.getSharedPreferences("master_martini_prefs", Context.MODE_PRIVATE)
 
     // 2. FUNCIÓN PARA GUARDAR (Escribir en la libreta)
-    fun guardarPerfil(nombre: String, rut: String, correo: String, rubro: String) {
+    fun guardarPerfil(
+        nombre: String,
+        rut: String,
+        correo: String,
+        rubro: String,
+        telefono: String,
+        tamanoNegocio: String
+    ) {
         // Pedimos un "lápiz" (editor) para escribir en el archivo
         val editor = preferences.edit()
 
@@ -20,6 +27,8 @@ class AlmacenamientoLocal(context: Context) {
         editor.putString("KEY_RUT", rut)
         editor.putString("KEY_CORREO", correo)
         editor.putString("KEY_RUBRO", rubro)
+        editor.putString("KEY_TELEFONO", telefono)
+        editor.putString("KEY_TAMANO_NEGOCIO", tamanoNegocio)
 
         // apply() confirma y guarda los cambios en el disco duro sin congelar la pantalla
         editor.apply()
@@ -40,10 +49,18 @@ class AlmacenamientoLocal(context: Context) {
     fun obtenerRubro(): String {
         return preferences.getString("KEY_RUBRO", "Panadería") ?: "Panadería"
     }
+    // Por defecto "" (vacío) y no "Sin teléfono": los perfiles guardados antes de agregar
+    // este campo no lo tienen, y ese texto se cargaría en el formulario como si fuera un número.
+    fun obtenerTelefono(): String {
+        return preferences.getString("KEY_TELEFONO", "") ?: ""
+    }
+    fun obtenerTamanoNegocio(): String {
+        return preferences.getString("KEY_TAMANO_NEGOCIO", "Micro") ?: "Micro"
+    }
 
     // 4. ¿YA HAY UN PERFIL GUARDADO?
     // contains() revisa si la clave existe en el archivo, sin leer su valor.
-    // Basta con revisar KEY_NOMBRE porque guardarPerfil() siempre guarda los 4 datos juntos.
+    // Basta con revisar KEY_NOMBRE porque guardarPerfil() siempre guarda todos los datos juntos.
     fun existePerfil(): Boolean {
         return preferences.contains("KEY_NOMBRE")
     }
