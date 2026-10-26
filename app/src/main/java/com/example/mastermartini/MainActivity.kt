@@ -9,9 +9,11 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.example.mastermartini.ui.screens.EncuestaScreen
 import com.example.mastermartini.ui.screens.HomeScreen
 import com.example.mastermartini.ui.screens.RegistroScreen
 import com.example.mastermartini.ui.theme.MasterMartiniTheme
+import com.example.mastermartini.viewmodel.EncuestaViewModel
 import com.example.mastermartini.viewmodel.HomeViewModel
 import com.example.mastermartini.viewmodel.RegistroViewModel
 
@@ -68,6 +70,17 @@ class MainActivity : ComponentActivity() {
                                 // navigate y no popBackStack(): si "home" es la pantalla inicial,
                                 // no hay nada debajo y popBackStack() dejaría la app sin pantalla.
                                 navController.navigate("registro")
+                            },
+                            onIrAEncuesta = {navController.navigate("encuesta")
+                            }
+                        )
+                    }
+                    composable("encuesta") {
+                        val encuestaViewModel: EncuestaViewModel = viewModel()
+                        EncuestaScreen(
+                            encuestaViewModel = encuestaViewModel,
+                            onVolverHome = {
+                                navController.popBackStack()
                             }
                         )
                     }
