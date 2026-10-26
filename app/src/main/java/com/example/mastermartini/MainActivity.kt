@@ -56,6 +56,7 @@ class MainActivity : ComponentActivity() {
                     composable("home") {
                         // ViewModel del catálogo de cursos. Se crea aquí dentro porque solo
                         // lo usa la pantalla Home (viewModel() lo conserva al rotar la pantalla).
+                        // Es AndroidViewModel: viewModel() le pasa la Application solo, igual que al RegistroViewModel.
                         val homeViewModel: HomeViewModel = viewModel()
                         HomeScreen(
                             viewModel = homeViewModel,

@@ -1,10 +1,16 @@
 package com.example.mastermartini.ui.screens
 
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -12,6 +18,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -27,7 +34,7 @@ import com.example.mastermartini.viewmodel.HomeViewModel
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
-    // ViewModel que entrega el catálogo de cursos (lo crea MainActivity)
+    // ViewModel que entrega el catálogo de cursos y los favoritos (lo crea MainActivity)
     viewModel: HomeViewModel,
     // Datos del perfil y la acción del botón, que manda el MainActivity
     nombreUsuario: String,
@@ -43,6 +50,11 @@ fun HomeScreen(
     // Escuchamos la lista de cursos del ViewModel. collectAsState() convierte el StateFlow
     // en un estado de Compose: si la lista cambia, la pantalla se vuelve a dibujar sola.
     val catalogoCursos by viewModel.cursos.collectAsState()
+
+    // Favoritos guardados en Room: los ids marcados y cuántos son.
+    // Cuando se toca un corazón, Room avisa el cambio y estos valores se actualizan solos.
+    val favoritos by viewModel.favoritos.collectAsState()
+    val totalFavoritos by viewModel.totalFavoritos.collectAsState()
 
     Scaffold(
         topBar = {
@@ -130,39 +142,100 @@ fun HomeScreen(
                 }
             }
 
-            // Bloque 2: Título de la sección de cursos
+            // Bloque 2: Título de la sección de cursos y contador de favoritos
             item {
                 Text(
                     text = "Masterclasses y Recetas Técnicas",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
+                Spacer(modifier = Modifier.height(6.dp))
+                // Ícono + texto (accesibilidad): el número sale de Room y se actualiza solo
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Filled.Favorite,
+                        contentDescription = null, // el texto de al lado ya lo explica
+                        tint = MaterialTheme.colorScheme.secondary
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "Mis favoritos: $totalFavoritos",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
             }
 
             // Bloque 3: Equivalente al ciclo 'for (curso in catalogoCursos)'
-            // Por cada curso en la lista, dibuja una Card en la pantalla
-            items(catalogoCursos) { curso ->
+            // Por cada curso en la lista, dibuja una Card en la pantalla.
+            // key = id: Compose sabe qué tarjeta es cuál, así cada corazón mantiene su propia animación.
+            items(catalogoCursos, key = { curso -> curso.id }) { curso ->
+                // ¿Este curso está en la lista de favoritos que entrega Room?
+                val esFavorito = favoritos.contains(curso.id)
+
+                // ANIMACIÓN DEL CORAZÓN: al marcarlo crece a 1.3 veces su tamaño con un
+                // pequeño rebote (spring); al desmarcarlo vuelve a su tamaño normal (1).
+                val escalaCorazon by animateFloatAsState(
+                    targetValue = if (esFavorito) 1.3f else 1f,
+                    animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
+                    label = "escalaCorazon"
+                )
+
                 Card(
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
                     shape = RoundedCornerShape(10.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text(
-                            text = curso.titulo,
-                            fontSize = 17.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(text = "Insumo principal: ${curso.insumo}", fontSize = 14.sp)
-                        Text(text = "Instructor: ${curso.chef}", fontSize = 14.sp)
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = "⏱️ Duración: ${curso.duracion}",
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = rojoItaliano
-                        )
+                    // Row: los datos del curso a la izquierda y el corazón a la derecha
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // weight(1f): los textos ocupan todo el espacio que deja libre el corazón
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = curso.titulo,
+                                fontSize = 17.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(text = "Insumo principal: ${curso.insumo}", fontSize = 14.sp)
+                            Text(text = "Instructor: ${curso.chef}", fontSize = 14.sp)
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "⏱️ Duración: ${curso.duracion}",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = rojoItaliano
+                            )
+                        }
+
+                        // Botón de favorito: la pantalla solo avisa al ViewModel; él decide si agrega o quita.
+                        // 56 dp: área táctil grande para usuarios mayores.
+                        IconButton(
+                            onClick = { viewModel.alternarFavorito(curso.id) },
+                            modifier = Modifier.size(56.dp)
+                        ) {
+                            Icon(
+                                // Corazón lleno si es favorito, solo el borde si no
+                                imageVector = if (esFavorito) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                                // TalkBack lee qué pasará al tocarlo
+                                contentDescription = if (esFavorito) {
+                                    "Quitar ${curso.titulo} de favoritos"
+                                } else {
+                                    "Agregar ${curso.titulo} a favoritos"
+                                },
+                                // Colores del tema: rojo (secondary) si es favorito, gris si no
+                                tint = if (esFavorito) {
+                                    MaterialTheme.colorScheme.secondary
+                                } else {
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                                },
+                                modifier = Modifier
+                                    .size(30.dp)
+                                    .scale(escalaCorazon)
+                            )
+                        }
                     }
                 }
             }
