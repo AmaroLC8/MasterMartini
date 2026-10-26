@@ -12,6 +12,7 @@ import androidx.navigation.compose.rememberNavController
 import com.example.mastermartini.ui.screens.HomeScreen
 import com.example.mastermartini.ui.screens.RegistroScreen
 import com.example.mastermartini.ui.theme.MasterMartiniTheme
+import com.example.mastermartini.viewmodel.HomeViewModel
 import com.example.mastermartini.viewmodel.RegistroViewModel
 
 class MainActivity : ComponentActivity() {
@@ -53,7 +54,11 @@ class MainActivity : ComponentActivity() {
                         )
                     }
                     composable("home") {
+                        // ViewModel del catálogo de cursos. Se crea aquí dentro porque solo
+                        // lo usa la pantalla Home (viewModel() lo conserva al rotar la pantalla).
+                        val homeViewModel: HomeViewModel = viewModel()
                         HomeScreen(
+                            viewModel = homeViewModel,
                             nombreUsuario = registroViewModel.obtenerNombreGuardado(),
                             rubroUsuario = registroViewModel.obtenerRubroGuardado(),
                             rutUsuario = registroViewModel.obtenerRutGuardado(),

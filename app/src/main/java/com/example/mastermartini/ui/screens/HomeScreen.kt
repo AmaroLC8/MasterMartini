@@ -7,6 +7,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -17,20 +19,17 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.Image
 import androidx.compose.ui.res.painterResource
 import com.example.mastermartini.R
+import com.example.mastermartini.viewmodel.HomeViewModel
 
-// 1. MOLDE DE DATOS (Igual que cuando creabas una clase simple en tus ejercicios)
-// Representa cada curso o ficha técnica del catálogo de Master Martini
-data class CursoMasterMartini(
-    val titulo: String,
-    val insumo: String,
-    val chef: String,
-    val duracion: String
-)
+// El molde de datos (Curso) está en model/Curso.kt y la lista en data/CursoRepository.kt.
+// Esta pantalla solo DIBUJA los cursos que le entrega el HomeViewModel (MVVM).
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
-    // Recibimos exactamente los 5 datos que nos manda el MainActivity
+    // ViewModel que entrega el catálogo de cursos (lo crea MainActivity)
+    viewModel: HomeViewModel,
+    // Datos del perfil y la acción del botón, que manda el MainActivity
     nombreUsuario: String,
     rubroUsuario: String,
     rutUsuario: String,
@@ -41,27 +40,9 @@ fun HomeScreen(
     val verdeItaliano = Color(0xFF008C45)
     val rojoItaliano = Color(0xFFCD212A)
 
-    // 2. LISTA INMUTABLE CON listOf() (Idéntico a lo que usaste en tus ejercicios de Kotlin)
-    val catalogoCursos = listOf(
-        CursoMasterMartini(
-            titulo = "Curva de Templado en Chocolatería",
-            insumo = "Cobertura Caravella Dark 54%",
-            chef = "Chef Roberto Valenzuela",
-            duracion = "15 min"
-        ),
-        CursoMasterMartini(
-            titulo = "Estabilización y Batido de Cremas",
-            insumo = "Crema Vegetal Decor Up",
-            chef = "Chef Elena Rossi",
-            duracion = "20 min"
-        ),
-        CursoMasterMartini(
-            titulo = "Laminado de Masa de Hoja Artesanal",
-            insumo = "Margarina Master Martini Placa",
-            chef = "Maestro Marco Zanetti",
-            duracion = "35 min"
-        )
-    )
+    // Escuchamos la lista de cursos del ViewModel. collectAsState() convierte el StateFlow
+    // en un estado de Compose: si la lista cambia, la pantalla se vuelve a dibujar sola.
+    val catalogoCursos by viewModel.cursos.collectAsState()
 
     Scaffold(
         topBar = {
