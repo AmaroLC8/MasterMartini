@@ -33,6 +33,20 @@ class CursoRepository {
                 insumo = "Margarina Master Martini Placa",
                 chef = "Maestro Marco Zanetti",
                 duracion = "35 min"
+            ),
+            Curso(
+                id = 4,
+                titulo = "Técnica del Glaseado Espejo Brillante",
+                insumo = "Glaseado Mirall Chocolate",
+                chef = "Chef Sofía Lombardo",
+                duracion ="25 min"
+            ),
+            Curso(
+                id = 5,
+                titulo = "Gelato Artesanal de Avellana",
+                insumo = "Pasta de Avellana Pura Ariba",
+                chef = "Maestro Matteo Bianco",
+                duracion ="40 min"
             )
         )
     }
