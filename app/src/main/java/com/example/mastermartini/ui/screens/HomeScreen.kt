@@ -41,7 +41,8 @@ fun HomeScreen(
     rubroUsuario: String,
     rutUsuario: String,
     correoUsuario: String,
-    onEditarDatos: () -> Unit // MainActivity decide a dónde navegar (abre "registro")
+    onEditarDatos: () -> Unit,// MainActivity decide a dónde navegar (abre "registro"
+    onIrAEncuesta: () -> Unit
 ) {
     // Colores estilo bandera italiana de Master Martini
     val verdeItaliano = Color(0xFF008C45)
@@ -253,6 +254,19 @@ fun HomeScreen(
                     Text("Editar Datos / Volver al Registro", fontWeight = FontWeight.Bold)
                 }
             }
+            item {
+                Button(
+                    onClick = onIrAEncuesta,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(52.dp),
+                    shape = RoundedCornerShape(10.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF008C45))
+                ) {
+                    Text("Responder Encuesta de Intereses (GPS)", fontWeight = FontWeight.Bold, color = Color.White)
+                }
+            }
+
         }
     }
 }
