@@ -1,6 +1,8 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
+    // KSP lee las anotaciones de Room (@Entity, @Dao, @Database) y genera el código de la base de datos
+    alias(libs.plugins.ksp)
 }
 
 android {
@@ -57,4 +59,9 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.6")
     implementation("androidx.compose.material:material-icons-extended:1.7.5")
 
-}
+    // Room: base de datos local sobre SQLite (favoritos de cursos)
+    implementation(libs.androidx.room.runtime)
+    implementation(libs.androidx.room.ktx)
+    ksp(libs.androidx.room.compiler)
+
+}
