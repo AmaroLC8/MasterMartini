@@ -47,6 +47,41 @@ class CursoRepository {
                 insumo = "Pasta de Avellana Pura Ariba",
                 chef = "Maestro Matteo Bianco",
                 duracion ="40 min"
+            ),
+            Curso(
+                id = 6,
+                titulo = "Ganache y Relleno para Macarons",
+                insumo = "Cobertura Caravella Milk 34%",
+                chef = "Chef Lucía Fernández",
+                duracion = "30 min"
+            ),
+            Curso(
+                id = 7,
+                titulo = "Brioche Tradicional Italiano",
+                insumo = "Margarina Maestro Martini Soft",
+                chef = "Maestro Giovanni Rossi",
+                duracion = "45 min"
+            ),
+            Curso(
+                id = 8,
+                titulo = "Mousse de Fruta de la Pasión y Chocolate Blanco",
+                insumo = "Cobertura Caravella White",
+                chef = "Chef Valentina Morales",
+                duracion = "20 min"
+            ),
+            Curso(
+                id = 9,
+                titulo = "Tartaletas con Crema Pastelera de Alto Rendimiento",
+                insumo = "Crema Vegetal Master Gourmet",
+                chef = "Chef Carlos Gutiérrez",
+                duracion = "30 min"
+            ),
+            Curso(
+                id = 10,
+                titulo = "Trufas Artesanales de Cacao Intenso",
+                insumo = "Cacao en Polvo Master Martini 22/24",
+                chef = "Maestro Andrea Conti",
+                duracion = "15 min"
             )
         )
     }
