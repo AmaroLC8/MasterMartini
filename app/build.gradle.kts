@@ -64,4 +64,6 @@ dependencies {
     implementation(libs.androidx.room.ktx)
     ksp(libs.androidx.room.compiler)
 
-}
+    implementation("com.google.android.gms:play-services-location:21.0.1")
+
+}
