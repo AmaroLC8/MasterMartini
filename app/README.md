@@ -60,4 +60,3 @@ El proyecto responde a la necesidad de **Master Martini** de estructurar la entr
 
 1. **Clonar el repositorio desde GitHub:**
 
-   git clone [suspicious link removed]
