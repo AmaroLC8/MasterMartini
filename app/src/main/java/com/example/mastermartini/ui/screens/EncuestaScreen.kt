@@ -1,16 +1,17 @@
 package com.example.mastermartini.ui.screens
 
-
 import android.Manifest
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LocationOn
@@ -19,12 +20,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
+import com.example.mastermartini.ui.theme.*
 import com.example.mastermartini.viewmodel.EncuestaViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -35,8 +36,6 @@ fun EncuestaScreen(
 ) {
     val state by encuestaViewModel.uiState.collectAsState()
     val context = LocalContext.current
-    val verdeItaliano = Color(0xFF008C45)
-    val rojoItaliano = Color(0xFFCD212A)
 
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions()
@@ -52,16 +51,29 @@ fun EncuestaScreen(
     }
 
     Scaffold(
+        containerColor = BlancoHueso,
         topBar = {
             TopAppBar(
-                title = { Text("Encuesta de Intereses", fontWeight = FontWeight.Bold) },
+                title = {
+                    Text(
+                        text = "Encuesta de Intereses",
+                        fontWeight = FontWeight.Bold,
+                        color = BlancoPuro
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = onVolverHome) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Volver")
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Volver",
+                            tint = BlancoPuro
+                        )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer
+                    containerColor = VerdeItaliano,
+                    titleContentColor = BlancoPuro,
+                    navigationIconContentColor = BlancoPuro
                 )
             )
         }
@@ -78,29 +90,32 @@ fun EncuestaScreen(
                 text = "Personaliza tus capacitaciones Master Martini",
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold,
-                color = verdeItaliano
+                color = VerdeOscuro
             )
             Text(
                 text = "Indica tus áreas de preferencia y nivel técnico para sugerirte recetas e insumos.",
                 fontSize = 14.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = TextoOscuro.copy(alpha = 0.7f)
             )
 
-            HorizontalDivider()
+            HorizontalDivider(color = GrisBorde)
 
             // 1. Áreas de Interés
             Card(
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                colors = CardDefaults.cardColors(containerColor = BlancoPuro),
+                shape = RoundedCornerShape(12.dp),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.Star, contentDescription = null, tint = verdeItaliano)
+                        Icon(Icons.Default.Star, contentDescription = null, tint = DoradoCalidad)
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = "1. Áreas de Interés (Selecciona al menos una):",
                             fontWeight = FontWeight.Bold,
-                            fontSize = 15.sp
+                            fontSize = 15.sp,
+                            color = TextoOscuro
                         )
                     }
 
@@ -115,18 +130,36 @@ fun EncuestaScreen(
                         ) {
                             Checkbox(
                                 checked = state.interesesSeleccionados.contains(interes),
-                                onCheckedChange = { encuestaViewModel.toggleInteres(interes) }
+                                onCheckedChange = { encuestaViewModel.toggleInteres(interes) },
+                                colors = CheckboxDefaults.colors(
+                                    checkedColor = VerdeItaliano,
+                                    uncheckedColor = TextoOscuro.copy(alpha = 0.6f)
+                                )
                             )
-                            Text(text = interes, fontSize = 14.sp)
+                            Text(
+                                text = interes,
+                                fontSize = 14.sp,
+                                color = TextoOscuro
+                            )
                         }
                     }
 
                     state.errorIntereses?.let { error ->
                         Spacer(modifier = Modifier.height(4.dp))
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Info, contentDescription = null, tint = rojoItaliano, modifier = Modifier.size(16.dp))
+                            Icon(
+                                imageVector = Icons.Default.Info,
+                                contentDescription = null,
+                                tint = RojoItaliano,
+                                modifier = Modifier.size(16.dp)
+                            )
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text(text = error, color = rojoItaliano, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                            Text(
+                                text = error,
+                                color = RojoItaliano,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
                         }
                     }
                 }
@@ -134,17 +167,20 @@ fun EncuestaScreen(
 
             // 2. Nivel de Experiencia
             Card(
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                colors = CardDefaults.cardColors(containerColor = BlancoPuro),
+                shape = RoundedCornerShape(12.dp),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.Star, contentDescription = null, tint = verdeItaliano)
+                        Icon(Icons.Default.Star, contentDescription = null, tint = DoradoCalidad)
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = "2. Nivel de Experiencia Técnica:",
                             fontWeight = FontWeight.Bold,
-                            fontSize = 15.sp
+                            fontSize = 15.sp,
+                            color = TextoOscuro
                         )
                     }
 
@@ -159,18 +195,36 @@ fun EncuestaScreen(
                         ) {
                             RadioButton(
                                 selected = state.nivelExperiencia == nivel,
-                                onClick = { encuestaViewModel.seleccionarNivel(nivel) }
+                                onClick = { encuestaViewModel.seleccionarNivel(nivel) },
+                                colors = RadioButtonDefaults.colors(
+                                    selectedColor = VerdeItaliano,
+                                    unselectedColor = TextoOscuro.copy(alpha = 0.6f)
+                                )
                             )
-                            Text(text = nivel, fontSize = 14.sp)
+                            Text(
+                                text = nivel,
+                                fontSize = 14.sp,
+                                color = TextoOscuro
+                            )
                         }
                     }
 
                     state.errorNivel?.let { error ->
                         Spacer(modifier = Modifier.height(4.dp))
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Info, contentDescription = null, tint = rojoItaliano, modifier = Modifier.size(16.dp))
+                            Icon(
+                                imageVector = Icons.Default.Info,
+                                contentDescription = null,
+                                tint = RojoItaliano,
+                                modifier = Modifier.size(16.dp)
+                            )
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text(text = error, color = rojoItaliano, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                            Text(
+                                text = error,
+                                color = RojoItaliano,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
                         }
                     }
                 }
@@ -178,26 +232,37 @@ fun EncuestaScreen(
 
             // 3. GPS Nativo
             Card(
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
+                colors = CardDefaults.cardColors(containerColor = BlancoPuro),
+                shape = RoundedCornerShape(12.dp),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.LocationOn, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                        Icon(
+                            imageVector = Icons.Default.LocationOn,
+                            contentDescription = null,
+                            tint = VerdeItaliano
+                        )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = "Ubicación del Taller / Negocio (GPS Nativo)",
                             fontWeight = FontWeight.Bold,
-                            fontSize = 15.sp
+                            fontSize = 15.sp,
+                            color = TextoOscuro
                         )
                     }
 
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(12.dp))
 
                     Button(
                         onClick = {
-                            val hasFine = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
-                            val hasCoarse = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+                            val hasFine = ContextCompat.checkSelfPermission(
+                                context, Manifest.permission.ACCESS_FINE_LOCATION
+                            ) == PackageManager.PERMISSION_GRANTED
+                            val hasCoarse = ContextCompat.checkSelfPermission(
+                                context, Manifest.permission.ACCESS_COARSE_LOCATION
+                            ) == PackageManager.PERMISSION_GRANTED
 
                             if (hasFine || hasCoarse) {
                                 encuestaViewModel.obtenerUbicacion(context)
@@ -210,26 +275,34 @@ fun EncuestaScreen(
                                 )
                             }
                         },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = VerdeItaliano,
+                            contentColor = BlancoPuro
+                        ),
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(8.dp)
                     ) {
                         Icon(Icons.Default.LocationOn, contentDescription = null)
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Usar mi ubicación actual")
+                        Text("Usar mi ubicación actual", fontWeight = FontWeight.SemiBold)
                     }
 
                     if (state.cargandoUbicacion) {
-                        Spacer(modifier = Modifier.height(8.dp))
-                        LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                        Spacer(modifier = Modifier.height(12.dp))
+                        LinearProgressIndicator(
+                            modifier = Modifier.fillMaxWidth(),
+                            color = VerdeItaliano,
+                            trackColor = GrisBorde
+                        )
                     }
 
                     if (state.ubicacionGps.isNotEmpty()) {
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(12.dp))
                         Text(
                             text = "📍 ${state.ubicacionGps}",
                             fontSize = 13.sp,
                             fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onSecondaryContainer
+                            color = VerdeOscuro
                         )
                     }
                 }
@@ -238,16 +311,27 @@ fun EncuestaScreen(
             // Mensaje de éxito
             state.mensajeExito?.let { mensaje ->
                 Card(
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFFE8F5E9)),
+                    colors = CardDefaults.cardColors(
+                        containerColor = VerdeItaliano.copy(alpha = 0.12f)
+                    ),
+                    shape = RoundedCornerShape(10.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Row(
                         modifier = Modifier.padding(16.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(Icons.Default.CheckCircle, contentDescription = null, tint = verdeItaliano)
+                        Icon(
+                            imageVector = Icons.Default.CheckCircle,
+                            contentDescription = null,
+                            tint = VerdeOscuro
+                        )
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text(text = mensaje, color = verdeItaliano, fontWeight = FontWeight.Bold)
+                        Text(
+                            text = mensaje,
+                            color = VerdeOscuro,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
                 }
             }
@@ -259,12 +343,21 @@ fun EncuestaScreen(
                 },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(52.dp),
+                    .height(54.dp),
                 shape = RoundedCornerShape(10.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = verdeItaliano)
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = VerdeItaliano,
+                    contentColor = BlancoPuro
+                )
             ) {
-                Text("Guardar Preferencias", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                Text(
+                    text = "GUARDAR PREFERENCIAS",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold
+                )
             }
+
+            Spacer(modifier = Modifier.height(16.dp))
         }
     }
 }

@@ -28,6 +28,10 @@ import androidx.compose.ui.res.painterResource
 import com.example.mastermartini.R
 import com.example.mastermartini.viewmodel.HomeViewModel
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.outlined.FavoriteBorder
+
 // El molde de datos (Curso) está en model/Curso.kt y la lista en data/CursoRepository.kt.
 // Esta pantalla solo DIBUJA los cursos que le entrega el HomeViewModel (MVVM).
 
@@ -44,9 +48,14 @@ fun HomeScreen(
     onEditarDatos: () -> Unit,// MainActivity decide a dónde navegar (abre "registro"
     onIrAEncuesta: () -> Unit
 ) {
+    val cursos by viewModel.cursos.collectAsState()
+
     // Colores estilo bandera italiana de Master Martini
     val verdeItaliano = Color(0xFF008C45)
     val rojoItaliano = Color(0xFFCD212A)
+    val doradoCalidad = Color(0xFFC59B27)
+    val blancoHueso = Color(0xFFF9F9F7)
+    val textoOscuro = Color(0xFF1E232A)
 
     // Escuchamos la lista de cursos del ViewModel. collectAsState() convierte el StateFlow
     // en un estado de Compose: si la lista cambia, la pantalla se vuelve a dibujar sola.
@@ -57,24 +66,68 @@ fun HomeScreen(
     val favoritos by viewModel.favoritos.collectAsState()
     val totalFavoritos by viewModel.totalFavoritos.collectAsState()
 
+
     Scaffold(
         topBar = {
             TopAppBar(
                 title = {
-                    Text(
-                        text = "Catálogo Master Martini B2B",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 20.sp
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        modifier = Modifier.fillMaxWidth().padding(end = 12.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.Star,
+                                contentDescription = null,
+                                tint = doradoCalidad,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "Master Martini B2B",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 18.sp,
+                                color = Color.White
+                            )
+                        }
+
+                        // Contador de Favoritos en la TopBar
+                        if (totalFavoritos > 0) {
+                        Surface(
+                            color = rojoItaliano,
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Favorite,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = "$totalFavoritos",
+                                    color = Color.White,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                    }
+                    }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    containerColor = verdeItaliano,
+                    titleContentColor = Color.White
                 )
             )
-        }
+        },
+        containerColor = blancoHueso
     ) { innerPadding ->
-        // 3. LazyColumn: Es una columna con scroll automático ideal para listas de elementos
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
@@ -82,31 +135,24 @@ fun HomeScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            item{
-                Text(
-                    text = "MasterClass en video (Offline):",
-                    fontWeight = FontWeight.Bold,
-                    style = MaterialTheme.typography.titleMedium
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-
-                ReproductorVideoLocal()
-            }
-            // Bloque 1: Franja tricolor italiana y Tarjeta con los datos guardados en el celular
+            // 1. Encabezado Corporativo (Logo + Franja Tricolor Italiana)
             item {
-                Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
                     Image(
                         painter = painterResource(id = R.drawable.logo_master_martini),
                         contentDescription = "Logo Master Martini",
                         modifier = Modifier
                             .width(200.dp)
                             .height(65.dp)
-                            .padding(bottom = 8.dp)
+                            .padding(bottom = 6.dp)
                     )
                     Row(
                         modifier = Modifier
-                            .width(120.dp)
-                            .height(6.dp)
+                            .width(130.dp)
+                            .height(5.dp)
                             .clip(RoundedCornerShape(3.dp))
                     ) {
                         Box(modifier = Modifier.weight(1f).fillMaxHeight().background(verdeItaliano))
@@ -114,146 +160,146 @@ fun HomeScreen(
                         Box(modifier = Modifier.weight(1f).fillMaxHeight().background(rojoItaliano))
                     }
                 }
+            }
 
-                Spacer(modifier = Modifier.height(10.dp))
+            // 2. MasterClass Video Destacado (Reproductor Offline)
+            item {
+                Text(
+                    text = "🎥 MasterClass Destacada (Video Offline):",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp,
+                    color = textoOscuro
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+                ReproductorVideoLocal()
+            }
 
-                // Tarjeta que demuestra al profesor que los datos se leyeron desde AlmacenamientoLocal
+            // 3. Tarjeta de Bienvenida con Datos del Perfil
+            item {
                 Card(
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
+                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    border = BorderStroke(1.dp, verdeItaliano),
                     shape = RoundedCornerShape(12.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text(
                             text = "¡Bienvenido, $nombreUsuario!",
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold
+                            fontSize = 19.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = verdeItaliano
                         )
                         Spacer(modifier = Modifier.height(6.dp))
-                        Text(text = "Rubro del Taller: $rubroUsuario", fontWeight = FontWeight.SemiBold, color = verdeItaliano)
-                        Text(text = "RUT Registrado: $rutUsuario", fontSize = 14.sp)
-                        Text(text = "Correo: $correoUsuario", fontSize = 14.sp)
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = "✓ Datos recuperados del almacenamiento local",
-                            fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        Text(text = "Rubro del Taller: $rubroUsuario", fontWeight = FontWeight.SemiBold, color = textoOscuro)
+                        Text(text = "RUT Empresa: $rutUsuario", fontSize = 14.sp, color = textoOscuro)
+                        Text(text = "Contacto: $correoUsuario", fontSize = 14.sp, color = textoOscuro)
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Surface(
+                            color = verdeItaliano.copy(alpha = 0.1f),
+                            shape = RoundedCornerShape(6.dp)
+                        ) {
+                            Text(
+                                text = "✓ Perfil verificado desde memoria interna (SharedPreferences)",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = verdeItaliano,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            )
+                        }
                     }
                 }
             }
 
-            // Bloque 2: Título de la sección de cursos y contador de favoritos
+            // 4. Título del Catálogo de Recetas
             item {
                 Text(
-                    text = "Masterclasses y Recetas Técnicas",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
+                    text = "📖 Catálogo de Recetas Técnicas e Insumos",
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = textoOscuro
                 )
-                Spacer(modifier = Modifier.height(6.dp))
-                // Ícono + texto (accesibilidad): el número sale de Room y se actualiza solo
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Filled.Favorite,
-                        contentDescription = null, // el texto de al lado ya lo explica
-                        tint = MaterialTheme.colorScheme.secondary
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = "Mis favoritos: $totalFavoritos",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                }
             }
 
-            // Bloque 3: Equivalente al ciclo 'for (curso in catalogoCursos)'
-            // Por cada curso en la lista, dibuja una Card en la pantalla.
-            // key = id: Compose sabe qué tarjeta es cuál, así cada corazón mantiene su propia animación.
-            items(catalogoCursos, key = { curso -> curso.id }) { curso ->
-                // ¿Este curso está en la lista de favoritos que entrega Room?
+            // 5. Lista Dinámica de Cursos / Recetas
+            items(catalogoCursos, key = { it.id }) { curso ->
                 val esFavorito = favoritos.contains(curso.id)
 
-                // ANIMACIÓN DEL CORAZÓN: al marcarlo crece a 1.3 veces su tamaño con un
-                // pequeño rebote (spring); al desmarcarlo vuelve a su tamaño normal (1).
-                val escalaCorazon by animateFloatAsState(
-                    targetValue = if (esFavorito) 1.3f else 1f,
-                    animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
-                    label = "escalaCorazon"
-                )
-
                 Card(
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    border = BorderStroke(1.dp, doradoCalidad.copy(alpha = 0.6f)),
                     shape = RoundedCornerShape(10.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    // Row: los datos del curso a la izquierda y el corazón a la derecha
-                    Row(
-                        modifier = Modifier.padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        // weight(1f): los textos ocupan todo el espacio que deja libre el corazón
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = curso.titulo,
-                                fontSize = 17.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(text = "Insumo principal: ${curso.insumo}", fontSize = 14.sp)
-                            Text(text = "Instructor: ${curso.chef}", fontSize = 14.sp)
-                            Spacer(modifier = Modifier.height(4.dp))
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Star,
+                                    contentDescription = null,
+                                    tint = doradoCalidad,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = curso.titulo,
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = textoOscuro
+                                )
+                            }
+
+                            // Botón de Favorito (Corazón)
+                            IconButton(onClick = { viewModel.alternarFavorito(curso.id) }) {
+                                Icon(
+                                    imageVector = if (esFavorito) Icons.Default.Favorite else Icons.Outlined.FavoriteBorder,
+                                    contentDescription = "Favorito",
+                                    tint = if (esFavorito) rojoItaliano else Color.Gray
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "Insumo Master Martini: ${curso.insumo}",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = verdeItaliano
+                        )
+                        Text(
+                            text = "Instructor: ${curso.chef}",
+                            fontSize = 14.sp,
+                            color = textoOscuro
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Row(
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
                             Text(
                                 text = "⏱️ Duración: ${curso.duracion}",
                                 fontSize = 13.sp,
-                                fontWeight = FontWeight.SemiBold,
+                                fontWeight = FontWeight.Bold,
                                 color = rojoItaliano
                             )
-                        }
-
-                        // Botón de favorito: la pantalla solo avisa al ViewModel; él decide si agrega o quita.
-                        // 56 dp: área táctil grande para usuarios mayores.
-                        IconButton(
-                            onClick = { viewModel.alternarFavorito(curso.id) },
-                            modifier = Modifier.size(56.dp)
-                        ) {
-                            Icon(
-                                // Corazón lleno si es favorito, solo el borde si no
-                                imageVector = if (esFavorito) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
-                                // TalkBack lee qué pasará al tocarlo
-                                contentDescription = if (esFavorito) {
-                                    "Quitar ${curso.titulo} de favoritos"
-                                } else {
-                                    "Agregar ${curso.titulo} a favoritos"
-                                },
-                                // Colores del tema: rojo (secondary) si es favorito, gris si no
-                                tint = if (esFavorito) {
-                                    MaterialTheme.colorScheme.secondary
-                                } else {
-                                    MaterialTheme.colorScheme.onSurfaceVariant
-                                },
-                                modifier = Modifier
-                                    .size(30.dp)
-                                    .scale(escalaCorazon)
+                            Text(
+                                text = "Certificación B2B",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = doradoCalidad
                             )
                         }
                     }
                 }
             }
 
-            // Bloque 4: Botón para regresar al formulario (Navegación funcional)
-            item {
-                Spacer(modifier = Modifier.height(8.dp))
-                OutlinedButton(
-                    onClick = onEditarDatos,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(52.dp),
-                    shape = RoundedCornerShape(10.dp)
-                ) {
-                    Text("Editar Datos / Volver al Registro", fontWeight = FontWeight.Bold)
-                }
-            }
+            // 6. Botón Encuesta de Preferencias &amp; GPS
             item {
                 Button(
                     onClick = onIrAEncuesta,
@@ -261,12 +307,35 @@ fun HomeScreen(
                         .fillMaxWidth()
                         .height(52.dp),
                     shape = RoundedCornerShape(10.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF008C45))
+                    colors = ButtonDefaults.buttonColors(containerColor = verdeItaliano)
                 ) {
-                    Text("Responder Encuesta de Intereses (GPS)", fontWeight = FontWeight.Bold, color = Color.White)
+                    Text(
+                        text = "📝 Encuesta de Preferencias &amp; Ubicación (GPS)",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 15.sp,
+                        color = Color.White
+                    )
                 }
             }
 
+            // 7. Botón Editar Datos
+            item {
+                OutlinedButton(
+                    onClick = onEditarDatos,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(50.dp),
+                    shape = RoundedCornerShape(10.dp),
+                    border = BorderStroke(1.dp, rojoItaliano)
+                ) {
+                    Text(
+                        text = "Editar Datos del Registro",
+                        fontWeight = FontWeight.Bold,
+                        color = rojoItaliano
+                    )
+                }
+            }
         }
     }
 }
+
