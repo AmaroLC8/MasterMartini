@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -16,6 +17,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -44,7 +46,7 @@ fun EncuestaScreen(
         val coarseGranted = permissions[Manifest.permission.ACCESS_COARSE_LOCATION] ?: false
 
         if (fineGranted || coarseGranted) {
-            encuestaViewModel.obtenerUbicacion(context)
+            encuestaViewModel.obtenerUbicacion()
         } else {
             encuestaViewModel.registrarRespuestaSinGps()
         }
@@ -265,7 +267,7 @@ fun EncuestaScreen(
                             ) == PackageManager.PERMISSION_GRANTED
 
                             if (hasFine || hasCoarse) {
-                                encuestaViewModel.obtenerUbicacion(context)
+                                encuestaViewModel.obtenerUbicacion()
                             } else {
                                 permissionLauncher.launch(
                                     arrayOf(
@@ -304,6 +306,29 @@ fun EncuestaScreen(
                             fontWeight = FontWeight.SemiBold,
                             color = VerdeOscuro
                         )
+                    }
+
+                    // AVISO DEL GPS (sin permiso o sin señal). Igual que el aviso de la cámara
+                    // en el registro: aparece con animación y desaparece al volver a intentar.
+                    AnimatedVisibility(visible = state.avisoGps != null) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 12.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Warning,
+                                contentDescription = "Aviso",
+                                tint = RojoItaliano
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = state.avisoGps ?: "",
+                                color = RojoItaliano,
+                                fontSize = 14.sp
+                            )
+                        }
                     }
                 }
             }

@@ -2,19 +2,21 @@ package com.example.mastermartini.viewmodel
 
 import android.annotation.SuppressLint
 import android.app.Application
-import android.content.Context
 import androidx.lifecycle.AndroidViewModel
 import com.example.mastermartini.data.AlmacenamientoLocal
 import com.google.android.gms.location.LocationServices
+import com.google.android.gms.location.Priority
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import java.util.Locale
 
 data class EncuestaState(
     val interesesSeleccionados: Set<String> = emptySet(),
     val nivelExperiencia: String = "",
-    val ubicacionGps: String = "",
+    val ubicacionGps: String = "",          // Solo coordenadas reales (ej. "Lat: -33.4489, Lon: -70.6693")
+    val avisoGps: String? = null,           // Aviso en rojo si no hay permiso o falla el GPS (null = sin aviso)
     val errorIntereses: String? = null,
     val errorNivel: String? = null,
     val mensajeExito: String? = null,
@@ -88,47 +90,66 @@ class EncuestaViewModel(application: Application) : AndroidViewModel(application
     }
 
 
+    // Pide la ubicación ACTUAL al GPS (RECURSO NATIVO).
+    // - getCurrentLocation pide una ubicación nueva. lastLocation solo devuelve la última
+    //   que el celular tenía guardada, y en el emulador casi siempre es null.
+    // - Usa getApplication() como Context: al ser AndroidViewModel no hace falta recibirlo
+    //   desde la pantalla (y el ViewModel no debe guardar el Context de una Activity).
+    // - La pantalla revisa el permiso antes de llamar; @SuppressLint le dice a Android Studio
+    //   que ya lo sabemos, y el try/catch cubre el caso raro de que se quite el permiso justo antes.
     @SuppressLint("MissingPermission")
-    fun obtenerUbicacion(context: Context) {
-        _uiState.update { it.copy(cargandoUbicacion = true) }
-        val fusedLocationClient = LocationServices.getFusedLocationProviderClient(context)
+    fun obtenerUbicacion() {
+        // Muestra la barra de carga y borra un aviso anterior
+        _uiState.update { it.copy(cargandoUbicacion = true, avisoGps = null) }
 
-        fusedLocationClient.lastLocation
-            .addOnSuccessListener { location ->
-                if (location != null) {
-                    val latitud = location.latitude
-                    val longitud = location.longitude
-                    val coords = "Lat: $latitud, Lon: $longitud"
-                    _uiState.update {
-                        it.copy(
-                            ubicacionGps = coords,
-                            cargandoUbicacion = false
+        val fusedLocationClient = LocationServices.getFusedLocationProviderClient(getApplication<Application>())
+
+        try {
+            // PRIORITY_HIGH_ACCURACY = usar el GPS para la mayor precisión.
+            // El segundo parámetro (null) sería para cancelar la búsqueda; no lo usamos.
+            fusedLocationClient.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, null)
+                .addOnSuccessListener { location ->
+                    if (location != null) {
+                        // %.4f = 4 decimales (unos 11 metros de precisión).
+                        // Locale.US para que use punto decimal y no coma.
+                        val coords = String.format(
+                            Locale.US, "Lat: %.4f, Lon: %.4f",
+                            location.latitude, location.longitude
                         )
-                    }
-                } else {
-                    _uiState.update {
-                        it.copy(
-                            ubicacionGps = "Ubicación GPS activa (Modo Emulador)",
-                            cargandoUbicacion = false
-                        )
+                        _uiState.update {
+                            it.copy(ubicacionGps = coords, avisoGps = null, cargandoUbicacion = false)
+                        }
+                    } else {
+                        // El GPS respondió pero sin ubicación (por ejemplo, GPS apagado)
+                        mostrarAvisoSinUbicacion()
                     }
                 }
-            }
-            .addOnFailureListener {
-                _uiState.update {
-                    it.copy(
-                        ubicacionGps = "No se pudo obtener la ubicación.",
-                        cargandoUbicacion = false
-                    )
+                .addOnFailureListener {
+                    // Hubo un error al pedir la ubicación
+                    mostrarAvisoSinUbicacion()
                 }
-            }
+        } catch (e: SecurityException) {
+            // Se quitó el permiso: avisamos en vez de que la app se caiga
+            mostrarAvisoSinUbicacion()
+        }
     }
 
+    // Aviso cuando no se pudo obtener la ubicación. No toca ubicacionGps:
+    // si ya había coordenadas de antes, se mantienen.
+    private fun mostrarAvisoSinUbicacion() {
+        _uiState.update {
+            it.copy(
+                avisoGps = "No se pudo obtener tu ubicación. Revisa que el GPS esté activado.",
+                cargandoUbicacion = false
+            )
+        }
+    }
 
-
+    // Se llama cuando la persona niega el permiso de ubicación.
+    // Solo muestra el aviso: la ubicación es opcional y la encuesta se puede guardar igual.
     fun registrarRespuestaSinGps(){
         _uiState.update {
-            it.copy(ubicacionGps = "Ubicacion no proporcionada (permiso denegado)")
+            it.copy(avisoGps = "Sin permiso de ubicación. Puedes guardar la encuesta igual.")
         }
     }
     fun guardarRespuesta(): Boolean{
