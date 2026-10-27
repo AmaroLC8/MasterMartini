@@ -48,8 +48,6 @@ fun HomeScreen(
     onEditarDatos: () -> Unit,// MainActivity decide a dónde navegar (abre "registro"
     onIrAEncuesta: () -> Unit
 ) {
-    val cursos by viewModel.cursos.collectAsState()
-
     // Colores estilo bandera italiana de Master Martini
     val verdeItaliano = Color(0xFF008C45)
     val rojoItaliano = Color(0xFFCD212A)
@@ -299,7 +297,7 @@ fun HomeScreen(
                 }
             }
 
-            // 6. Botón Encuesta de Preferencias &amp; GPS
+            // 6. Botón Encuesta de Preferencias y Ubicación (GPS)
             item {
                 Button(
                     onClick = onIrAEncuesta,
@@ -310,7 +308,7 @@ fun HomeScreen(
                     colors = ButtonDefaults.buttonColors(containerColor = verdeItaliano)
                 ) {
                     Text(
-                        text = "📝 Encuesta de Preferencias &amp; Ubicación (GPS)",
+                        text = "📝 Encuesta de Preferencias y Ubicación (GPS)",
                         fontWeight = FontWeight.Bold,
                         fontSize = 15.sp,
                         color = Color.White

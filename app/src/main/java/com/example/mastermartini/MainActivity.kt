@@ -3,7 +3,6 @@ package com.example.mastermartini
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.runtime.remember
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
@@ -30,13 +29,8 @@ class MainActivity : ComponentActivity() {
                 val navController = rememberNavController()
                 val registroViewModel: RegistroViewModel = viewModel()
 
-                // Pantalla inicial: Si ya existe perfil, inicia en "login" (o "home"); si no, va a "registro"
-                val pantallaInicial = remember {
-                    if (registroViewModel.hayPerfilGuardado()) "login" else "registro"
-                }
-
-                // UN SOLO NavHost con todas las pantallas registradas
-                // Pantalla inicial fija en login
+                // UN SOLO NavHost con todas las pantallas registradas.
+                // La app siempre parte en "login"; desde ahí se puede ir a "registro".
                 NavHost(
                     navController = navController,
                     startDestination = "login"
@@ -56,12 +50,13 @@ class MainActivity : ComponentActivity() {
                         )
                     }
 
-                    // 2. REGISTRO (Al completar vuelve a Login)
+                    // 2. REGISTRO (Al completar navega a Home)
                     composable("registro") {
                         RegistroScreen(
                             viewModel = registroViewModel,
                             onRegistroCompletado = {
-                                // Vuelve a la pantalla de Login para que ingrese sus credenciales
+                                // Entra directo a Home y saca "registro" de la pila para que
+                                // el botón Atrás no vuelva al formulario
                                 navController.navigate("home"){
                                     popUpTo("registro") { inclusive = true }
                                     launchSingleTop = true
