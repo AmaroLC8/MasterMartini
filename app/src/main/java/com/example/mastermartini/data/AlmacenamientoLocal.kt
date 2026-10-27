@@ -3,10 +3,14 @@ package com.example.mastermartini.data
 import android.content.Context
 import android.content.SharedPreferences
 
+// Recibe el 'context' (el permiso del sistema Android para acceder a la memoria interna del celular)
 class AlmacenamientoLocal(context: Context) {
+
+    // 1. Abrimos o creamos el archivo "master_martini_prefs" en modo privado (solo nuestra app puede leerlo)
     private val preferences: SharedPreferences =
         context.getSharedPreferences("master_martini_prefs", Context.MODE_PRIVATE)
 
+    // 2. FUNCIÓN PARA GUARDAR (Escribir en la libreta)
     fun guardarPerfil(
         nombre: String,
         rut: String,
@@ -14,19 +18,31 @@ class AlmacenamientoLocal(context: Context) {
         rubro: String,
         telefono: String,
         tamanoNegocio: String,
-        password: String // 👈 Nuevo parámetro
+        password: String // Contraseña creada en el registro, la usa el login
     ) {
+        // Pedimos un "lápiz" (editor) para escribir en el archivo
         val editor = preferences.edit()
+
+        // Guardamos cada dato con su etiqueta (Clave -> Valor), igual que un mapOf
         editor.putString("KEY_NOMBRE", nombre)
         editor.putString("KEY_RUT", rut)
         editor.putString("KEY_CORREO", correo)
         editor.putString("KEY_RUBRO", rubro)
         editor.putString("KEY_TELEFONO", telefono)
         editor.putString("KEY_TAMANO_NEGOCIO", tamanoNegocio)
-        editor.putString("KEY_PASSWORD", password) // 👈 Guarda la contraseña
+        // Se guarda como texto simple porque es un proyecto académico con datos ficticios;
+        // en una app real la contraseña se guardaría cifrada o la revisaría un servidor.
+        editor.putString("KEY_PASSWORD", password)
+
+        // apply() confirma y guarda los cambios en el disco duro sin congelar la pantalla
         editor.apply()
     }
 
+    // 3. FUNCIONES PARA LEER (Recuperar de la libreta)
+    // El segundo texto (ej: "Emprendedor") es el valor por defecto si aún no se ha guardado nada.
+    // El operador '?:' (Elvis) de Null Safety asegura que nunca devuelva null.
+    // RUT, correo, teléfono y contraseña usan "" (vacío) por defecto: así, si no hay perfil,
+    // el formulario no se llena con textos de relleno (como "Sin RUT") y el login no puede coincidir con ellos.
     fun obtenerNombre(): String = preferences.getString("KEY_NOMBRE", "Emprendedor") ?: "Emprendedor"
     fun obtenerRut(): String = preferences.getString("KEY_RUT", "") ?: ""
     fun obtenerCorreo(): String = preferences.getString("KEY_CORREO", "") ?: ""
@@ -35,9 +51,17 @@ class AlmacenamientoLocal(context: Context) {
     fun obtenerTamanoNegocio(): String = preferences.getString("KEY_TAMANO_NEGOCIO", "Micro") ?: "Micro"
     fun obtenerPassword(): String = preferences.getString("KEY_PASSWORD", "") ?: ""
 
+    // 4. ¿YA HAY UN PERFIL GUARDADO?
+    // contains() revisa si la clave existe en el archivo, sin leer su valor.
+    // Basta con revisar KEY_NOMBRE porque guardarPerfil() siempre guarda todos los datos juntos.
     fun existePerfil(): Boolean = preferences.contains("KEY_NOMBRE")
 
-    // 👈 FUNCIÓN DE VALIDACIÓN DE LOGIN
+    // 5. REVISAR LAS CREDENCIALES DEL LOGIN (la llama LoginViewModel.iniciarSesion)
+    // El usuario puede entrar con su RUT o con su correo, más la contraseña del registro.
+    // - trim() quita espacios al inicio y al final (por si se escribió " 12345678-5 ").
+    // - ignoreCase = true: "Juan@Mail.cl" es igual a "juan@mail.cl" y "-k" igual a "-K".
+    // - La contraseña se compara exacta (distingue mayúsculas y minúsculas).
+    // Devuelve true solo si el usuario Y la contraseña coinciden.
     fun validarCredenciales(rutOCorreoIngresado: String, passwordIngresada: String): Boolean {
         val rutGuardado = obtenerRut()
         val correoGuardado = obtenerCorreo()
@@ -51,7 +75,7 @@ class AlmacenamientoLocal(context: Context) {
         return usuarioValido && passwordValida
     }
 
-    // --- ENCUESTA DE PREFERENCIAS ---
+    // 6. ENCUESTA DE PREFERENCIAS
     // Se guarda en el mismo archivo de SharedPreferences que el perfil, con claves propias.
 
     // Guarda las respuestas de la encuesta.

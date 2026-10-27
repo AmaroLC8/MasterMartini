@@ -22,12 +22,16 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Configuración de bordes para pantalla completa
+        // Configuración exacta proyectada en la Parte 5 de la clase:
+        // la app dibuja de borde a borde (pantalla completa)
         WindowCompat.setDecorFitsSystemWindows(window, false)
 
         setContent {
             MasterMartiniTheme {
+                // Controla la navegación entre pantallas (qué pantalla se ve y la pila para "Atrás")
                 val navController = rememberNavController()
+                // Se crea afuera del NavHost porque lo usan dos pantallas:
+                // Registro (formulario) y Home (lee los datos guardados del perfil)
                 val registroViewModel: RegistroViewModel = viewModel()
 
                 // UN SOLO NavHost con todas las pantallas registradas.
@@ -45,6 +49,8 @@ class MainActivity : ComponentActivity() {
                             viewModel = loginViewModel,
                             onLoginExitoso = {
                                 navController.navigate("home") {
+                                    // Saca "login" de la pila: el botón Atrás en Home cierra la app
+                                    // en vez de volver al login
                                     popUpTo("login") { inclusive = true }
                                 }
                             },
@@ -63,6 +69,8 @@ class MainActivity : ComponentActivity() {
                                 // el botón Atrás no vuelva al formulario
                                 navController.navigate("home"){
                                     popUpTo("registro") { inclusive = true }
+                                    // Si "home" ya estaba debajo (caso "Editar Datos"), reutiliza esa
+                                    // pantalla en vez de apilar un segundo "home" encima.
                                     launchSingleTop = true
                                 }
                             }
@@ -71,6 +79,9 @@ class MainActivity : ComponentActivity() {
 
                     // 3. HOME
                     composable("home") {
+                        // ViewModel del catálogo de cursos. Se crea aquí dentro porque solo
+                        // lo usa la pantalla Home (viewModel() lo conserva al rotar la pantalla).
+                        // Es AndroidViewModel: viewModel() le pasa la Application solo, igual que al RegistroViewModel.
                         val homeViewModel: HomeViewModel = viewModel()
                         HomeScreen(
                             viewModel = homeViewModel,
@@ -78,17 +89,22 @@ class MainActivity : ComponentActivity() {
                             rubroUsuario = registroViewModel.obtenerRubroGuardado(),
                             rutUsuario = registroViewModel.obtenerRutGuardado(),
                             correoUsuario = registroViewModel.obtenerCorreoGuardado(),
+                            // navigate y no popBackStack(): si se entró desde el login, "login" se sacó
+                            // de la pila, no hay nada debajo de Home y popBackStack() dejaría la app sin pantalla.
                             onEditarDatos = { navController.navigate("registro") },
+                            // Abre la encuesta encima de Home: pila [home, encuesta]
                             onIrAEncuesta = { navController.navigate("encuesta") }
                         )
                     }
 
-                    // 4. ENCUESTA
+                    // 4. ENCUESTA (intereses, nivel y ubicación GPS; se guarda en SharedPreferences)
                     composable("encuesta") {
+                        // Se crea aquí dentro porque solo la usa esta pantalla.
                         // EncuestaViewModel es AndroidViewModel: viewModel() le pasa la Application solo
                         val encuestaViewModel: EncuestaViewModel = viewModel()
                         EncuestaScreen(
                             encuestaViewModel = encuestaViewModel,
+                            // Aquí sí sirve popBackStack(): debajo de "encuesta" siempre está "home"
                             onVolverHome = { navController.popBackStack() }
                         )
                     }
