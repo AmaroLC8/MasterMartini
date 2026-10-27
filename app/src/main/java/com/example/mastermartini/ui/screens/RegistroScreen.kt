@@ -24,6 +24,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Badge
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.Store
 import androidx.compose.material.icons.filled.Warning
@@ -38,6 +39,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
@@ -282,6 +284,24 @@ fun RegistroScreen(
                 supportingText = {
                     AnimatedVisibility(visible = uiState.errorCorreo != null) {
                         Text(uiState.errorCorreo ?: "", color = RojoItaliano)
+                    }
+                },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(10.dp)
+            )
+
+            // CAMPO CONTRASENA EN REGISTRO
+            OutlinedTextField(
+                value = uiState.password,
+                onValueChange = { viewModel.onPasswordChange(it) },
+                label = { Text("Crea una Contraseña") },
+                leadingIcon = { Icon(Icons.Filled.Lock, contentDescription = "Contraseña") },
+                trailingIcon = { IconoValidacion(valor = uiState.password, error = uiState.errorPassword) },
+                visualTransformation = PasswordVisualTransformation(),
+                isError = uiState.errorPassword != null,
+                supportingText = {
+                    AnimatedVisibility(visible = uiState.errorPassword != null) {
+                        Text(uiState.errorPassword ?: "", color = MaterialTheme.colorScheme.error)
                     }
                 },
                 modifier = Modifier.fillMaxWidth(),
