@@ -22,7 +22,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Badge
-import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Phone
@@ -44,6 +43,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import com.example.mastermartini.R
+import com.example.mastermartini.ui.components.IconoValidacion // Ícono ✓/⚠ compartido con LoginScreen
 import com.example.mastermartini.ui.theme.*
 import com.example.mastermartini.viewmodel.RegistroViewModel
 
@@ -425,22 +425,5 @@ fun RegistroScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
         }
-    }
-}
-
-@Composable
-private fun IconoValidacion(valor: String, error: String?) {
-    if (error != null) {
-        Icon(
-            imageVector = Icons.Filled.Warning,
-            contentDescription = "Dato con error",
-            tint = RojoItaliano
-        )
-    } else if (valor.isNotBlank()) {
-        Icon(
-            imageVector = Icons.Filled.CheckCircle,
-            contentDescription = "Dato correcto",
-            tint = VerdeItaliano
-        )
     }
 }

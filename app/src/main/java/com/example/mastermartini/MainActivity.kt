@@ -15,6 +15,7 @@ import com.example.mastermartini.ui.screens.RegistroScreen
 import com.example.mastermartini.ui.theme.MasterMartiniTheme
 import com.example.mastermartini.viewmodel.EncuestaViewModel
 import com.example.mastermartini.viewmodel.HomeViewModel
+import com.example.mastermartini.viewmodel.LoginViewModel
 import com.example.mastermartini.viewmodel.RegistroViewModel
 
 class MainActivity : ComponentActivity() {
@@ -37,8 +38,11 @@ class MainActivity : ComponentActivity() {
                 ) {
                     // 1. LOGIN
                     composable("login") {
+                        // El Login tiene su propio ViewModel, con sus validaciones.
+                        // Se crea aquí dentro, igual que HomeViewModel en "home".
+                        val loginViewModel: LoginViewModel = viewModel()
                         LoginScreen(
-                            viewModel = registroViewModel, // 👈 Se pasa el ViewModel aquí
+                            viewModel = loginViewModel,
                             onLoginExitoso = {
                                 navController.navigate("home") {
                                     popUpTo("login") { inclusive = true }

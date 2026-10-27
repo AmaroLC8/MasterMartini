@@ -210,11 +210,6 @@ class RegistroViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
-    // 👈 NUEVA FUNCIÓN: Permite a LoginScreen verificar credenciales en AlmacenamientoLocal
-    fun validarLogin(rutOCorreo: String, pass: String): Boolean {
-        return almacenamiento.validarCredenciales(rutOCorreo, pass)
-    }
-
     fun obtenerNombreGuardado(): String {
         return almacenamiento.obtenerNombre()
     }
