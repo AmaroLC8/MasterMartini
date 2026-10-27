@@ -10,7 +10,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -222,6 +221,17 @@ fun HomeScreen(
             items(catalogoCursos, key = { it.id }) { curso ->
                 val esFavorito = favoritos.contains(curso.id)
 
+                // Animación del corazón: crece a 1.3 veces su tamaño cuando es favorito y vuelve a 1 al quitarlo.
+                // animateFloatAsState no salta de golpe: Compose calcula los valores intermedios en cada cuadro.
+                // spring con DampingRatioMediumBouncy da un pequeño rebote, como un resorte.
+                // Va dentro de items() para que cada curso tenga su propia animación
+                // (key = id hace que cada corazón conserve la suya aunque la lista cambie).
+                val escalaCorazon by animateFloatAsState(
+                    targetValue = if (esFavorito) 1.3f else 1f,
+                    animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
+                    label = "escalaCorazon"
+                )
+
                 Card(
                     colors = CardDefaults.cardColors(containerColor = Color.White),
                     border = BorderStroke(1.dp, doradoCalidad.copy(alpha = 0.6f)),
@@ -253,12 +263,22 @@ fun HomeScreen(
                                 )
                             }
 
-                            // Botón de Favorito (Corazón)
-                            IconButton(onClick = { viewModel.alternarFavorito(curso.id) }) {
+                            // Botón de Favorito (Corazón).
+                            // 56.dp: área táctil grande, pensada para usuarios mayores.
+                            // contentDescription dice el curso y la acción, para que TalkBack lea qué hace el botón.
+                            IconButton(
+                                onClick = { viewModel.alternarFavorito(curso.id) },
+                                modifier = Modifier.size(56.dp)
+                            ) {
                                 Icon(
                                     imageVector = if (esFavorito) Icons.Default.Favorite else Icons.Outlined.FavoriteBorder,
-                                    contentDescription = "Favorito",
-                                    tint = if (esFavorito) rojoItaliano else Color.Gray
+                                    contentDescription = if (esFavorito) {
+                                        "Quitar ${curso.titulo} de favoritos"
+                                    } else {
+                                        "Agregar ${curso.titulo} a favoritos"
+                                    },
+                                    tint = if (esFavorito) rojoItaliano else Color.Gray,
+                                    modifier = Modifier.scale(escalaCorazon) // aplica la animación
                                 )
                             }
                         }
