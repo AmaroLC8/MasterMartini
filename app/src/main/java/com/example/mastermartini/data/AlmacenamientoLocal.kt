@@ -50,4 +50,28 @@ class AlmacenamientoLocal(context: Context) {
 
         return usuarioValido && passwordValida
     }
+
+    // --- ENCUESTA DE PREFERENCIAS ---
+    // Se guarda en el mismo archivo de SharedPreferences que el perfil, con claves propias.
+
+    // Guarda las respuestas de la encuesta.
+    // Los intereses son varios (Set<String>), por eso se usa putStringSet en vez de putString.
+    fun guardarEncuesta(intereses: Set<String>, nivel: String, ubicacion: String) {
+        val editor = preferences.edit()
+        editor.putStringSet("KEY_ENCUESTA_INTERESES", intereses)
+        editor.putString("KEY_ENCUESTA_NIVEL", nivel)
+        editor.putString("KEY_ENCUESTA_UBICACION", ubicacion)
+        editor.apply()
+    }
+
+    // Devuelve los intereses guardados (o un conjunto vacío si nunca se respondió).
+    // toSet() hace una copia: Android pide no modificar directamente el Set que entrega getStringSet.
+    fun obtenerInteresesEncuesta(): Set<String> =
+        preferences.getStringSet("KEY_ENCUESTA_INTERESES", emptySet())?.toSet() ?: emptySet()
+
+    fun obtenerNivelEncuesta(): String = preferences.getString("KEY_ENCUESTA_NIVEL", "") ?: ""
+    fun obtenerUbicacionEncuesta(): String = preferences.getString("KEY_ENCUESTA_UBICACION", "") ?: ""
+
+    // true si la encuesta ya se respondió alguna vez (igual que existePerfil, basta con una clave)
+    fun existeEncuesta(): Boolean = preferences.contains("KEY_ENCUESTA_NIVEL")
 }

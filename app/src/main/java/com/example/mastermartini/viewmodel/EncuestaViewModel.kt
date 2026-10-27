@@ -1,8 +1,10 @@
 package com.example.mastermartini.viewmodel
 
 import android.annotation.SuppressLint
+import android.app.Application
 import android.content.Context
-import androidx.lifecycle.ViewModel
+import androidx.lifecycle.AndroidViewModel
+import com.example.mastermartini.data.AlmacenamientoLocal
 import com.google.android.gms.location.LocationServices
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -19,9 +21,36 @@ data class EncuestaState(
     val cargandoUbicacion: Boolean = false
 )
 
-class EncuestaViewModel : ViewModel(){
+// Es AndroidViewModel (y no ViewModel) porque necesita la Application para crear
+// AlmacenamientoLocal y guardar las respuestas en SharedPreferences.
+class EncuestaViewModel(application: Application) : AndroidViewModel(application) {
+
+    // Acceso a SharedPreferences para guardar y leer la encuesta
+    private val almacenamiento = AlmacenamientoLocal(application)
+
     private val _uiState = MutableStateFlow(EncuestaState())
     val uiState: StateFlow<EncuestaState> = _uiState.asStateFlow()
+
+    // Al crear el ViewModel (cada vez que se entra a la encuesta) se cargan
+    // las respuestas guardadas, para que aparezcan marcadas.
+    // Va DESPUÉS de _uiState: Kotlin inicializa en orden y _uiState tiene que existir antes.
+    init {
+        cargarEncuestaGuardada()
+    }
+
+    // Copia al estado lo que se guardó la última vez. Si nunca se respondió, no hace nada
+    // y la encuesta aparece vacía. No muestra el mensaje de éxito: ese es solo al guardar.
+    private fun cargarEncuestaGuardada() {
+        if (almacenamiento.existeEncuesta()) {
+            _uiState.update {
+                it.copy(
+                    interesesSeleccionados = almacenamiento.obtenerInteresesEncuesta(),
+                    nivelExperiencia = almacenamiento.obtenerNivelEncuesta(),
+                    ubicacionGps = almacenamiento.obtenerUbicacionEncuesta()
+                )
+            }
+        }
+    }
 
     val opcionesIntereses = listOf(
         "Chocolatería y Coberturas",
@@ -117,6 +146,17 @@ class EncuestaViewModel : ViewModel(){
             errNivel="Debes seleccionar tu nivel de experiencia."
             valido = false
         }
+
+        // Si la encuesta está completa, se guarda ANTES de mostrar "registrada con éxito",
+        // así el mensaje dice la verdad. Si no es válida, no se guarda nada.
+        if (valido) {
+            almacenamiento.guardarEncuesta(
+                intereses = state.interesesSeleccionados,
+                nivel = state.nivelExperiencia,
+                ubicacion = state.ubicacionGps
+            )
+        }
+
         _uiState.update {
             it.copy(
                 errorIntereses = errIntereses,

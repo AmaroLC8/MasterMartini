@@ -85,6 +85,7 @@ class MainActivity : ComponentActivity() {
 
                     // 4. ENCUESTA
                     composable("encuesta") {
+                        // EncuestaViewModel es AndroidViewModel: viewModel() le pasa la Application solo
                         val encuestaViewModel: EncuestaViewModel = viewModel()
                         EncuestaScreen(
                             encuestaViewModel = encuestaViewModel,
