@@ -22,7 +22,7 @@ fun ReproductorVideoLocal(modifier: Modifier = Modifier) {
             .clip(RoundedCornerShape(12.dp)),
         factory = { context ->
             VideoView(context).apply {
-                // Ruta canónica recomendada por Android Developers para recursos en res/raw
+                // Ruta canónica del video alojado en res/raw/video_receta_master.mp4
                 val rutaUri = Uri.parse("android.resource://${context.packageName}/${R.raw.video_receta_master}")
                 setVideoURI(rutaUri)
 
@@ -30,14 +30,13 @@ fun ReproductorVideoLocal(modifier: Modifier = Modifier) {
                 controlador.setAnchorView(this)
                 setMediaController(controlador)
 
-                // Espera a que el emulador decodifique el video antes de interactuar
+                // En emuladores como BlueStacks, dar start() directo al estar preparado fuerza la decodificación visual
                 setOnPreparedListener { mediaPlayer ->
-                    mediaPlayer.isLooping = false
-                    seekTo(100) // Muestra el primer fotograma sin reproducir de golpe
+                    mediaPlayer.isLooping = true
+                    start()
                 }
 
-                setOnErrorListener { _, what, extra ->
-                    // Evita que la app se caiga si el emulador no soporta el formato
+                setOnErrorListener { _, _, _ ->
                     true
                 }
             }
