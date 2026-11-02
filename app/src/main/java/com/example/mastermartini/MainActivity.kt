@@ -3,17 +3,30 @@ package com.example.mastermartini
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Scaffold
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.example.mastermartini.ui.components.BarraNavegacion
+import com.example.mastermartini.ui.components.itemsNavegacion
+import com.example.mastermartini.ui.screens.BuscarScreen
 import com.example.mastermartini.ui.screens.DetalleScreen
 import com.example.mastermartini.ui.screens.EncuestaScreen
+import com.example.mastermartini.ui.screens.FavoritosScreen
 import com.example.mastermartini.ui.screens.HomeScreen
 import com.example.mastermartini.ui.screens.LoginScreen
+import com.example.mastermartini.ui.screens.PerfilScreen
+import com.example.mastermartini.ui.screens.RecetasScreen
 import com.example.mastermartini.ui.screens.RegistroScreen
 import com.example.mastermartini.ui.theme.MasterMartiniTheme
 import com.example.mastermartini.viewmodel.DetalleViewModel
@@ -38,101 +51,174 @@ class MainActivity : ComponentActivity() {
                 // Registro (formulario) y Home (lee los datos guardados del perfil)
                 val registroViewModel: RegistroViewModel = viewModel()
 
-                // UN SOLO NavHost con todas las pantallas registradas.
-                // La app siempre parte en "login"; desde ahí se puede ir a "registro".
-                NavHost(
-                    navController = navController,
-                    startDestination = "login"
-                ) {
-                    // 1. LOGIN
-                    composable("login") {
-                        // El Login tiene su propio ViewModel, con sus validaciones.
-                        // Se crea aquí dentro, igual que HomeViewModel en "home".
-                        val loginViewModel: LoginViewModel = viewModel()
-                        LoginScreen(
-                            viewModel = loginViewModel,
-                            onLoginExitoso = {
-                                navController.navigate("home") {
-                                    // Saca "login" de la pila: el botón Atrás en Home cierra la app
-                                    // en vez de volver al login
-                                    popUpTo("login") { inclusive = true }
+                // Pantalla que se está viendo ahora. currentBackStackEntryAsState() es un estado:
+                // cada vez que se navega, cambia y este bloque se vuelve a dibujar (así la barra
+                // marca el botón correcto). Es null al partir, antes de cargar la primera pantalla.
+                val entradaActual by navController.currentBackStackEntryAsState()
+                // La ruta de esa pantalla, ej. "home", "recetas" o "detalle/{cursoId}"
+                val rutaActual = entradaActual?.destination?.route
+
+                // La barra inferior se muestra SOLO en las 5 pantallas que tienen botón en ella.
+                // Se arma la lista de rutas desde itemsNavegacion, así si se agrega un botón
+                // la barra aparece sola en esa pantalla. En login, registro, detalle y encuesta no se ve.
+                val rutasConBarra = itemsNavegacion.map { item -> item.ruta }
+                val mostrarBarra = rutaActual in rutasConBarra
+
+                // Scaffold EXTERNO: envuelve todo el NavHost para poner la barra abajo.
+                // contentWindowInsets = WindowInsets(0, 0, 0, 0): este Scaffold NO agrega el espacio
+                // de las barras del sistema (hora arriba, gestos abajo). Así su innerPadding es solo
+                // el alto de la barra inferior, y cada pantalla sigue manejando sus propios bordes
+                // como antes. Si no, se sumaría el espacio del sistema dos veces.
+                Scaffold(
+                    contentWindowInsets = WindowInsets(0, 0, 0, 0),
+                    bottomBar = {
+                        if (mostrarBarra) {
+                            BarraNavegacion(
+                                rutaActual = rutaActual,
+                                onNavegar = { ruta ->
+                                    navController.navigate(ruta) {
+                                        // Deja "home" en la base de la pila y saca lo que haya encima.
+                                        // saveState = true: antes de sacarlas, GUARDA el estado de esas
+                                        // pantallas (ej. hasta dónde bajó la lista) para recuperarlo después.
+                                        popUpTo("home") { saveState = true }
+                                        // Si ya estás en esa pantalla, no apila una copia encima
+                                        launchSingleTop = true
+                                        // Si esa pantalla tenía un estado guardado (por saveState), lo recupera
+                                        restoreState = true
+                                    }
                                 }
-                            },
-                            onIrARegistro = {
-                                navController.navigate("registro")
-                            }
-                        )
+                            )
+                        }
                     }
-
-                    // 2. REGISTRO (Al completar navega a Home)
-                    composable("registro") {
-                        RegistroScreen(
-                            viewModel = registroViewModel,
-                            onRegistroCompletado = {
-                                // Entra directo a Home y saca "registro" de la pila para que
-                                // el botón Atrás no vuelva al formulario
-                                navController.navigate("home"){
-                                    popUpTo("registro") { inclusive = true }
-                                    // Si "home" ya estaba debajo (caso "Editar Datos"), reutiliza esa
-                                    // pantalla en vez de apilar un segundo "home" encima.
-                                    launchSingleTop = true
+                ) { innerPadding ->
+                    // UN SOLO NavHost con todas las pantallas registradas.
+                    // La app siempre parte en "login"; desde ahí se puede ir a "registro".
+                    // padding(innerPadding): deja libre el espacio de la barra inferior (0 si no se ve).
+                    // consumeWindowInsets(innerPadding): avisa a los Scaffold de cada pantalla que ese
+                    // espacio de abajo ya está cubierto, para que no le sumen otra vez el de la barra de gestos.
+                    NavHost(
+                        navController = navController,
+                        startDestination = "login",
+                        modifier = Modifier
+                            .padding(innerPadding)
+                            .consumeWindowInsets(innerPadding)
+                    ) {
+                        // 1. LOGIN
+                        composable("login") {
+                            // El Login tiene su propio ViewModel, con sus validaciones.
+                            // Se crea aquí dentro, igual que HomeViewModel en "home".
+                            val loginViewModel: LoginViewModel = viewModel()
+                            LoginScreen(
+                                viewModel = loginViewModel,
+                                onLoginExitoso = {
+                                    navController.navigate("home") {
+                                        // Saca "login" de la pila: el botón Atrás en Home cierra la app
+                                        // en vez de volver al login
+                                        popUpTo("login") { inclusive = true }
+                                    }
+                                },
+                                onIrARegistro = {
+                                    navController.navigate("registro")
                                 }
-                            }
-                        )
-                    }
+                            )
+                        }
 
-                    // 3. HOME
-                    composable("home") {
-                        // ViewModel del catálogo de cursos. Se crea aquí dentro porque solo
-                        // lo usa la pantalla Home (viewModel() lo conserva al rotar la pantalla).
-                        // Es AndroidViewModel: viewModel() le pasa la Application solo, igual que al RegistroViewModel.
-                        val homeViewModel: HomeViewModel = viewModel()
-                        HomeScreen(
-                            viewModel = homeViewModel,
-                            nombreUsuario = registroViewModel.obtenerNombreGuardado(),
-                            rubroUsuario = registroViewModel.obtenerRubroGuardado(),
-                            rutUsuario = registroViewModel.obtenerRutGuardado(),
-                            correoUsuario = registroViewModel.obtenerCorreoGuardado(),
-                            // navigate y no popBackStack(): si se entró desde el login, "login" se sacó
-                            // de la pila, no hay nada debajo de Home y popBackStack() dejaría la app sin pantalla.
-                            onEditarDatos = { navController.navigate("registro") },
-                            // Abre la encuesta encima de Home: pila [home, encuesta]
-                            onIrAEncuesta = { navController.navigate("encuesta") },
-                            // Arma la ruta con el id del curso tocado: ej. "detalle/3". Pila [home, detalle]
-                            onVerDetalle = { id -> navController.navigate("detalle/$id") }
-                        )
-                    }
+                        // 2. REGISTRO (Al completar navega a Home)
+                        composable("registro") {
+                            RegistroScreen(
+                                viewModel = registroViewModel,
+                                onRegistroCompletado = {
+                                    // Entra directo a Home y saca "registro" de la pila para que
+                                    // el botón Atrás no vuelva al formulario
+                                    navController.navigate("home"){
+                                        popUpTo("registro") { inclusive = true }
+                                        // Si "home" ya estaba debajo (caso "Editar Datos"), reutiliza esa
+                                        // pantalla en vez de apilar un segundo "home" encima.
+                                        launchSingleTop = true
+                                    }
+                                }
+                            )
+                        }
 
-                    // 5. DETALLE DE UN CURSO (receta paso a paso + video)
-                    // {cursoId} es un "hueco" en la ruta: se llena con el número que manda Home.
-                    // navArgument dice que ese hueco es un Int (IntType); así llega como número y no como texto.
-                    composable(
-                        route = "detalle/{cursoId}",
-                        arguments = listOf(navArgument("cursoId") { type = NavType.IntType })
-                    ) { backStackEntry ->
-                        // Se lee el argumento por su nombre. Si por algún motivo no viene, se usa 0
-                        // (no existe ningún curso con id 0, así que la pantalla dice "Receta no encontrada").
-                        val cursoId = backStackEntry.arguments?.getInt("cursoId") ?: 0
-                        // Se crea aquí dentro porque solo lo usa esta pantalla
-                        val detalleViewModel: DetalleViewModel = viewModel()
-                        DetalleScreen(
-                            cursoId = cursoId,
-                            viewModel = detalleViewModel,
-                            // Debajo de "detalle" siempre está "home", así que popBackStack() vuelve a Home
-                            onVolver = { navController.popBackStack() }
-                        )
-                    }
+                        // 3. HOME
+                        composable("home") {
+                            // ViewModel del catálogo de cursos. Se crea aquí dentro porque solo
+                            // lo usa la pantalla Home (viewModel() lo conserva al rotar la pantalla).
+                            // Es AndroidViewModel: viewModel() le pasa la Application solo, igual que al RegistroViewModel.
+                            val homeViewModel: HomeViewModel = viewModel()
+                            HomeScreen(
+                                viewModel = homeViewModel,
+                                nombreUsuario = registroViewModel.obtenerNombreGuardado(),
+                                rubroUsuario = registroViewModel.obtenerRubroGuardado(),
+                                rutUsuario = registroViewModel.obtenerRutGuardado(),
+                                correoUsuario = registroViewModel.obtenerCorreoGuardado(),
+                                // navigate y no popBackStack(): si se entró desde el login, "login" se sacó
+                                // de la pila, no hay nada debajo de Home y popBackStack() dejaría la app sin pantalla.
+                                onEditarDatos = { navController.navigate("registro") },
+                                // Abre la encuesta encima de Home: pila [home, encuesta]
+                                onIrAEncuesta = { navController.navigate("encuesta") },
+                                // Arma la ruta con el id del curso tocado: ej. "detalle/3". Pila [home, detalle]
+                                onVerDetalle = { id -> navController.navigate("detalle/$id") }
+                            )
+                        }
 
-                    // 4. ENCUESTA (intereses, nivel y ubicación GPS; se guarda en SharedPreferences)
-                    composable("encuesta") {
-                        // Se crea aquí dentro porque solo la usa esta pantalla.
-                        // EncuestaViewModel es AndroidViewModel: viewModel() le pasa la Application solo
-                        val encuestaViewModel: EncuestaViewModel = viewModel()
-                        EncuestaScreen(
-                            encuestaViewModel = encuestaViewModel,
-                            // Aquí sí sirve popBackStack(): debajo de "encuesta" siempre está "home"
-                            onVolverHome = { navController.popBackStack() }
-                        )
+                        // 5. DETALLE DE UN CURSO (receta paso a paso + video)
+                        // {cursoId} es un "hueco" en la ruta: se llena con el número que manda Home.
+                        // navArgument dice que ese hueco es un Int (IntType); así llega como número y no como texto.
+                        composable(
+                            route = "detalle/{cursoId}",
+                            arguments = listOf(navArgument("cursoId") { type = NavType.IntType })
+                        ) { backStackEntry ->
+                            // Se lee el argumento por su nombre. Si por algún motivo no viene, se usa 0
+                            // (no existe ningún curso con id 0, así que la pantalla dice "Receta no encontrada").
+                            val cursoId = backStackEntry.arguments?.getInt("cursoId") ?: 0
+                            // Se crea aquí dentro porque solo lo usa esta pantalla
+                            val detalleViewModel: DetalleViewModel = viewModel()
+                            DetalleScreen(
+                                cursoId = cursoId,
+                                viewModel = detalleViewModel,
+                                // popBackStack() vuelve a la pantalla desde donde se abrió la receta
+                                // (Home, Recetas, Buscar o Favoritos), que siempre queda debajo de "detalle"
+                                onVolver = { navController.popBackStack() }
+                            )
+                        }
+
+                        // 4. ENCUESTA (intereses, nivel y ubicación GPS; se guarda en SharedPreferences)
+                        composable("encuesta") {
+                            // Se crea aquí dentro porque solo la usa esta pantalla.
+                            // EncuestaViewModel es AndroidViewModel: viewModel() le pasa la Application solo
+                            val encuestaViewModel: EncuestaViewModel = viewModel()
+                            EncuestaScreen(
+                                encuestaViewModel = encuestaViewModel,
+                                // Aquí sí sirve popBackStack(): debajo de "encuesta" siempre está "home"
+                                onVolverHome = { navController.popBackStack() }
+                            )
+                        }
+
+                        // 6. PANTALLAS DE LA BARRA INFERIOR (por ahora "en construcción").
+                        // Recetas, Buscar y Favoritos abren el detalle igual que Home: "detalle/3".
+                        // Pila: [home, recetas, detalle] → Atrás vuelve a Recetas.
+                        composable("recetas") {
+                            RecetasScreen(
+                                onVerDetalle = { id -> navController.navigate("detalle/$id") }
+                            )
+                        }
+
+                        composable("buscar") {
+                            BuscarScreen(
+                                onVerDetalle = { id -> navController.navigate("detalle/$id") }
+                            )
+                        }
+
+                        composable("favoritos") {
+                            FavoritosScreen(
+                                onVerDetalle = { id -> navController.navigate("detalle/$id") }
+                            )
+                        }
+
+                        composable("perfil") {
+                            PerfilScreen()
+                        }
                     }
                 }
             }
