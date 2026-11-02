@@ -5,14 +5,18 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
+import com.example.mastermartini.ui.screens.DetalleScreen
 import com.example.mastermartini.ui.screens.EncuestaScreen
 import com.example.mastermartini.ui.screens.HomeScreen
 import com.example.mastermartini.ui.screens.LoginScreen
 import com.example.mastermartini.ui.screens.RegistroScreen
 import com.example.mastermartini.ui.theme.MasterMartiniTheme
+import com.example.mastermartini.viewmodel.DetalleViewModel
 import com.example.mastermartini.viewmodel.EncuestaViewModel
 import com.example.mastermartini.viewmodel.HomeViewModel
 import com.example.mastermartini.viewmodel.LoginViewModel
@@ -93,7 +97,29 @@ class MainActivity : ComponentActivity() {
                             // de la pila, no hay nada debajo de Home y popBackStack() dejaría la app sin pantalla.
                             onEditarDatos = { navController.navigate("registro") },
                             // Abre la encuesta encima de Home: pila [home, encuesta]
-                            onIrAEncuesta = { navController.navigate("encuesta") }
+                            onIrAEncuesta = { navController.navigate("encuesta") },
+                            // Arma la ruta con el id del curso tocado: ej. "detalle/3". Pila [home, detalle]
+                            onVerDetalle = { id -> navController.navigate("detalle/$id") }
+                        )
+                    }
+
+                    // 5. DETALLE DE UN CURSO (receta paso a paso + video)
+                    // {cursoId} es un "hueco" en la ruta: se llena con el número que manda Home.
+                    // navArgument dice que ese hueco es un Int (IntType); así llega como número y no como texto.
+                    composable(
+                        route = "detalle/{cursoId}",
+                        arguments = listOf(navArgument("cursoId") { type = NavType.IntType })
+                    ) { backStackEntry ->
+                        // Se lee el argumento por su nombre. Si por algún motivo no viene, se usa 0
+                        // (no existe ningún curso con id 0, así que la pantalla dice "Receta no encontrada").
+                        val cursoId = backStackEntry.arguments?.getInt("cursoId") ?: 0
+                        // Se crea aquí dentro porque solo lo usa esta pantalla
+                        val detalleViewModel: DetalleViewModel = viewModel()
+                        DetalleScreen(
+                            cursoId = cursoId,
+                            viewModel = detalleViewModel,
+                            // Debajo de "detalle" siempre está "home", así que popBackStack() vuelve a Home
+                            onVolver = { navController.popBackStack() }
                         )
                     }
 

@@ -11,5 +11,8 @@ data class Curso(
     val titulo: String,
     val insumo: String,
     val chef: String,
-    val duracion: String
+    val duracion: String,
+    // Pasos de la receta, en orden. Es una lista de textos porque cada curso
+    // tiene una cantidad distinta de pasos. Los muestra la pantalla de Detalle.
+    val pasos: List<String>
 )
