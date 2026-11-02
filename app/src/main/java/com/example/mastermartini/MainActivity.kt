@@ -31,6 +31,7 @@ import com.example.mastermartini.ui.screens.RegistroScreen
 import com.example.mastermartini.ui.theme.MasterMartiniTheme
 import com.example.mastermartini.viewmodel.DetalleViewModel
 import com.example.mastermartini.viewmodel.EncuestaViewModel
+import com.example.mastermartini.viewmodel.FavoritosViewModel
 import com.example.mastermartini.viewmodel.HomeViewModel
 import com.example.mastermartini.viewmodel.LoginViewModel
 import com.example.mastermartini.viewmodel.RegistroViewModel
@@ -64,6 +65,22 @@ class MainActivity : ComponentActivity() {
                 val rutasConBarra = itemsNavegacion.map { item -> item.ruta }
                 val mostrarBarra = rutaActual in rutasConBarra
 
+                // Navega a una de las 5 secciones de la barra inferior (home, recetas, buscar, favoritos, perfil).
+                // Es una función para escribir estas opciones UNA sola vez: la usan la barra
+                // y el botón "Ver recetas" de Favoritos, y así las dos navegan igual.
+                fun navegarASeccion(ruta: String) {
+                    navController.navigate(ruta) {
+                        // Deja "home" en la base de la pila y saca lo que haya encima.
+                        // saveState = true: antes de sacarlas, GUARDA el estado de esas
+                        // pantallas (ej. hasta dónde bajó la lista) para recuperarlo después.
+                        popUpTo("home") { saveState = true }
+                        // Si ya estás en esa pantalla, no apila una copia encima
+                        launchSingleTop = true
+                        // Si esa pantalla tenía un estado guardado (por saveState), lo recupera
+                        restoreState = true
+                    }
+                }
+
                 // Scaffold EXTERNO: envuelve todo el NavHost para poner la barra abajo.
                 // contentWindowInsets = WindowInsets(0, 0, 0, 0): este Scaffold NO agrega el espacio
                 // de las barras del sistema (hora arriba, gestos abajo). Así su innerPadding es solo
@@ -75,18 +92,7 @@ class MainActivity : ComponentActivity() {
                         if (mostrarBarra) {
                             BarraNavegacion(
                                 rutaActual = rutaActual,
-                                onNavegar = { ruta ->
-                                    navController.navigate(ruta) {
-                                        // Deja "home" en la base de la pila y saca lo que haya encima.
-                                        // saveState = true: antes de sacarlas, GUARDA el estado de esas
-                                        // pantallas (ej. hasta dónde bajó la lista) para recuperarlo después.
-                                        popUpTo("home") { saveState = true }
-                                        // Si ya estás en esa pantalla, no apila una copia encima
-                                        launchSingleTop = true
-                                        // Si esa pantalla tenía un estado guardado (por saveState), lo recupera
-                                        restoreState = true
-                                    }
-                                }
+                                onNavegar = { ruta -> navegarASeccion(ruta) }
                             )
                         }
                     }
@@ -211,8 +217,15 @@ class MainActivity : ComponentActivity() {
                         }
 
                         composable("favoritos") {
+                            // Se crea aquí dentro porque solo lo usa esta pantalla.
+                            // Es AndroidViewModel: viewModel() le pasa la Application solo.
+                            val favoritosViewModel: FavoritosViewModel = viewModel()
                             FavoritosScreen(
-                                onVerDetalle = { id -> navController.navigate("detalle/$id") }
+                                viewModel = favoritosViewModel,
+                                onVerDetalle = { id -> navController.navigate("detalle/$id") },
+                                // Mismas opciones que la barra: así "Recetas" queda marcada abajo
+                                // y Atrás desde Recetas vuelve a Inicio (no a Favoritos)
+                                onIrARecetas = { navegarASeccion("recetas") }
                             )
                         }
 
