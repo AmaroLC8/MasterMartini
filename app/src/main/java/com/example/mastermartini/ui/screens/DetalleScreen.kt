@@ -1,11 +1,13 @@
 package com.example.mastermartini.ui.screens
 
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -16,7 +18,10 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -43,6 +48,10 @@ fun DetalleScreen(
 
     // Escuchamos el curso del ViewModel: cuando cargarCurso() lo encuentra, la pantalla se redibuja sola
     val curso by viewModel.curso.collectAsState()
+
+    // Posiciones de los ingredientes marcados. Vienen de Room a través del ViewModel:
+    // al marcar uno, Room avisa el cambio y esta lista se actualiza sola.
+    val marcados by viewModel.marcados.collectAsState()
 
     Scaffold(
         containerColor = BlancoHueso,
@@ -172,30 +181,105 @@ fun DetalleScreen(
                 // Cuando un curso tenga videoUrl, aquí se elegirá entre el video en la nube y el local.
                 ReproductorVideoLocal()
 
-                // 3. Ingredientes (lista simple con viñetas; el checklist será la siguiente tarea)
+                // 3. Ingredientes como checklist (las marcas se guardan en Room)
                 Text(
                     text = "🧺 Ingredientes",
                     fontSize = 17.sp,
                     fontWeight = FontWeight.Bold,
                     color = TextoOscuro
                 )
-                // forEach recorre la lista y dibuja una fila por cada ingrediente
-                cursoActual.ingredientes.forEach { ingrediente ->
-                    Row(verticalAlignment = Alignment.Top) {
-                        // Viñeta "•" en verde, con el mismo tamaño de letra que el texto
+
+                // Cuántos hay listos y cuántos son en total (solo para dibujar; la lista la maneja el ViewModel)
+                val totalIngredientes = cursoActual.ingredientes.size
+                val totalListos = marcados.size
+
+                // Progreso de 0f (ninguno) a 1f (todos). Se revisa que el total no sea 0 para no dividir por cero.
+                val progreso = if (totalIngredientes > 0) {
+                    totalListos.toFloat() / totalIngredientes
+                } else {
+                    0f
+                }
+                // animateFloatAsState: al marcar un ingrediente la barra avanza suave en vez de saltar
+                // (mismo tipo de animación que el corazón de favoritos en Home)
+                val progresoAnimado by animateFloatAsState(
+                    targetValue = progreso,
+                    label = "progresoIngredientes"
+                )
+
+                Text(
+                    text = "$totalListos de $totalIngredientes ingredientes listos",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = VerdeOscuro
+                )
+                LinearProgressIndicator(
+                    // progress se pasa como función { } para que Compose lea el valor animado en cada cuadro
+                    progress = { progresoAnimado },
+                    color = VerdeItaliano,
+                    trackColor = GrisBorde,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(8.dp)
+                )
+
+                // Column con espacio 0: las filas ya miden 48 dp, no hace falta separarlas más
+                Column {
+                    // forEachIndexed entrega la posición (indice) que se guarda en Room
+                    cursoActual.ingredientes.forEachIndexed { indice, ingrediente ->
+                        val estaMarcado = marcados.contains(indice)
+
+                        // Toda la fila se puede tocar (no solo la casilla pequeña), más fácil para usuarios mayores.
+                        // toggleable con Role.Checkbox: TalkBack lee la fila como una casilla "marcada/no marcada".
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(min = 48.dp)
+                                .toggleable(
+                                    value = estaMarcado,
+                                    role = Role.Checkbox,
+                                    onValueChange = { viewModel.alternarIngrediente(indice) }
+                                )
+                        ) {
+                            // onCheckedChange = null: el toque lo maneja la fila completa (toggleable),
+                            // así no se registra dos veces al tocar justo la casilla
+                            Checkbox(
+                                checked = estaMarcado,
+                                onCheckedChange = null,
+                                colors = CheckboxDefaults.colors(
+                                    checkedColor = VerdeItaliano,
+                                    uncheckedColor = VerdeOscuro,
+                                    checkmarkColor = BlancoPuro
+                                )
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            // Marcado: texto tachado y gris, para ver de un vistazo lo que ya está listo.
+                            // Gris oscuro (0xFF666666) y no Color.Gray: el gris claro casi no se lee
+                            // sobre el fondo blanco hueso (poco contraste para usuarios mayores).
+                            Text(
+                                text = ingrediente,
+                                fontSize = 16.sp,
+                                color = if (estaMarcado) Color(0xFF666666) else TextoOscuro,
+                                textDecoration = if (estaMarcado) TextDecoration.LineThrough else null,
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .padding(vertical = 8.dp)
+                            )
+                        }
+                    }
+                }
+
+                // Botón para desmarcar todo: solo aparece si hay al menos un ingrediente marcado
+                if (totalListos > 0) {
+                    TextButton(
+                        onClick = { viewModel.reiniciarChecklist() },
+                        modifier = Modifier.heightIn(min = 48.dp)
+                    ) {
                         Text(
-                            text = "•",
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = VerdeItaliano
-                        )
-                        Spacer(modifier = Modifier.width(10.dp))
-                        // weight(1f): igual que en los pasos, el texto baja de línea si es largo
-                        Text(
-                            text = ingrediente,
+                            text = "Reiniciar lista",
                             fontSize = 16.sp,
-                            color = TextoOscuro,
-                            modifier = Modifier.weight(1f)
+                            fontWeight = FontWeight.Bold,
+                            color = RojoItaliano
                         )
                     }
                 }
