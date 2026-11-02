@@ -25,6 +25,14 @@ class CursoRepository {
                     "Agrega el resto de la cobertura y mezcla hasta bajar a 28 °C.",
                     "Vuelve a calentar suavemente hasta 31 °C.",
                     "Prueba en una espátula: debe quedar brillante y firme en 5 minutos."
+                ),
+                categoria = "Chocolatería",
+                descripcion = "Aprende a templar chocolate paso a paso para lograr bombones brillantes y crujientes que no se derriten en la mano.",
+                ingredientes = listOf(
+                    "600 g de Cobertura Caravella Dark 54%",
+                    "150 g de ganache o praliné para rellenar (opcional)",
+                    "50 g de almendras tostadas para decorar (opcional)",
+                    "1 pizca de sal de mar para decorar (opcional)"
                 )
             ),
             Curso(
@@ -39,6 +47,14 @@ class CursoRepository {
                     "Bate a velocidad media hasta que la crema empiece a espesar.",
                     "Agrega azúcar flor de a poco, sin dejar de batir.",
                     "Detén el batido cuando la crema forme picos firmes."
+                ),
+                categoria = "Decoración",
+                descripcion = "Aprende a batir y estabilizar crema vegetal para decorar tortas con una crema firme que dura varios días.",
+                ingredientes = listOf(
+                    "1 litro de Crema Vegetal Decor Up",
+                    "80 g de azúcar flor",
+                    "1 cucharadita de esencia de vainilla",
+                    "Colorante en gel (opcional)"
                 )
             ),
             Curso(
@@ -54,6 +70,15 @@ class CursoRepository {
                     "Estira y dobla la masa en tres. Repite este pliegue tres veces.",
                     "Refrigera 20 minutos entre cada pliegue.",
                     "Corta las piezas y hornea a 200 °C hasta que estén doradas."
+                ),
+                categoria = "Panadería",
+                descripcion = "Aprende a laminar masa de hoja con margarina en placa para lograr capas crujientes y bien separadas.",
+                ingredientes = listOf(
+                    "1 kg de harina sin polvos de hornear",
+                    "500 ml de agua fría",
+                    "20 g de sal",
+                    "500 g de Margarina Master Martini Placa",
+                    "1 huevo para pintar"
                 )
             ),
             Curso(
@@ -69,6 +94,15 @@ class CursoRepository {
                     "Deja enfriar el glaseado hasta 32 °C.",
                     "Vierte el glaseado sobre el postre congelado, de una sola vez.",
                     "Retira el exceso con una espátula y refrigera."
+                ),
+                categoria = "Decoración",
+                descripcion = "Aprende a cubrir postres congelados con un glaseado de chocolate liso y brillante como un espejo.",
+                ingredientes = listOf(
+                    "500 g de Glaseado Mirall Chocolate",
+                    "1 torta de mousse congelada de 20 cm",
+                    "100 g de frutillas frescas para decorar",
+                    "30 g de escamas de chocolate para el borde",
+                    "Hojas de menta para decorar"
                 )
             ),
             Curso(
@@ -83,6 +117,15 @@ class CursoRepository {
                     "Enfría la mezcla y déjala reposar 4 horas en el refrigerador.",
                     "Bate en la máquina de helados hasta que quede cremoso.",
                     "Guarda el gelato en el congelador a -18 °C."
+                ),
+                categoria = "Heladería",
+                descripcion = "Aprende a preparar un gelato cremoso de avellana al estilo italiano, desde la mezcla base hasta la conservación.",
+                ingredientes = listOf(
+                    "700 ml de leche entera",
+                    "200 ml de crema de leche",
+                    "150 g de azúcar",
+                    "120 g de Pasta de Avellana Pura Ariba",
+                    "Avellanas tostadas picadas para decorar"
                 )
             ),
             Curso(
@@ -97,6 +140,15 @@ class CursoRepository {
                     "Vierte la crema sobre la cobertura y espera 1 minuto.",
                     "Mezcla desde el centro hasta lograr una ganache lisa.",
                     "Deja que tome cuerpo y rellena las tapas de los macarons."
+                ),
+                categoria = "Pastelería",
+                descripcion = "Aprende a preparar una ganache de chocolate de leche suave y firme, ideal para rellenar macarons.",
+                ingredientes = listOf(
+                    "300 g de Cobertura Caravella Milk 34%",
+                    "150 ml de crema de leche",
+                    "20 g de mantequilla sin sal",
+                    "40 tapas de macarons",
+                    "1 pizca de sal"
                 )
             ),
             Curso(
@@ -111,6 +163,16 @@ class CursoRepository {
                     "Incorpora la Margarina Maestro Martini Soft de a poco.",
                     "Deja leudar hasta que la masa duplique su tamaño.",
                     "Forma los panes, píntalos con huevo y hornea a 180 °C."
+                ),
+                categoria = "Panadería",
+                descripcion = "Aprende a hacer un brioche esponjoso y dorado, con el amasado y el leudado que pide la receta italiana.",
+                ingredientes = listOf(
+                    "500 g de harina",
+                    "60 g de azúcar",
+                    "10 g de levadura seca",
+                    "5 huevos (4 para la masa y 1 para pintar)",
+                    "200 g de Margarina Maestro Martini Soft",
+                    "1 pizca de sal"
                 )
             ),
             Curso(
@@ -125,6 +187,14 @@ class CursoRepository {
                     "Bate la crema a medio punto, que todavía se mueva al inclinar el bol.",
                     "Une la crema a la mezcla con movimientos envolventes.",
                     "Rellena los moldes y refrigera por 4 horas."
+                ),
+                categoria = "Pastelería",
+                descripcion = "Aprende a preparar una mousse liviana que combina el sabor ácido del maracuyá con el chocolate blanco.",
+                ingredientes = listOf(
+                    "250 g de Cobertura Caravella White",
+                    "150 ml de pulpa de fruta de la pasión",
+                    "300 ml de crema para batir",
+                    "Semillas de fruta de la pasión para decorar"
                 )
             ),
             Curso(
@@ -140,6 +210,17 @@ class CursoRepository {
                     "Une todo y cocina sin dejar de revolver hasta que espese.",
                     "Deja enfriar la crema y rellena las tartaletas.",
                     "Decora con fruta fresca."
+                ),
+                categoria = "Pastelería",
+                descripcion = "Aprende a hacer una crema pastelera que rinde más y no se corta, para rellenar tartaletas de venta diaria.",
+                ingredientes = listOf(
+                    "12 bases de tartaleta",
+                    "250 ml de Crema Vegetal Master Gourmet",
+                    "250 ml de leche",
+                    "4 yemas de huevo",
+                    "100 g de azúcar",
+                    "40 g de maicena",
+                    "1 cucharadita de esencia de vainilla"
                 )
             ),
             Curso(
@@ -154,9 +235,25 @@ class CursoRepository {
                     "Forma bolitas del mismo tamaño con las manos.",
                     "Pasa cada bolita por el Cacao en Polvo Master Martini 22/24.",
                     "Guarda las trufas en un lugar fresco hasta servirlas."
+                ),
+                categoria = "Chocolatería",
+                descripcion = "Aprende a formar trufas de ganache del mismo tamaño y a cubrirlas con cacao para venderlas en cajas de regalo.",
+                ingredientes = listOf(
+                    "250 g de chocolate semiamargo",
+                    "125 ml de crema de leche",
+                    "80 g de Cacao en Polvo Master Martini 22/24",
+                    "50 g de nueces picadas para cubrir (opcional)"
                 )
             )
         )
+    }
+
+    // Devuelve las 5 secciones de recetas. Coinciden con las opciones de la encuesta
+    // y con el campo "categoria" de cada curso. La pantalla de Recetas las usará
+    // para mostrar los botones de filtro. Se escriben aquí (y no en la pantalla)
+    // porque son datos de la app: si mañana se agrega una sección, se cambia solo este lugar.
+    fun obtenerCategorias(): List<String> {
+        return listOf("Chocolatería", "Pastelería", "Panadería", "Heladería", "Decoración")
     }
 
     // Busca UN curso por su id (lo usa la pantalla de Detalle).

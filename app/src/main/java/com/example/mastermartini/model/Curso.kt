@@ -14,5 +14,17 @@ data class Curso(
     val duracion: String,
     // Pasos de la receta, en orden. Es una lista de textos porque cada curso
     // tiene una cantidad distinta de pasos. Los muestra la pantalla de Detalle.
-    val pasos: List<String>
+    val pasos: List<String>,
+    // Sección a la que pertenece la receta ("Chocolatería", "Pastelería", etc.).
+    // La usará la pantalla de Recetas para filtrar por sección.
+    val categoria: String,
+    // Una o dos frases que cuentan qué se aprende en el curso
+    val descripcion: String,
+    // Ingredientes con su cantidad (ej: "200 g de Cobertura Caravella Dark 54%").
+    // Es una lista de textos, igual que los pasos, porque cada receta tiene una cantidad distinta.
+    val ingredientes: List<String>,
+    // Dirección del video en la nube (AWS). Es String? porque puede no existir:
+    // "= null" es su valor por defecto, así que si no se escribe, queda en null.
+    // Mientras sea null, el Detalle muestra el video local guardado en res/raw.
+    val videoUrl: String? = null
 )

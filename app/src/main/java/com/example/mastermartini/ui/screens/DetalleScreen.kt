@@ -114,11 +114,30 @@ fun DetalleScreen(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
+                        // Etiqueta (chip) con la sección de la receta: texto blanco sobre verde
+                        // para buen contraste. No es un botón, solo informa, por eso no usa onClick.
+                        Text(
+                            text = cursoActual.categoria,
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = BlancoPuro,
+                            modifier = Modifier
+                                .background(VerdeItaliano, RoundedCornerShape(50))
+                                .padding(horizontal = 14.dp, vertical = 6.dp)
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
                         Text(
                             text = cursoActual.titulo,
                             fontSize = 20.sp,
                             fontWeight = FontWeight.Bold,
                             color = VerdeOscuro
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        // Descripción breve: qué se aprende en este curso
+                        Text(
+                            text = cursoActual.descripcion,
+                            fontSize = 16.sp,
+                            color = TextoOscuro
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
@@ -148,9 +167,40 @@ fun DetalleScreen(
                     fontWeight = FontWeight.Bold,
                     color = TextoOscuro
                 )
+                // Por ahora todos los cursos tienen videoUrl = null (aún no se suben a AWS),
+                // así que siempre se muestra el video local de res/raw, igual que antes.
+                // Cuando un curso tenga videoUrl, aquí se elegirá entre el video en la nube y el local.
                 ReproductorVideoLocal()
 
-                // 3. Paso a paso
+                // 3. Ingredientes (lista simple con viñetas; el checklist será la siguiente tarea)
+                Text(
+                    text = "🧺 Ingredientes",
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TextoOscuro
+                )
+                // forEach recorre la lista y dibuja una fila por cada ingrediente
+                cursoActual.ingredientes.forEach { ingrediente ->
+                    Row(verticalAlignment = Alignment.Top) {
+                        // Viñeta "•" en verde, con el mismo tamaño de letra que el texto
+                        Text(
+                            text = "•",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = VerdeItaliano
+                        )
+                        Spacer(modifier = Modifier.width(10.dp))
+                        // weight(1f): igual que en los pasos, el texto baja de línea si es largo
+                        Text(
+                            text = ingrediente,
+                            fontSize = 16.sp,
+                            color = TextoOscuro,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                }
+
+                // 4. Paso a paso
                 Text(
                     text = "📖 Paso a paso",
                     fontSize = 17.sp,
