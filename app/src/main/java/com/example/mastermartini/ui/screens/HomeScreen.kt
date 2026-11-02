@@ -28,6 +28,7 @@ import com.example.mastermartini.R
 import com.example.mastermartini.viewmodel.HomeViewModel
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.FavoriteBorder
 
@@ -45,7 +46,9 @@ fun HomeScreen(
     rutUsuario: String,
     correoUsuario: String,
     onEditarDatos: () -> Unit,// MainActivity decide a dónde navegar (abre "registro"
-    onIrAEncuesta: () -> Unit
+    onIrAEncuesta: () -> Unit,
+    // Recibe el id del curso tocado; MainActivity navega a "detalle/{id}"
+    onVerDetalle: (Int) -> Unit
 ) {
     // Colores estilo bandera italiana de Master Martini
     val verdeItaliano = Color(0xFF008C45)
@@ -232,7 +235,11 @@ fun HomeScreen(
                     label = "escalaCorazon"
                 )
 
+                // Card con onClick: toda la tarjeta se puede tocar para abrir la receta.
+                // El corazón (IconButton) tiene su propio onClick y "se queda" con el toque,
+                // por eso tocar el corazón NO abre el detalle.
                 Card(
+                    onClick = { onVerDetalle(curso.id) },
                     colors = CardDefaults.cardColors(containerColor = Color.White),
                     border = BorderStroke(1.dp, doradoCalidad.copy(alpha = 0.6f)),
                     shape = RoundedCornerShape(10.dp),
@@ -311,6 +318,29 @@ fun HomeScreen(
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Medium,
                                 color = doradoCalidad
+                            )
+                        }
+
+                        // Botón visible "Ver receta": hace lo mismo que tocar la tarjeta,
+                        // pero deja claro que hay más información (útil para usuarios mayores
+                        // que no saben que la tarjeta completa se puede tocar). 48 dp de alto mínimo.
+                        TextButton(
+                            onClick = { onVerDetalle(curso.id) },
+                            modifier = Modifier
+                                .align(Alignment.End)
+                                .heightIn(min = 48.dp)
+                        ) {
+                            Text(
+                                text = "Ver receta",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = verdeItaliano
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                                contentDescription = null, // el texto "Ver receta" ya lo explica
+                                tint = verdeItaliano
                             )
                         }
                     }
