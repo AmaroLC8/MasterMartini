@@ -35,6 +35,7 @@ import com.example.mastermartini.viewmodel.EncuestaViewModel
 import com.example.mastermartini.viewmodel.FavoritosViewModel
 import com.example.mastermartini.viewmodel.HomeViewModel
 import com.example.mastermartini.viewmodel.LoginViewModel
+import com.example.mastermartini.viewmodel.PerfilViewModel
 import com.example.mastermartini.viewmodel.RecetasViewModel
 import com.example.mastermartini.viewmodel.RegistroViewModel
 
@@ -136,13 +137,23 @@ class MainActivity : ComponentActivity() {
                             RegistroScreen(
                                 viewModel = registroViewModel,
                                 onRegistroCompletado = {
-                                    // Entra directo a Home y saca "registro" de la pila para que
-                                    // el botón Atrás no vuelva al formulario
-                                    navController.navigate("home"){
-                                        popUpTo("registro") { inclusive = true }
-                                        // Si "home" ya estaba debajo (caso "Editar Datos"), reutiliza esa
-                                        // pantalla en vez de apilar un segundo "home" encima.
-                                        launchSingleTop = true
+                                    // ¿Desde qué pantalla se abrió el registro?
+                                    // previousBackStackEntry es la pantalla que quedó DEBAJO en la pila.
+                                    val rutaAnterior = navController.previousBackStackEntry?.destination?.route
+
+                                    if (rutaAnterior == null || rutaAnterior == "login") {
+                                        // REGISTRO NUEVO (se llegó desde el login): entra a Home y saca
+                                        // "registro" de la pila para que Atrás no vuelva al formulario.
+                                        // (null no debería pasar, pero así nunca queda la pila vacía)
+                                        navController.navigate("home") {
+                                            popUpTo("registro") { inclusive = true }
+                                            launchSingleTop = true
+                                        }
+                                    } else {
+                                        // EDITAR DATOS (se llegó desde Home o desde Perfil):
+                                        // popBackStack() saca "registro" y vuelve a la pantalla de abajo.
+                                        // Así, si editaste desde Perfil, vuelves a Perfil (y no a Home).
+                                        navController.popBackStack()
                                     }
                                 }
                             )
@@ -198,12 +209,13 @@ class MainActivity : ComponentActivity() {
                             val encuestaViewModel: EncuestaViewModel = viewModel()
                             EncuestaScreen(
                                 encuestaViewModel = encuestaViewModel,
-                                // Aquí sí sirve popBackStack(): debajo de "encuesta" siempre está "home"
+                                // Aquí sí sirve popBackStack(): debajo de "encuesta" siempre hay una pantalla
+                                // ("home" o "perfil", según desde dónde se abrió), y se vuelve a esa
                                 onVolverHome = { navController.popBackStack() }
                             )
                         }
 
-                        // 6. PANTALLAS DE LA BARRA INFERIOR (Perfil sigue "en construcción").
+                        // 6. PANTALLAS DE LA BARRA INFERIOR (Recetas, Buscar, Favoritos y Perfil).
                         // Recetas, Buscar y Favoritos abren el detalle igual que Home: "detalle/3".
                         // Pila: [home, recetas, detalle] → Atrás vuelve a Recetas.
                         composable("recetas") {
@@ -243,7 +255,25 @@ class MainActivity : ComponentActivity() {
                         }
 
                         composable("perfil") {
-                            PerfilScreen()
+                            // Se crea aquí dentro porque solo lo usa esta pantalla.
+                            // Es AndroidViewModel: viewModel() le pasa la Application solo.
+                            val perfilViewModel: PerfilViewModel = viewModel()
+                            PerfilScreen(
+                                viewModel = perfilViewModel,
+                                // Pila [home, perfil, registro]: al guardar, popBackStack() vuelve a Perfil
+                                onEditarDatos = { navController.navigate("registro") },
+                                // Pila [home, perfil, encuesta]: el botón volver de la encuesta regresa a Perfil
+                                onIrAEncuesta = { navController.navigate("encuesta") },
+                                onCerrarSesion = {
+                                    navController.navigate("login") {
+                                        // graph.id = el NavHost completo: saca TODAS las pantallas de la pila
+                                        // (home, perfil...). inclusive = true saca también la raíz.
+                                        // Queda solo [login]: Atrás desde el login cierra la app,
+                                        // no vuelve a Perfil. Los datos guardados NO se borran.
+                                        popUpTo(navController.graph.id) { inclusive = true }
+                                    }
+                                }
+                            )
                         }
                     }
                 }
