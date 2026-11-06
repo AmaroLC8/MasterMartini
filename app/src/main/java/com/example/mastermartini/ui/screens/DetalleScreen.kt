@@ -1,8 +1,11 @@
 package com.example.mastermartini.ui.screens
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -26,6 +29,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -61,6 +65,9 @@ fun DetalleScreen(
     // Posiciones de los ingredientes marcados. Vienen de Room a través del ViewModel:
     // al marcar uno, Room avisa el cambio y esta lista se actualiza sola.
     val marcados by viewModel.marcados.collectAsState()
+
+    // Posiciones de los pasos completados (también vienen de Room, tabla "checklist_pasos")
+    val pasosCompletados by viewModel.pasosCompletados.collectAsState()
 
     // Producto Master Martini del insumo (null si no se encontró por nombre)
     val productoInsumo by viewModel.productoInsumo.collectAsState()
@@ -350,35 +357,82 @@ fun DetalleScreen(
                     fontWeight = FontWeight.Bold,
                     color = TextoOscuro
                 )
+
+                // Cuántos pasos están hechos y cuántos son en total (igual que con los ingredientes)
+                val totalPasos = cursoActual.pasos.size
+                val totalCompletados = pasosCompletados.size
+
+                // Progreso de 0f a 1f, revisando que no se divida por cero
+                val progresoPasos = if (totalPasos > 0) {
+                    totalCompletados.toFloat() / totalPasos
+                } else {
+                    0f
+                }
+                // La barra avanza suave al completar un paso
+                val progresoPasosAnimado by animateFloatAsState(
+                    targetValue = progresoPasos,
+                    label = "progresoPasos"
+                )
+
+                Text(
+                    text = "$totalCompletados de $totalPasos pasos completados",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = VerdeOscuro
+                )
+                LinearProgressIndicator(
+                    progress = { progresoPasosAnimado },
+                    color = VerdeItaliano,
+                    trackColor = GrisBorde,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(8.dp)
+                )
+
                 // forEachIndexed entrega la posición (indice, parte en 0) y el texto de cada paso.
-                // Se muestra indice + 1 para que la numeración parta en 1.
-                cursoActual.pasos.forEachIndexed { indice, paso ->
-                    Row(verticalAlignment = Alignment.Top) {
-                        // Número dentro de un círculo verde
-                        Box(
-                            contentAlignment = Alignment.Center,
-                            modifier = Modifier
-                                .size(36.dp)
-                                .background(VerdeItaliano, CircleShape)
-                        ) {
-                            Text(
-                                text = "${indice + 1}",
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = BlancoPuro
-                            )
-                        }
-                        Spacer(modifier = Modifier.width(12.dp))
-                        // weight(1f): el texto usa el ancho que sobra y baja de línea si es largo
-                        Text(
-                            text = paso,
-                            fontSize = 16.sp,
-                            color = TextoOscuro,
-                            modifier = Modifier
-                                .weight(1f)
-                                .padding(top = 6.dp)
+                // El indice es lo que se guarda en Room; en pantalla se muestra indice + 1.
+                Column {
+                    cursoActual.pasos.forEachIndexed { indice, paso ->
+                        FilaPaso(
+                            numero = indice + 1,
+                            texto = paso,
+                            completado = pasosCompletados.contains(indice),
+                            onAlternar = { viewModel.alternarPaso(indice) }
                         )
                     }
+                }
+
+                // Botón para desmarcar todos los pasos: solo aparece si hay al menos uno completado
+                if (totalCompletados > 0) {
+                    TextButton(
+                        onClick = { viewModel.reiniciarPasos() },
+                        modifier = Modifier.heightIn(min = 48.dp)
+                    ) {
+                        Text(
+                            text = "Reiniciar pasos",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = RojoItaliano
+                        )
+                    }
+                }
+
+                // Mensaje de felicitación cuando se completan TODOS los pasos.
+                // AnimatedVisibility: en vez de aparecer de golpe, el mensaje entra con una
+                // animación (se despliega) y sale igual al desmarcar un paso o reiniciar.
+                // totalPasos > 0: una receta sin pasos no debe mostrarse como "terminada".
+                AnimatedVisibility(visible = totalPasos > 0 && totalCompletados == totalPasos) {
+                    Text(
+                        text = "¡Receta terminada! 🎉",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = BlancoPuro,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(VerdeItaliano, RoundedCornerShape(12.dp))
+                            .padding(16.dp)
+                    )
                 }
 
                 // 5. Contacto con ventas, al final de la receta.
@@ -388,6 +442,69 @@ fun DetalleScreen(
                 )
             }
         }
+    }
+}
+
+// UNA FILA DEL "PASO A PASO" (número o ✓ + texto del paso).
+// Es private porque solo la usa esta pantalla. No guarda nada: recibe si está completado
+// y avisa el toque con onAlternar; el ViewModel decide qué hacer (MVVM).
+@Composable
+private fun FilaPaso(
+    numero: Int,
+    texto: String,
+    completado: Boolean,
+    onAlternar: () -> Unit
+) {
+    // animateColorAsState: al completar el paso el color cambia de a poco (no de golpe).
+    // Sin completar: círculo blanco con borde y número verde.
+    // Completado: círculo verde relleno con ✓ blanco (como una casilla marcada).
+    val colorFondo by animateColorAsState(
+        targetValue = if (completado) VerdeItaliano else BlancoPuro,
+        label = "fondoPaso"
+    )
+    val colorContenido by animateColorAsState(
+        targetValue = if (completado) BlancoPuro else VerdeItaliano,
+        label = "contenidoPaso"
+    )
+
+    // Toda la fila se puede tocar (mínimo 48 dp de alto), más fácil para usuarios mayores.
+    // toggleable con Role.Checkbox: TalkBack lee el paso como una casilla "marcada/no marcada".
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 48.dp)
+            .toggleable(
+                value = completado,
+                role = Role.Checkbox,
+                onValueChange = { onAlternar() }
+            )
+            .padding(vertical = 6.dp)
+    ) {
+        // Círculo de 36 dp: muestra el número o el ✓ según el estado
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier
+                .size(36.dp)
+                .background(colorFondo, CircleShape)
+                .border(2.dp, VerdeItaliano, CircleShape)
+        ) {
+            Text(
+                text = if (completado) "✓" else "$numero",
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold,
+                color = colorContenido
+            )
+        }
+        Spacer(modifier = Modifier.width(12.dp))
+        // Completado: texto en gris oscuro (0xFF666666), igual que los ingredientes marcados.
+        // weight(1f): el texto usa el ancho que sobra y baja de línea si es largo.
+        Text(
+            text = texto,
+            fontSize = 16.sp,
+            color = if (completado) Color(0xFF666666) else TextoOscuro,
+            modifier = Modifier.weight(1f)
+        )
     }
 }
 

@@ -17,7 +17,7 @@ import kotlinx.coroutines.launch
 
 // VIEWMODEL DE LA PANTALLA DETALLE
 // Entrega a DetalleScreen el curso que el usuario tocó en Home (con sus pasos de receta)
-// y el checklist de ingredientes guardado en Room.
+// y los checklists de ingredientes y de pasos guardados en Room.
 // Es AndroidViewModel (y no ViewModel normal) porque necesita el Context (application)
 // para abrir la base de datos, igual que HomeViewModel.
 class DetalleViewModel(application: Application) : AndroidViewModel(application) {
@@ -45,6 +45,13 @@ class DetalleViewModel(application: Application) : AndroidViewModel(application)
     // Versión pública de solo lectura para la pantalla
     val marcados: StateFlow<List<Int>> = _marcados.asStateFlow()
 
+    // Posiciones de los PASOS completados del curso (ej. [0, 1] = los dos primeros pasos hechos).
+    // Funciona igual que _marcados, pero con la tabla "checklist_pasos".
+    private val _pasosCompletados = MutableStateFlow<List<Int>>(emptyList())
+
+    // Versión pública de solo lectura para la pantalla
+    val pasosCompletados: StateFlow<List<Int>> = _pasosCompletados.asStateFlow()
+
     // Para encontrar el producto Master Martini que usa la receta (su insumo)
     private val productoRepository = ProductoRepository()
 
@@ -58,6 +65,9 @@ class DetalleViewModel(application: Application) : AndroidViewModel(application)
     // Guarda la corrutina que está escuchando a Room, para poder detenerla
     // si se carga otro curso (así no quedan dos escuchando a la vez).
     private var trabajoChecklist: Job? = null
+
+    // Lo mismo, pero para la corrutina que escucha los pasos completados
+    private var trabajoPasos: Job? = null
 
     // La llama DetalleScreen con el id que llegó por la navegación ("detalle/3" → id = 3).
     // Si el repositorio no encuentra el curso, _curso queda en null y la pantalla
@@ -86,6 +96,16 @@ class DetalleViewModel(application: Application) : AndroidViewModel(application)
                 _marcados.value = listaMarcados
             }
         }
+
+        // Lo mismo para los pasos: se detiene la escucha anterior y se escucha la del curso nuevo.
+        // Son dos corrutinas distintas porque cada collect se queda escuchando "para siempre":
+        // si se pusieran en la misma, el segundo collect nunca empezaría.
+        trabajoPasos?.cancel()
+        trabajoPasos = viewModelScope.launch {
+            checklistRepository.obtenerPasosCompletados(id).collect { listaPasos ->
+                _pasosCompletados.value = listaPasos
+            }
+        }
     }
 
     // Se llama al tocar un ingrediente: si ya estaba marcado lo desmarca, si no lo marca.
@@ -106,6 +126,25 @@ class DetalleViewModel(application: Application) : AndroidViewModel(application)
         val cursoActual = _curso.value ?: return
         viewModelScope.launch {
             checklistRepository.reiniciar(cursoActual.id)
+        }
+    }
+
+    // Se llama al tocar un paso: si estaba completado lo desmarca, si no lo marca.
+    // Igual que alternarIngrediente: se guarda en Room y Room avisa el cambio por el Flow.
+    fun alternarPaso(indice: Int) {
+        val cursoActual = _curso.value ?: return
+        val estabaCompletado = _pasosCompletados.value.contains(indice)
+
+        viewModelScope.launch {
+            checklistRepository.marcarPaso(cursoActual.id, indice, !estabaCompletado)
+        }
+    }
+
+    // Deja todos los pasos del curso actual sin completar (botón "Reiniciar pasos")
+    fun reiniciarPasos() {
+        val cursoActual = _curso.value ?: return
+        viewModelScope.launch {
+            checklistRepository.reiniciarPasos(cursoActual.id)
         }
     }
 }
