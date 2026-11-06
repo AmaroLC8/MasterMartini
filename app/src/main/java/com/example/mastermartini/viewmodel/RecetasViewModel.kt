@@ -24,6 +24,9 @@ data class RecetasUiState(
     val categoriaSeleccionada: String? = null,
     // Orden elegido. Parte en A - Z
     val orden: OrdenRecetas = OrdenRecetas.ALFABETICO,
+    // true = mostrar solo las recetas veganas. Se COMBINA con la sección:
+    // ej. "Pastelería" + "Solo veganas" = solo las pastelerías veganas.
+    val soloVeganas: Boolean = false,
     // Recetas ya filtradas y ordenadas, listas para dibujar
     val recetas: List<Curso> = emptyList(),
     // Las mismas recetas, pero agrupadas por sección: clave = categoría, valor = sus recetas.
@@ -47,53 +50,83 @@ class RecetasViewModel : ViewModel() {
     private val categorias: List<String> = cursoRepository.obtenerCategorias()
 
     // Estado privado y mutable: solo este ViewModel lo cambia.
-    // Parte en "Todas" y A - Z, con las recetas ya armadas para la primera vez que se dibuja.
+    // Parte en "Todas", A - Z y sin el filtro vegano, con las recetas ya armadas
+    // para la primera vez que se dibuja.
     private val _uiState = MutableStateFlow(
-        armarEstado(categoriaSeleccionada = null, orden = OrdenRecetas.ALFABETICO)
+        armarEstado(categoriaSeleccionada = null, orden = OrdenRecetas.ALFABETICO, soloVeganas = false)
     )
 
     // Versión pública de solo lectura: RecetasScreen la observa con collectAsState()
     val uiState: StateFlow<RecetasUiState> = _uiState.asStateFlow()
 
     // Se llama al tocar un botón de sección. Recibe null cuando se toca "Todas".
-    // Se mantiene el orden que ya estaba elegido.
+    // Se mantienen el orden y el filtro vegano que ya estaban elegidos.
     fun seleccionarCategoria(categoria: String?) {
         _uiState.value = armarEstado(
             categoriaSeleccionada = categoria,
-            orden = _uiState.value.orden
+            orden = _uiState.value.orden,
+            soloVeganas = _uiState.value.soloVeganas
         )
     }
 
     // Se llama al tocar "A - Z" o "Más cortas".
-    // Se mantiene la sección que ya estaba elegida.
+    // Se mantienen la sección y el filtro vegano que ya estaban elegidos.
     fun cambiarOrden(orden: OrdenRecetas) {
         _uiState.value = armarEstado(
             categoriaSeleccionada = _uiState.value.categoriaSeleccionada,
-            orden = orden
+            orden = orden,
+            soloVeganas = _uiState.value.soloVeganas
         )
     }
 
-    // Arma el estado completo a partir de las dos elecciones del usuario.
-    // Así seleccionarCategoria y cambiarOrden no repiten el mismo código.
-    private fun armarEstado(categoriaSeleccionada: String?, orden: OrdenRecetas): RecetasUiState {
-        val recetas = filtrarYOrdenar(categoriaSeleccionada, orden)
+    // Se llama al tocar "Solo veganas": si estaba apagado lo enciende, y al revés
+    // (! = "lo contrario de"). Se mantienen la sección y el orden.
+    fun alternarSoloVeganas() {
+        _uiState.value = armarEstado(
+            categoriaSeleccionada = _uiState.value.categoriaSeleccionada,
+            orden = _uiState.value.orden,
+            soloVeganas = !_uiState.value.soloVeganas
+        )
+    }
+
+    // Arma el estado completo a partir de las tres elecciones del usuario.
+    // Así las tres funciones de arriba no repiten el mismo código.
+    private fun armarEstado(
+        categoriaSeleccionada: String?,
+        orden: OrdenRecetas,
+        soloVeganas: Boolean
+    ): RecetasUiState {
+        val recetas = filtrarYOrdenar(categoriaSeleccionada, orden, soloVeganas)
         return RecetasUiState(
             categorias = categorias,
             categoriaSeleccionada = categoriaSeleccionada,
             orden = orden,
+            soloVeganas = soloVeganas,
             recetas = recetas,
             secciones = agruparPorSeccion(recetas)
         )
     }
 
     // Paso 1 y 2: FILTRAR y luego ORDENAR.
-    private fun filtrarYOrdenar(categoriaSeleccionada: String?, orden: OrdenRecetas): List<Curso> {
-        // 1. FILTRAR. filter recorre la lista y deja solo los cursos que cumplen la condición.
-        //    Si es null ("Todas"), no se filtra y quedan los 10 cursos.
-        val filtradas = if (categoriaSeleccionada == null) {
+    private fun filtrarYOrdenar(
+        categoriaSeleccionada: String?,
+        orden: OrdenRecetas,
+        soloVeganas: Boolean
+    ): List<Curso> {
+        // 1a. FILTRAR POR SECCIÓN. filter recorre la lista y deja solo los cursos que cumplen la condición.
+        //     Si es null ("Todas"), no se filtra y quedan los 10 cursos.
+        val porSeccion = if (categoriaSeleccionada == null) {
             todosLosCursos
         } else {
             todosLosCursos.filter { curso -> curso.categoria == categoriaSeleccionada }
+        }
+
+        // 1b. FILTRAR VEGANAS (sobre el resultado anterior, así los dos filtros se suman).
+        //     Si el filtro está apagado, quedan todas las de la sección.
+        val filtradas = if (soloVeganas) {
+            porSeccion.filter { curso -> curso.esVegano }
+        } else {
+            porSeccion
         }
 
         // 2. ORDENAR. sortedBy devuelve una lista NUEVA ordenada según el valor que se le indique

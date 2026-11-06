@@ -2,7 +2,9 @@ package com.example.mastermartini.ui.components
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -56,16 +58,27 @@ fun TarjetaReceta(
         modifier = modifier.fillMaxWidth()
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            // Etiqueta con la categoría (mismo estilo que en Favoritos y en el Detalle)
-            Text(
-                text = curso.categoria,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Bold,
-                color = BlancoPuro,
-                modifier = Modifier
-                    .background(VerdeItaliano, RoundedCornerShape(50))
-                    .padding(horizontal = 12.dp, vertical = 4.dp)
-            )
+            // Fila de etiquetas: la categoría y, si corresponde, "Apto vegano".
+            // spacedBy deja 8 dp entre las dos.
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Etiqueta con la categoría (mismo estilo que en Favoritos y en el Detalle)
+                Text(
+                    text = curso.categoria,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = BlancoPuro,
+                    modifier = Modifier
+                        .background(VerdeItaliano, RoundedCornerShape(50))
+                        .padding(horizontal = 12.dp, vertical = 4.dp)
+                )
+                // Solo se dibuja en las recetas veganas
+                if (curso.esVegano) {
+                    EtiquetaVegana()
+                }
+            }
             Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = curso.titulo,

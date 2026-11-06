@@ -11,6 +11,9 @@ import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Restaurant
+import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.SignalCellularAlt
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -19,12 +22,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.mastermartini.ui.components.EtiquetaVegana
 import com.example.mastermartini.ui.theme.*
 import com.example.mastermartini.viewmodel.DetalleViewModel
 
@@ -123,17 +128,26 @@ fun DetalleScreen(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
-                        // Etiqueta (chip) con la sección de la receta: texto blanco sobre verde
-                        // para buen contraste. No es un botón, solo informa, por eso no usa onClick.
-                        Text(
-                            text = cursoActual.categoria,
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = BlancoPuro,
-                            modifier = Modifier
-                                .background(VerdeItaliano, RoundedCornerShape(50))
-                                .padding(horizontal = 14.dp, vertical = 6.dp)
-                        )
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            // Etiqueta (chip) con la sección de la receta: texto blanco sobre verde
+                            // para buen contraste. No es un botón, solo informa, por eso no usa onClick.
+                            Text(
+                                text = cursoActual.categoria,
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = BlancoPuro,
+                                modifier = Modifier
+                                    .background(VerdeItaliano, RoundedCornerShape(50))
+                                    .padding(horizontal = 14.dp, vertical = 6.dp)
+                            )
+                            // "Apto vegano 🌱" al lado, solo si la receta es vegana
+                            if (cursoActual.esVegano) {
+                                EtiquetaVegana(tamanoTexto = 15)
+                            }
+                        }
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
                             text = cursoActual.titulo,
@@ -160,12 +174,21 @@ fun DetalleScreen(
                             fontSize = 16.sp,
                             color = TextoOscuro
                         )
-                        Text(
-                            text = "⏱️ Duración: ${cursoActual.duracion}",
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = RojoItaliano
-                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        // Fila con duración, rendimiento y dificultad, cada uno con su ícono.
+                        // FlowRow: si no caben en una línea (celular angosto o letra grande),
+                        // los que sobran bajan a la línea siguiente en vez de cortarse.
+                        FlowRow(
+                            horizontalArrangement = Arrangement.spacedBy(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            DatoConIcono(icono = Icons.Filled.Schedule, texto = cursoActual.duracion)
+                            DatoConIcono(icono = Icons.Filled.Restaurant, texto = cursoActual.rendimiento)
+                            DatoConIcono(
+                                icono = Icons.Filled.SignalCellularAlt,
+                                texto = "Dificultad: ${cursoActual.dificultad}"
+                            )
+                        }
                     }
                 }
 
@@ -323,5 +346,27 @@ fun DetalleScreen(
                 }
             }
         }
+    }
+}
+
+// UN DATO CON SU ÍCONO (ej: 🕒 15 min). Lo usan duración, rendimiento y dificultad.
+// Es private porque solo lo usa esta pantalla.
+@Composable
+private fun DatoConIcono(icono: ImageVector, texto: String) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        // Decorativo (contentDescription = null): el texto de al lado ya dice el dato
+        Icon(
+            imageVector = icono,
+            contentDescription = null,
+            tint = RojoItaliano,
+            modifier = Modifier.size(22.dp)
+        )
+        Spacer(modifier = Modifier.width(6.dp))
+        Text(
+            text = texto,
+            fontSize = 16.sp,
+            fontWeight = FontWeight.Bold,
+            color = TextoOscuro
+        )
     }
 }

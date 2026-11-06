@@ -23,6 +23,14 @@ data class Curso(
     // Ingredientes con su cantidad (ej: "200 g de Cobertura Caravella Dark 54%").
     // Es una lista de textos, igual que los pasos, porque cada receta tiene una cantidad distinta.
     val ingredientes: List<String>,
+    // Cuánto sale de la receta (ej: "Rinde 20 unidades", "Para 1 torta de 22 cm").
+    // Ayuda al emprendedor a calcular cuánto producir para vender.
+    val rendimiento: String,
+    // "Fácil", "Media" o "Avanzada". Es un texto simple (no un enum) porque solo se muestra.
+    val dificultad: String,
+    // true si la receta no lleva ingredientes de origen animal (leche, mantequilla, huevo...).
+    // "= false" es su valor por defecto: solo hay que escribirlo en las recetas veganas.
+    val esVegano: Boolean = false,
     // Dirección del video en la nube (AWS). Es String? porque puede no existir:
     // "= null" es su valor por defecto, así que si no se escribe, queda en null.
     // Mientras sea null, el Detalle muestra el video local guardado en res/raw.

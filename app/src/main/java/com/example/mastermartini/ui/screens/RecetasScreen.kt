@@ -126,6 +126,15 @@ fun RecetasScreen(
                 )
             }
 
+            // FILTRO VEGANO: un solo botón que se enciende y se apaga.
+            // Va en su propia fila porque no es una sección ni un orden: se suma a los dos.
+            ChipOpcion(
+                texto = "Solo veganas 🌱",
+                seleccionado = uiState.soloVeganas,
+                onClick = { viewModel.alternarSoloVeganas() },
+                modifier = Modifier.padding(start = 16.dp, top = 4.dp)
+            )
+
             // LISTA DE RECETAS
             // weight(1f): la lista ocupa todo el alto que dejan libre las dos filas de arriba
             LazyColumn(
@@ -136,10 +145,15 @@ fun RecetasScreen(
                     .weight(1f)
             ) {
                 if (uiState.recetas.isEmpty()) {
-                    // Si una sección no tiene recetas, se avisa en vez de dejar la pantalla en blanco
+                    // Si una sección no tiene recetas, se avisa en vez de dejar la pantalla en blanco.
+                    // Con "Solo veganas" encendido el mensaje lo dice, para que el usuario sepa por qué.
                     item {
                         Text(
-                            text = "Todavía no hay recetas en esta sección.",
+                            text = if (uiState.soloVeganas) {
+                                "Todavía no hay recetas veganas en esta sección."
+                            } else {
+                                "Todavía no hay recetas en esta sección."
+                            },
                             fontSize = 18.sp,
                             color = TextoOscuro
                         )
@@ -188,14 +202,16 @@ fun RecetasScreen(
     }
 }
 
-// BOTÓN DE OPCIÓN (FilterChip) que usan las dos filas: secciones y orden.
-// Se escribe UNA vez aquí para no repetir los colores y el tamaño en los 8 botones.
+// BOTÓN DE OPCIÓN (FilterChip) que usan las tres filas: secciones, orden y "Solo veganas".
+// Se escribe UNA vez aquí para no repetir los colores y el tamaño en los 9 botones.
 // Es private porque solo lo usa esta pantalla.
 @Composable
 private fun ChipOpcion(
     texto: String,
     seleccionado: Boolean,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    // Margen extra opcional (lo usa "Solo veganas", que no está dentro de una Row con padding)
+    modifier: Modifier = Modifier
 ) {
     FilterChip(
         selected = seleccionado,
@@ -217,6 +233,6 @@ private fun ChipOpcion(
             labelColor = TextoOscuro
         ),
         // 48 dp de alto: botón grande y fácil de tocar (el normal mide 32 dp)
-        modifier = Modifier.height(48.dp)
+        modifier = modifier.height(48.dp)
     )
 }
