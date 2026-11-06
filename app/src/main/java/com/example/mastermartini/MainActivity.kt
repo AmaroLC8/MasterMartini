@@ -29,6 +29,7 @@ import com.example.mastermartini.ui.screens.PerfilScreen
 import com.example.mastermartini.ui.screens.RecetasScreen
 import com.example.mastermartini.ui.screens.RegistroScreen
 import com.example.mastermartini.ui.theme.MasterMartiniTheme
+import com.example.mastermartini.viewmodel.BuscarViewModel
 import com.example.mastermartini.viewmodel.DetalleViewModel
 import com.example.mastermartini.viewmodel.EncuestaViewModel
 import com.example.mastermartini.viewmodel.FavoritosViewModel
@@ -202,7 +203,7 @@ class MainActivity : ComponentActivity() {
                             )
                         }
 
-                        // 6. PANTALLAS DE LA BARRA INFERIOR (Buscar y Perfil siguen "en construcción").
+                        // 6. PANTALLAS DE LA BARRA INFERIOR (Perfil sigue "en construcción").
                         // Recetas, Buscar y Favoritos abren el detalle igual que Home: "detalle/3".
                         // Pila: [home, recetas, detalle] → Atrás vuelve a Recetas.
                         composable("recetas") {
@@ -218,7 +219,12 @@ class MainActivity : ComponentActivity() {
                         }
 
                         composable("buscar") {
+                            // Se crea aquí dentro porque solo lo usa esta pantalla.
+                            // Es un ViewModel normal (no usa Room), igual que RecetasViewModel.
+                            // Con saveState/restoreState de la barra, lo escrito se conserva al volver.
+                            val buscarViewModel: BuscarViewModel = viewModel()
                             BuscarScreen(
+                                viewModel = buscarViewModel,
                                 onVerDetalle = { id -> navController.navigate("detalle/$id") }
                             )
                         }
