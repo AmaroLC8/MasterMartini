@@ -34,6 +34,7 @@ import com.example.mastermartini.viewmodel.EncuestaViewModel
 import com.example.mastermartini.viewmodel.FavoritosViewModel
 import com.example.mastermartini.viewmodel.HomeViewModel
 import com.example.mastermartini.viewmodel.LoginViewModel
+import com.example.mastermartini.viewmodel.RecetasViewModel
 import com.example.mastermartini.viewmodel.RegistroViewModel
 
 class MainActivity : ComponentActivity() {
@@ -201,11 +202,17 @@ class MainActivity : ComponentActivity() {
                             )
                         }
 
-                        // 6. PANTALLAS DE LA BARRA INFERIOR (por ahora "en construcción").
+                        // 6. PANTALLAS DE LA BARRA INFERIOR (Buscar y Perfil siguen "en construcción").
                         // Recetas, Buscar y Favoritos abren el detalle igual que Home: "detalle/3".
                         // Pila: [home, recetas, detalle] → Atrás vuelve a Recetas.
                         composable("recetas") {
+                            // Se crea aquí dentro porque solo lo usa esta pantalla.
+                            // Es un ViewModel normal (no usa Room), así que viewModel() no necesita la Application.
+                            // Como la barra navega con saveState/restoreState, la sección y el orden
+                            // elegidos se conservan al ir a otra pestaña y volver.
+                            val recetasViewModel: RecetasViewModel = viewModel()
                             RecetasScreen(
+                                viewModel = recetasViewModel,
                                 onVerDetalle = { id -> navController.navigate("detalle/$id") }
                             )
                         }
