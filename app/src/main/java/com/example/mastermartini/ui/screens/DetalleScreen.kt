@@ -30,6 +30,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.mastermartini.ui.components.ContactoVentas
 import com.example.mastermartini.ui.components.EtiquetaVegana
 import com.example.mastermartini.ui.theme.*
 import com.example.mastermartini.viewmodel.DetalleViewModel
@@ -379,6 +380,12 @@ fun DetalleScreen(
                         )
                     }
                 }
+
+                // 5. Contacto con ventas, al final de la receta.
+                // \" escribe una comilla dentro del texto: ...para preparar "Brioche Tradicional Italiano".
+                ContactoVentas(
+                    mensaje = "Hola, quiero información sobre ${cursoActual.insumo} para preparar \"${cursoActual.titulo}\"."
+                )
             }
         }
     }

@@ -30,6 +30,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.mastermartini.ui.components.BotonCatalogoPdf
+import com.example.mastermartini.ui.components.ContactoVentas
 import com.example.mastermartini.ui.components.EtiquetaVegana
 import com.example.mastermartini.ui.components.TarjetaReceta
 import com.example.mastermartini.ui.theme.BlancoHueso
@@ -184,7 +185,10 @@ fun ProductoDetalleScreen(
                     }
                 }
 
-                // 5. CATÁLOGO PDF
+                // 5. CONTACTO CON VENTAS (antes del catálogo PDF)
+                ContactoVentas(mensaje = "Hola, quiero información sobre ${producto.nombre}.")
+
+                // 6. CATÁLOGO PDF
                 BotonCatalogoPdf()
             }
         }

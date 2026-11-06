@@ -12,4 +12,18 @@ object DatosEmpresa {
     // publicado en su sitio web (archivo PDF). Se abre en el navegador del celular.
     const val URL_CATALOGO =
         "https://mastermartini.cl/wp-content/uploads/2023/07/Panaderia-Pasteleria-Catalogo.pdf"
+
+    // CONTACTO CON VENTAS (lo usa ui/components/ContactoVentas.kt)
+    // DATOS DE EJEMPLO. No poner números ni correos reales hasta que Master Martini lo autorice.
+    // example.com es un dominio reservado para ejemplos.
+
+    // Número de WhatsApp con código de país y sin "+" ni espacios (ej. "56912345678").
+    // Vacío = se abre WhatsApp con el mensaje y el usuario elige a quién enviarlo.
+    const val WHATSAPP_VENTAS = ""
+
+    // Teléfono de ventas (ej. "+56221234567"). Vacío = se abre el marcador sin número.
+    const val TELEFONO_VENTAS = ""
+
+    // Correo de ventas
+    const val CORREO_VENTAS = "ventas@example.com"
 }
