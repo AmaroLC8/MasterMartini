@@ -98,4 +98,14 @@ class AlmacenamientoLocal(context: Context) {
 
     // true si la encuesta ya se respondió alguna vez (igual que existePerfil, basta con una clave)
     fun existeEncuesta(): Boolean = preferences.contains("KEY_ENCUESTA_NIVEL")
+
+    // 7. RUTA DE LA FOTO DEL LOCAL
+    // La foto en sí se guarda como archivo JPEG (lo hace FotoRepository);
+    // aquí solo se anota DÓNDE quedó ese archivo, como un texto más.
+    fun guardarRutaFoto(ruta: String) {
+        preferences.edit().putString("KEY_FOTO_LOCAL", ruta).apply()
+    }
+
+    // "" (vacío) si nunca se guardó una foto
+    fun obtenerRutaFoto(): String = preferences.getString("KEY_FOTO_LOCAL", "") ?: ""
 }

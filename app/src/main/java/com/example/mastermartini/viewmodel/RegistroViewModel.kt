@@ -1,12 +1,17 @@
 package com.example.mastermartini.viewmodel
 
 import android.app.Application
+import android.graphics.Bitmap
+import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
 import com.example.mastermartini.data.AlmacenamientoLocal
+import com.example.mastermartini.data.FotoRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 
 // 1. EL MOLDE DE ESTADO (Visto en tu diapositiva de clase)
 // Agrupa todo lo que la pantalla necesita saber en un solo paquete inmutable
@@ -24,8 +29,11 @@ data class RegistroUiState(
     val errorPassword: String? = null,    // Mensaje de error de la contraseña
     // Tamaño del negocio: "Micro", "Pequeño" o "Mediano" (se elige con FilterChips)
     val tamanoNegocio: String = "Micro",
-    val tieneFoto: Boolean = false,
-    // Mensaje que se muestra si no se pudo usar la cámara (null = no hay aviso)
+    // Foto del local ya guardada en el celular (null = todavía no hay foto).
+    // Antes vivía en un remember de la pantalla y se perdía al salir; ahora la guarda
+    // el ViewModel y se vuelve a cargar del archivo al abrir la app.
+    val fotoLocal: Bitmap? = null,
+    // Mensaje que se muestra si no se pudo usar la cámara o abrir la imagen (null = no hay aviso)
     val avisoCamara: String? = null,
     val esFormularioValido: Boolean = false
 )
@@ -34,6 +42,9 @@ class RegistroViewModel(application: Application) : AndroidViewModel(application
 
     // Capa de persistencia local (IE 2.3.1)
     private val almacenamiento = AlmacenamientoLocal(application)
+
+    // Guarda y lee la foto del local como archivo JPEG en la memoria interna
+    private val fotoRepository = FotoRepository(application)
 
     // Flujo de estado reactivo oficial de Jetpack Compose
     private val _uiState = MutableStateFlow(RegistroUiState())
@@ -60,6 +71,14 @@ class RegistroViewModel(application: Application) : AndroidViewModel(application
             // muestra "Ingresa tu número de celular" para que el usuario lo complete.
             onTelefonoChange(almacenamiento.obtenerTelefono())
             onTamanoNegocioChange(almacenamiento.obtenerTamanoNegocio())
+        }
+
+        // La foto se carga AUNQUE no haya perfil completo, porque se guarda apenas se elige
+        // (antes de tocar "Registrar"). Leer un archivo es lento, por eso va en una corrutina:
+        // obtenerFoto() trabaja en Dispatchers.IO y aquí solo se espera el resultado.
+        viewModelScope.launch {
+            val fotoGuardada = fotoRepository.obtenerFoto()
+            _uiState.update { it.copy(fotoLocal = fotoGuardada) }
         }
     }
 
@@ -201,9 +220,42 @@ class RegistroViewModel(application: Application) : AndroidViewModel(application
         _uiState.update { it.copy(tamanoNegocio = nuevoTamano) }
     }
 
-    fun registrarFotoCapturada() {
-        // Si la foto se tomó bien, se borra cualquier aviso anterior de la cámara
-        _uiState.update { it.copy(tieneFoto = true, avisoCamara = null) }
+    // FOTO DEL LOCAL
+    // Se llama con la foto que devolvió la cámara (TakePicturePreview entrega un Bitmap).
+    // viewModelScope.launch: guardar el archivo es lento y guardarFoto() es suspend.
+    fun onFotoTomada(bitmap: Bitmap) {
+        viewModelScope.launch {
+            val guardada = fotoRepository.guardarFoto(bitmap)
+            mostrarFotoGuardada(guardada)
+        }
+    }
+
+    // Se llama con el Uri de la imagen elegida en la galería (PickVisualMedia)
+    // o en el explorador de archivos (GetContent). Los dos entregan un Uri, por eso
+    // comparten esta misma función.
+    fun onFotoElegida(uri: Uri) {
+        viewModelScope.launch {
+            val guardada = fotoRepository.guardarFotoDesdeUri(uri)
+            mostrarFotoGuardada(guardada)
+        }
+    }
+
+    // Si se guardó bien, se muestra y se borra cualquier aviso anterior.
+    // Si falló (null), se deja la foto que había y se avisa: la app no se cae.
+    private fun mostrarFotoGuardada(foto: Bitmap?) {
+        if (foto != null) {
+            _uiState.update { it.copy(fotoLocal = foto, avisoCamara = null) }
+        } else {
+            onImagenNoDisponible()
+        }
+    }
+
+    // Se llama si la imagen no se pudo leer o guardar, o si el celular no tiene
+    // una app de galería o de archivos para abrir. La foto es opcional: solo se avisa.
+    fun onImagenNoDisponible() {
+        _uiState.update {
+            it.copy(avisoCamara = "No se pudo abrir la imagen. Prueba con otra o regístrate igual.")
+        }
     }
 
     // Se llama cuando el usuario rechaza el permiso de cámara.

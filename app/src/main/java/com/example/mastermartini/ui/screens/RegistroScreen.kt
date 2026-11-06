@@ -4,9 +4,9 @@ import android.Manifest
 import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.pm.PackageManager
-import android.graphics.Bitmap
 import android.os.Vibrator
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -14,6 +14,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -21,10 +22,14 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AddAPhoto
 import androidx.compose.material.icons.filled.Badge
 import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material.icons.filled.PhotoCamera
+import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.Store
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
@@ -34,8 +39,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -55,16 +63,42 @@ fun RegistroScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
-    var fotoBitmap by remember { mutableStateOf<Bitmap?>(null) }
+
+    // ¿Se está mostrando el panel de abajo con las 3 opciones de foto?
+    // Es estado SOLO visual (abrir/cerrar un panel), por eso puede vivir en un remember de la pantalla.
+    // La foto en sí NO: esa la guarda el ViewModel (uiState.fotoLocal) para que no se pierda.
+    var mostrarOpcionesFoto by remember { mutableStateOf(false) }
 
     // RECURSO NATIVO 1: Cámara fotográfica mediante ActivityResultLauncher (IE 2.4.1)
-    // TakePicturePreview() abre la cámara y devuelve la foto como Bitmap (o null si se cancela)
+    // TakePicturePreview() abre la cámara y devuelve la foto como Bitmap (o null si se cancela).
+    // Si se cancela no se hace nada: queda la foto que había.
     val camaraLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicturePreview()
     ) { foto ->
         if (foto != null) {
-            fotoBitmap = foto
-            viewModel.registrarFotoCapturada()
+            viewModel.onFotoTomada(foto)
+        }
+    }
+
+    // GALERÍA: PickVisualMedia() abre el selector de fotos del sistema (Photo Picker).
+    // NO necesita permiso: el usuario elige UNA foto y Android solo nos da acceso a esa,
+    // no a toda la galería. Devuelve un Uri (la "dirección" de la foto) o null si se cancela.
+    val galeriaLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        if (uri != null) {
+            viewModel.onFotoElegida(uri)
+        }
+    }
+
+    // ARCHIVOS: GetContent() abre el explorador de archivos del celular (Descargas, Drive, etc.).
+    // Tampoco necesita permiso, por la misma razón: el usuario elige el archivo.
+    // Devuelve un Uri o null si se cancela.
+    val archivosLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri ->
+        if (uri != null) {
+            viewModel.onFotoElegida(uri)
         }
     }
 
@@ -88,6 +122,41 @@ fun RegistroScreen(
             abrirCamara()
         } else {
             viewModel.onPermisoCamaraDenegado()
+        }
+    }
+
+    // Opción "Tomar foto": si el permiso ya fue aceptado antes, abrimos la cámara directo;
+    // si no, primero lo pedimos con el diálogo del sistema.
+    fun tomarFoto() {
+        val tienePermiso = ContextCompat.checkSelfPermission(
+            context, Manifest.permission.CAMERA
+        ) == PackageManager.PERMISSION_GRANTED
+
+        if (tienePermiso) {
+            abrirCamara()
+        } else {
+            permisoCamaraLauncher.launch(Manifest.permission.CAMERA)
+        }
+    }
+
+    // Opción "Elegir de la galería". ImageOnly: solo muestra fotos (no videos).
+    // try/catch por si el celular no tiene cómo abrir el selector (la app no se cae).
+    fun elegirDeGaleria() {
+        try {
+            galeriaLauncher.launch(
+                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+            )
+        } catch (e: ActivityNotFoundException) {
+            viewModel.onImagenNoDisponible()
+        }
+    }
+
+    // Opción "Buscar en archivos". "image/*" = cualquier tipo de imagen (JPG, PNG, WEBP...)
+    fun buscarEnArchivos() {
+        try {
+            archivosLauncher.launch("image/*")
+        } catch (e: ActivityNotFoundException) {
+            viewModel.onImagenNoDisponible()
         }
     }
 
@@ -178,7 +247,10 @@ fun RegistroScreen(
                 color = TextoOscuro.copy(alpha = 0.7f)
             )
 
-            // PREVISUALIZACIÓN DE FOTO TOMADA CON LA CÁMARA NATIVA (círculo con 📷 si aún no hay foto)
+            // PREVISUALIZACIÓN DE LA FOTO DEL LOCAL (círculo con 📷 si aún no hay foto).
+            // La foto viene del ViewModel: así se ve también al volver a abrir la app.
+            // Se copia a una variable local para poder revisar si es null y usarla sin "!!".
+            val fotoLocal = uiState.fotoLocal
             Box(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier
@@ -187,10 +259,13 @@ fun RegistroScreen(
                     .background(BlancoPuro)
                     .border(2.dp, DoradoCalidad, CircleShape)
             ) {
-                if (fotoBitmap != null) {
+                if (fotoLocal != null) {
                     Image(
-                        bitmap = fotoBitmap!!.asImageBitmap(),
-                        contentDescription = "Foto capturada",
+                        bitmap = fotoLocal.asImageBitmap(),
+                        contentDescription = "Foto del local",
+                        // Crop: agranda la foto hasta llenar todo el círculo y recorta lo que sobra
+                        // (sin deformarla). Sin esto, una foto alargada dejaría bordes vacíos.
+                        contentScale = ContentScale.Crop,
                         modifier = Modifier.fillMaxSize()
                     )
                 } else {
@@ -198,21 +273,9 @@ fun RegistroScreen(
                 }
             }
 
-            // BOTÓN DE ACCESO NATIVO A LA CÁMARA
+            // BOTÓN QUE ABRE LAS OPCIONES DE FOTO (cámara, galería o archivos)
             OutlinedButton(
-                onClick = {
-                    // Si el permiso ya fue aceptado antes, abrimos la cámara directo;
-                    // si no, primero lo pedimos con el diálogo del sistema.
-                    val tienePermiso = ContextCompat.checkSelfPermission(
-                        context, Manifest.permission.CAMERA
-                    ) == PackageManager.PERMISSION_GRANTED
-
-                    if (tienePermiso) {
-                        abrirCamara()
-                    } else {
-                        permisoCamaraLauncher.launch(Manifest.permission.CAMERA)
-                    }
-                },
+                onClick = { mostrarOpcionesFoto = true },
                 colors = ButtonDefaults.outlinedButtonColors(
                     contentColor = VerdeItaliano
                 ),
@@ -221,7 +284,55 @@ fun RegistroScreen(
                 ),
                 modifier = Modifier.height(48.dp)
             ) {
-                Text("Tomar foto del local", fontWeight = FontWeight.SemiBold)
+                Icon(imageVector = Icons.Filled.AddAPhoto, contentDescription = null)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Agregar foto del local", fontWeight = FontWeight.SemiBold)
+            }
+
+            // PANEL DE ABAJO (ModalBottomSheet) con las 3 formas de agregar la foto.
+            // Solo se dibuja mientras mostrarOpcionesFoto sea true.
+            // onDismissRequest: se llama si el usuario lo cierra deslizando hacia abajo,
+            // tocando fuera o con Atrás. En ese caso no pasa nada más.
+            if (mostrarOpcionesFoto) {
+                ModalBottomSheet(
+                    onDismissRequest = { mostrarOpcionesFoto = false },
+                    containerColor = BlancoPuro
+                ) {
+                    Column(modifier = Modifier.padding(bottom = 24.dp)) {
+                        Text(
+                            text = "Foto del local",
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = TextoOscuro,
+                            modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)
+                        )
+                        // Cada opción primero cierra el panel y después abre lo que corresponda
+                        OpcionFoto(
+                            icono = Icons.Filled.PhotoCamera,
+                            texto = "Tomar foto",
+                            onClick = {
+                                mostrarOpcionesFoto = false
+                                tomarFoto()
+                            }
+                        )
+                        OpcionFoto(
+                            icono = Icons.Filled.PhotoLibrary,
+                            texto = "Elegir de la galería",
+                            onClick = {
+                                mostrarOpcionesFoto = false
+                                elegirDeGaleria()
+                            }
+                        )
+                        OpcionFoto(
+                            icono = Icons.Filled.Folder,
+                            texto = "Buscar en archivos",
+                            onClick = {
+                                mostrarOpcionesFoto = false
+                                buscarEnArchivos()
+                            }
+                        )
+                    }
+                }
             }
 
             // AVISO DE CÁMARA: aparece con animación si se negó el permiso o no hay cámara
@@ -439,5 +550,35 @@ fun RegistroScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
         }
+    }
+}
+
+// UNA OPCIÓN DEL PANEL DE FOTO: fila completa de 56 dp con ícono + texto.
+// Toda la fila se puede tocar (no solo el texto): blanco grande para usuarios mayores.
+// Es private porque solo la usa esta pantalla.
+@Composable
+private fun OpcionFoto(
+    icono: ImageVector,
+    texto: String,
+    onClick: () -> Unit
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(56.dp)
+            // role = Button: TalkBack la anuncia como "botón"
+            .clickable(role = Role.Button, onClick = onClick)
+            .padding(horizontal = 24.dp)
+    ) {
+        // contentDescription = null: el texto de al lado ya dice qué hace
+        Icon(
+            imageVector = icono,
+            contentDescription = null,
+            tint = VerdeItaliano,
+            modifier = Modifier.size(28.dp)
+        )
+        Spacer(modifier = Modifier.width(16.dp))
+        Text(text = texto, fontSize = 18.sp, color = TextoOscuro)
     }
 }
