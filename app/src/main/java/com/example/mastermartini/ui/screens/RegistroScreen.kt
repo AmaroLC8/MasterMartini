@@ -15,6 +15,8 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -477,28 +479,72 @@ fun RegistroScreen(
                 }
             }
 
-            // SELECTOR DE TAMAÑO DEL NEGOCIO (FilterChips, igual que la especialidad)
+            // PREGUNTA: ¿CUÁNTAS PERSONAS TRABAJAN EN TU NEGOCIO? (RadioButton, se elige una sola)
+            // Reemplaza a "Tamaño del negocio: Micro / Pequeño / Mediano": una pregunta concreta
+            // que cualquiera puede responder, y con la opción "Prefiero no decirlo".
             Text(
-                text = "Tamaño del Negocio:",
-                fontWeight = FontWeight.SemiBold,
+                text = "¿Cuántas personas trabajan en tu negocio?",
+                fontSize = 17.sp,
+                fontWeight = FontWeight.Bold,
                 color = TextoOscuro,
                 modifier = Modifier.align(Alignment.Start)
             )
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+            // selectableGroup(): le avisa a TalkBack que estas filas son UN grupo de opciones
+            // (lee "opción 2 de 5"), igual que un grupo de radio buttons.
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .selectableGroup()
             ) {
-                listOf("Micro", "Pequeño", "Mediano").forEach { tamanoOpcion ->
-                    FilterChip(
-                        selected = uiState.tamanoNegocio == tamanoOpcion,
-                        onClick = { viewModel.onTamanoNegocioChange(tamanoOpcion) },
-                        label = { Text(tamanoOpcion) },
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = VerdeItaliano,
-                            selectedLabelColor = BlancoPuro,
-                            containerColor = BlancoPuro,
-                            labelColor = TextoOscuro
+                // Las opciones vienen del ViewModel (no se escriben en la pantalla)
+                viewModel.opcionesPersonas.forEach { opcion ->
+                    // Toda la FILA se puede tocar (no solo el circulito), de 48 dp como mínimo.
+                    // selectable + Role.RadioButton: TalkBack la lee como "botón de opción, seleccionado/no".
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 48.dp)
+                            .selectable(
+                                selected = uiState.personasNegocio == opcion,
+                                onClick = { viewModel.onPersonasNegocioChange(opcion) },
+                                role = Role.RadioButton
+                            )
+                    ) {
+                        // onClick = null: el toque lo maneja la fila completa (selectable),
+                        // así no se registra dos veces al tocar justo el círculo
+                        RadioButton(
+                            selected = uiState.personasNegocio == opcion,
+                            onClick = null,
+                            colors = RadioButtonDefaults.colors(
+                                selectedColor = VerdeItaliano,
+                                unselectedColor = TextoOscuro.copy(alpha = 0.6f)
+                            )
                         )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(text = opcion, fontSize = 16.sp, color = TextoOscuro)
+                    }
+                }
+            }
+            // ERROR DE LA PREGUNTA: aparece con animación solo al tocar "Registrar" sin haber elegido,
+            // y se va apenas se elige una opción (onPersonasNegocioChange lo borra)
+            AnimatedVisibility(visible = uiState.errorPersonas != null) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Warning,
+                        contentDescription = null,
+                        tint = RojoItaliano,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = uiState.errorPersonas ?: "",
+                        color = RojoItaliano,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.SemiBold
                     )
                 }
             }
@@ -532,8 +578,9 @@ fun RegistroScreen(
                         onRegistroCompletado() // Navega hacia HomeScreen
                     }
                 },
-                // Solo se puede tocar cuando el ViewModel dice que el formulario está completo
-                enabled = uiState.esFormularioValido,
+                // Se puede tocar cuando los campos de texto están bien. Si falta elegir cuántas
+                // personas trabajan, al tocarlo guardarPerfil() muestra ese error y no guarda.
+                enabled = uiState.puedeIntentarRegistrar,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = VerdeItaliano,
                     contentColor = BlancoPuro,

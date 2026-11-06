@@ -27,15 +27,25 @@ data class RegistroUiState(
     val errorTelefono: String? = null,
     val password: String = "",            // Contraseña que se crea al registrarse (se usa después en el login)
     val errorPassword: String? = null,    // Mensaje de error de la contraseña
-    // Tamaño del negocio: "Micro", "Pequeño" o "Mediano" (se elige con FilterChips)
-    val tamanoNegocio: String = "Micro",
+    // Respuesta a "¿Cuántas personas trabajan en tu negocio?" (una de opcionesPersonas).
+    // Vacío = todavía no elige. Reemplaza al antiguo "tamaño del negocio" (Micro/Pequeño/Mediano),
+    // que podía sonar despectivo y el usuario no tenía cómo saber cuál le correspondía.
+    val personasNegocio: String = "",
+    // Error de esa pregunta. Solo aparece al tocar "Registrar" sin haber elegido (null = sin error)
+    val errorPersonas: String? = null,
     // Foto del local ya guardada en el celular (null = todavía no hay foto).
     // Antes vivía en un remember de la pantalla y se perdía al salir; ahora la guarda
     // el ViewModel y se vuelve a cargar del archivo al abrir la app.
     val fotoLocal: Bitmap? = null,
     // Mensaje que se muestra si no se pudo usar la cámara o abrir la imagen (null = no hay aviso)
     val avisoCamara: String? = null,
-    val esFormularioValido: Boolean = false
+    // true cuando TODO está completo y sin errores (incluida la pregunta de personas).
+    // Con esto aparece el banner "Formulario validado" y se permite guardar.
+    val esFormularioValido: Boolean = false,
+    // true cuando los campos de TEXTO están completos y sin errores. Con esto se habilita
+    // el botón "REGISTRAR Y ACCEDER": así, si falta elegir cuántas personas trabajan,
+    // el usuario puede tocarlo y ver el error de esa pregunta (con el botón apagado no lo vería).
+    val puedeIntentarRegistrar: Boolean = false
 )
 
 class RegistroViewModel(application: Application) : AndroidViewModel(application) {
@@ -45,6 +55,18 @@ class RegistroViewModel(application: Application) : AndroidViewModel(application
 
     // Guarda y lee la foto del local como archivo JPEG en la memoria interna
     private val fotoRepository = FotoRepository(application)
+
+    // Opciones de "¿Cuántas personas trabajan en tu negocio?". Están aquí (y no en la pantalla)
+    // porque son datos del formulario: la pantalla solo las dibuja, y el ViewModel las usa
+    // para revisar que lo guardado sea una opción válida.
+    // Va ANTES de init: cargarPerfilGuardado() la usa, y Kotlin inicializa en orden.
+    val opcionesPersonas = listOf(
+        "Solo yo",
+        "2 a 5 personas",
+        "6 a 20 personas",
+        "Más de 20 personas",
+        "Prefiero no decirlo"
+    )
 
     // Flujo de estado reactivo oficial de Jetpack Compose
     private val _uiState = MutableStateFlow(RegistroUiState())
@@ -70,7 +92,14 @@ class RegistroViewModel(application: Application) : AndroidViewModel(application
             // Si el perfil se guardó antes de existir el teléfono, llega "" y el campo
             // muestra "Ingresa tu número de celular" para que el usuario lo complete.
             onTelefonoChange(almacenamiento.obtenerTelefono())
-            onTamanoNegocioChange(almacenamiento.obtenerTamanoNegocio())
+
+            // Solo se precarga si lo guardado es una de las opciones NUEVAS.
+            // Si es un valor antiguo ("Micro", "Pequeño", "Mediano") o cualquier otro texto,
+            // queda vacío y el usuario tiene que elegir de nuevo. "in" revisa si está en la lista.
+            val personasGuardado = almacenamiento.obtenerPersonasNegocio()
+            if (personasGuardado in opcionesPersonas) {
+                onPersonasNegocioChange(personasGuardado)
+            }
         }
 
         // La foto se carga AUNQUE no haya perfil completo, porque se guarda apenas se elige
@@ -215,9 +244,12 @@ class RegistroViewModel(application: Application) : AndroidViewModel(application
         revisarValidez()
     }
 
-    // El tamaño se elige con chips, así que no puede venir mal escrito: no necesita validación
-    fun onTamanoNegocioChange(nuevoTamano: String) {
-        _uiState.update { it.copy(tamanoNegocio = nuevoTamano) }
+    // Se llama al tocar una opción de "¿Cuántas personas trabajan en tu negocio?".
+    // Al elegir una, se borra el error (si había) y se revisa otra vez el formulario.
+    // Como se elige de una lista, no puede venir mal escrita: la única validación es que no esté vacía.
+    fun onPersonasNegocioChange(opcion: String) {
+        _uiState.update { it.copy(personasNegocio = opcion, errorPersonas = null) }
+        revisarValidez()
     }
 
     // FOTO DEL LOCAL
@@ -274,23 +306,40 @@ class RegistroViewModel(application: Application) : AndroidViewModel(application
     }
 
     // Equivalente directo a perfilCompleto() de tu diapositiva de clase.
-    // El formulario es válido si todos los campos tienen texto y ninguno tiene error
-    // (incluida la contraseña). Con esto se habilita el botón "REGISTRAR Y ACCEDER".
+    // Revisa el formulario en dos partes:
+    // 1. camposTextoValidos: todos los campos de texto tienen algo y ninguno tiene error
+    //    (incluida la contraseña). Con esto se habilita el botón "REGISTRAR Y ACCEDER".
+    // 2. valido: lo anterior Y además se eligió cuántas personas trabajan (es obligatoria).
+    //    Con esto aparece el banner verde y se permite guardar.
     private fun revisarValidez() {
         val actual = _uiState.value
-        val valido = actual.nombre.isNotBlank() && actual.errorNombre == null &&
+        val camposTextoValidos = actual.nombre.isNotBlank() && actual.errorNombre == null &&
                 actual.rut.isNotBlank() && actual.errorRut == null &&
                 actual.correo.isNotBlank() && actual.errorCorreo == null &&
                 actual.telefono.isNotBlank() && actual.errorTelefono == null &&
                 actual.password.isNotBlank() && actual.errorPassword == null
 
-        _uiState.update { it.copy(esFormularioValido = valido) }
+        val valido = camposTextoValidos && actual.personasNegocio.isNotBlank()
+
+        _uiState.update {
+            it.copy(esFormularioValido = valido, puedeIntentarRegistrar = camposTextoValidos)
+        }
     }
 
     // Guarda en el disco del celular mediante SharedPreferences (también la contraseña,
     // para que el login pueda compararla después)
     fun guardarPerfil(onExito: () -> Unit) {
         val actual = _uiState.value
+
+        // Si falta la pregunta de personas, se muestra su error AHORA (al intentar registrar)
+        // y no se guarda nada. No se muestra antes para no recibir al usuario con un error en rojo.
+        if (actual.personasNegocio.isBlank()) {
+            _uiState.update {
+                it.copy(errorPersonas = "Elige una opción (puedes elegir \"Prefiero no decirlo\")")
+            }
+            return
+        }
+
         if (actual.esFormularioValido) {
             almacenamiento.guardarPerfil(
                 nombre = actual.nombre,
@@ -298,7 +347,7 @@ class RegistroViewModel(application: Application) : AndroidViewModel(application
                 correo = actual.correo,
                 rubro = actual.rubro,
                 telefono = actual.telefono,
-                tamanoNegocio = actual.tamanoNegocio,
+                personasNegocio = actual.personasNegocio,
                 password = actual.password
             )
             onExito() // Dispara la navegación hacia Home (la decide MainActivity)

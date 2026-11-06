@@ -27,12 +27,12 @@ import androidx.compose.material.icons.filled.Badge
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.Quiz
 import androidx.compose.material.icons.filled.School
-import androidx.compose.material.icons.filled.Store
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -172,7 +172,7 @@ fun PerfilScreen(
                 FilaDato(icono = Icons.Filled.Badge, etiqueta = "RUT", valor = uiState.rut)
                 FilaDato(icono = Icons.Filled.Email, etiqueta = "Correo", valor = uiState.correo)
                 FilaDato(icono = Icons.Filled.Phone, etiqueta = "Celular", valor = uiState.telefono)
-                FilaDato(icono = Icons.Filled.Store, etiqueta = "Tamaño del negocio", valor = uiState.tamanoNegocio)
+                FilaDato(icono = Icons.Filled.Groups, etiqueta = "Personas en el negocio", valor = uiState.personasNegocio)
             }
 
             // 3. TARJETA "MIS INTERESES" (datos de la encuesta)

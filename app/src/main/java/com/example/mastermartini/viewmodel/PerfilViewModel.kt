@@ -24,7 +24,9 @@ data class PerfilUiState(
     val correo: String = "",
     val telefono: String = "",
     val rubro: String = "",
-    val tamanoNegocio: String = "",
+    // Cuántas personas trabajan en el negocio, ya listo para mostrar
+    // ("No indicado" si eligió "Prefiero no decirlo" o si todavía no responde)
+    val personasNegocio: String = "",
     // Foto del local (null = no hay foto; la pantalla muestra un ícono de persona)
     val foto: Bitmap? = null,
     // Datos de la encuesta
@@ -82,7 +84,7 @@ class PerfilViewModel(application: Application) : AndroidViewModel(application) 
                 correo = almacenamiento.obtenerCorreo(),
                 telefono = almacenamiento.obtenerTelefono(),
                 rubro = almacenamiento.obtenerRubro(),
-                tamanoNegocio = almacenamiento.obtenerTamanoNegocio(),
+                personasNegocio = textoPersonas(almacenamiento.obtenerPersonasNegocio()),
                 // Los intereses se guardan como Set (sin orden fijo). sorted() los deja en
                 // orden alfabético, para que no cambien de lugar cada vez que se abre la pantalla.
                 intereses = almacenamiento.obtenerInteresesEncuesta().sorted(),
@@ -97,6 +99,17 @@ class PerfilViewModel(application: Application) : AndroidViewModel(application) 
         viewModelScope.launch {
             val fotoGuardada = fotoRepository.obtenerFoto()
             _uiState.update { it.copy(foto = fotoGuardada) }
+        }
+    }
+
+    // Convierte la respuesta guardada en el texto que se muestra en el Perfil.
+    // "Prefiero no decirlo" se muestra como "No indicado" (más corto y neutro),
+    // y si está vacío (perfil antiguo o sin responder), también.
+    private fun textoPersonas(guardado: String): String {
+        return if (guardado.isBlank() || guardado == "Prefiero no decirlo") {
+            "No indicado"
+        } else {
+            guardado
         }
     }
 }

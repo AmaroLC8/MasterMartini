@@ -17,7 +17,7 @@ class AlmacenamientoLocal(context: Context) {
         correo: String,
         rubro: String,
         telefono: String,
-        tamanoNegocio: String,
+        personasNegocio: String, // Respuesta a "¿Cuántas personas trabajan en tu negocio?"
         password: String // Contraseña creada en el registro, la usa el login
     ) {
         // Pedimos un "lápiz" (editor) para escribir en el archivo
@@ -29,7 +29,11 @@ class AlmacenamientoLocal(context: Context) {
         editor.putString("KEY_CORREO", correo)
         editor.putString("KEY_RUBRO", rubro)
         editor.putString("KEY_TELEFONO", telefono)
-        editor.putString("KEY_TAMANO_NEGOCIO", tamanoNegocio)
+        // Clave NUEVA (y no "KEY_TAMANO_NEGOCIO"): así un "Micro" guardado antes nunca se lee
+        // como si fuera una respuesta de la pregunta nueva.
+        editor.putString("KEY_PERSONAS_NEGOCIO", personasNegocio)
+        // Se borra la clave antigua, que ya no se usa (si no existía, no pasa nada)
+        editor.remove("KEY_TAMANO_NEGOCIO")
         // Se guarda como texto simple porque es un proyecto académico con datos ficticios;
         // en una app real la contraseña se guardaría cifrada o la revisaría un servidor.
         editor.putString("KEY_PASSWORD", password)
@@ -48,7 +52,8 @@ class AlmacenamientoLocal(context: Context) {
     fun obtenerCorreo(): String = preferences.getString("KEY_CORREO", "") ?: ""
     fun obtenerRubro(): String = preferences.getString("KEY_RUBRO", "Panadería") ?: "Panadería"
     fun obtenerTelefono(): String = preferences.getString("KEY_TELEFONO", "") ?: ""
-    fun obtenerTamanoNegocio(): String = preferences.getString("KEY_TAMANO_NEGOCIO", "Micro") ?: "Micro"
+    // "" (vacío) si todavía no se responde la pregunta nueva
+    fun obtenerPersonasNegocio(): String = preferences.getString("KEY_PERSONAS_NEGOCIO", "") ?: ""
     fun obtenerPassword(): String = preferences.getString("KEY_PASSWORD", "") ?: ""
 
     // 4. ¿YA HAY UN PERFIL GUARDADO?
