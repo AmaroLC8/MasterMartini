@@ -26,6 +26,8 @@ import com.example.mastermartini.ui.screens.FavoritosScreen
 import com.example.mastermartini.ui.screens.HomeScreen
 import com.example.mastermartini.ui.screens.LoginScreen
 import com.example.mastermartini.ui.screens.PerfilScreen
+import com.example.mastermartini.ui.screens.ProductoDetalleScreen
+import com.example.mastermartini.ui.screens.ProductosScreen
 import com.example.mastermartini.ui.screens.RecetasScreen
 import com.example.mastermartini.ui.screens.RegistroScreen
 import com.example.mastermartini.ui.theme.MasterMartiniTheme
@@ -36,6 +38,8 @@ import com.example.mastermartini.viewmodel.FavoritosViewModel
 import com.example.mastermartini.viewmodel.HomeViewModel
 import com.example.mastermartini.viewmodel.LoginViewModel
 import com.example.mastermartini.viewmodel.PerfilViewModel
+import com.example.mastermartini.viewmodel.ProductoDetalleViewModel
+import com.example.mastermartini.viewmodel.ProductosViewModel
 import com.example.mastermartini.viewmodel.RecetasViewModel
 import com.example.mastermartini.viewmodel.RegistroViewModel
 
@@ -177,7 +181,9 @@ class MainActivity : ComponentActivity() {
                                 // Abre la encuesta encima de Home: pila [home, encuesta]
                                 onIrAEncuesta = { navController.navigate("encuesta") },
                                 // Arma la ruta con el id del curso tocado: ej. "detalle/3". Pila [home, detalle]
-                                onVerDetalle = { id -> navController.navigate("detalle/$id") }
+                                onVerDetalle = { id -> navController.navigate("detalle/$id") },
+                                // Abre el catálogo de productos encima de Home: pila [home, productos]
+                                onVerProductos = { navController.navigate("productos") }
                             )
                         }
 
@@ -197,8 +203,43 @@ class MainActivity : ComponentActivity() {
                                 cursoId = cursoId,
                                 viewModel = detalleViewModel,
                                 // popBackStack() vuelve a la pantalla desde donde se abrió la receta
-                                // (Home, Recetas, Buscar o Favoritos), que siempre queda debajo de "detalle"
-                                onVolver = { navController.popBackStack() }
+                                // (Home, Recetas, Buscar, Favoritos o un producto), que siempre queda debajo de "detalle"
+                                onVolver = { navController.popBackStack() },
+                                // El botón del insumo abre el detalle de ese producto: ej. "producto/9"
+                                onVerProducto = { id -> navController.navigate("producto/$id") }
+                            )
+                        }
+
+                        // 7. CATÁLOGO DE PRODUCTOS MASTER MARTINI (se abre desde Home).
+                        // No tiene barra inferior porque "productos" no está en itemsNavegacion.
+                        composable("productos") {
+                            // Se crea aquí dentro porque solo lo usa esta pantalla (ViewModel normal)
+                            val productosViewModel: ProductosViewModel = viewModel()
+                            ProductosScreen(
+                                viewModel = productosViewModel,
+                                // Debajo de "productos" siempre está "home"
+                                onVolver = { navController.popBackStack() },
+                                onVerProducto = { id -> navController.navigate("producto/$id") }
+                            )
+                        }
+
+                        // 8. DETALLE DE UN PRODUCTO. Igual que "detalle/{cursoId}": {productoId} es un hueco
+                        // en la ruta que se llena con el número, y navArgument dice que es un Int.
+                        // Se abre desde "productos" o desde el detalle de una receta (botón del insumo).
+                        composable(
+                            route = "producto/{productoId}",
+                            arguments = listOf(navArgument("productoId") { type = NavType.IntType })
+                        ) { backStackEntry ->
+                            // Si no viene el argumento se usa 0 (no existe): la pantalla dice "Producto no encontrado"
+                            val productoId = backStackEntry.arguments?.getInt("productoId") ?: 0
+                            val productoDetalleViewModel: ProductoDetalleViewModel = viewModel()
+                            ProductoDetalleScreen(
+                                productoId = productoId,
+                                viewModel = productoDetalleViewModel,
+                                // Vuelve a donde se abrió (la lista de productos o la receta)
+                                onVolver = { navController.popBackStack() },
+                                // Las recetas que usan el producto abren su detalle: ej. "detalle/1"
+                                onVerReceta = { id -> navController.navigate("detalle/$id") }
                             )
                         }
 

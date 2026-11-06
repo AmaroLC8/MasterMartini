@@ -5,8 +5,10 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.mastermartini.data.ChecklistRepository
 import com.example.mastermartini.data.CursoRepository
+import com.example.mastermartini.data.ProductoRepository
 import com.example.mastermartini.data.local.MasterMartiniDatabase
 import com.example.mastermartini.model.Curso
+import com.example.mastermartini.model.Producto
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -43,6 +45,16 @@ class DetalleViewModel(application: Application) : AndroidViewModel(application)
     // Versión pública de solo lectura para la pantalla
     val marcados: StateFlow<List<Int>> = _marcados.asStateFlow()
 
+    // Para encontrar el producto Master Martini que usa la receta (su insumo)
+    private val productoRepository = ProductoRepository()
+
+    // Producto del insumo de la receta (ej. "Chocolate Ariba"). null si no se encontró
+    // un producto con ese nombre: en ese caso la pantalla muestra el insumo como texto normal.
+    private val _productoInsumo = MutableStateFlow<Producto?>(null)
+
+    // Versión pública de solo lectura para la pantalla
+    val productoInsumo: StateFlow<Producto?> = _productoInsumo.asStateFlow()
+
     // Guarda la corrutina que está escuchando a Room, para poder detenerla
     // si se carga otro curso (así no quedan dos escuchando a la vez).
     private var trabajoChecklist: Job? = null
@@ -51,7 +63,16 @@ class DetalleViewModel(application: Application) : AndroidViewModel(application)
     // Si el repositorio no encuentra el curso, _curso queda en null y la pantalla
     // muestra "Receta no encontrada" (la app no se cae).
     fun cargarCurso(id: Int) {
-        _curso.value = cursoRepository.obtenerCursoPorId(id)
+        val cursoEncontrado = cursoRepository.obtenerCursoPorId(id)
+        _curso.value = cursoEncontrado
+
+        // Se busca el producto por el nombre EXACTO del insumo.
+        // Si no hay curso o ningún producto se llama así, queda en null.
+        _productoInsumo.value = if (cursoEncontrado != null) {
+            productoRepository.obtenerProductoPorNombre(cursoEncontrado.insumo)
+        } else {
+            null
+        }
 
         // Se detiene la escucha anterior (si había una) antes de empezar la nueva
         trabajoChecklist?.cancel()

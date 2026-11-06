@@ -10,6 +10,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -48,7 +49,9 @@ fun HomeScreen(
     onEditarDatos: () -> Unit,// MainActivity decide a dónde navegar (abre "registro"
     onIrAEncuesta: () -> Unit,
     // Recibe el id del curso tocado; MainActivity navega a "detalle/{id}"
-    onVerDetalle: (Int) -> Unit
+    onVerDetalle: (Int) -> Unit,
+    // Tarjeta "Nuestros productos": MainActivity navega a "productos"
+    onVerProductos: () -> Unit
 ) {
     // Colores estilo bandera italiana de Master Martini
     val verdeItaliano = Color(0xFF008C45)
@@ -206,6 +209,53 @@ fun HomeScreen(
                                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                             )
                         }
+                    }
+                }
+            }
+
+            // 3b. Tarjeta "Nuestros productos" (arriba del catálogo de recetas, bien visible).
+            // Card con onClick: toda la tarjeta abre el catálogo de productos.
+            // Fondo verde con texto blanco para que se distinga de las tarjetas de recetas (blancas).
+            item {
+                Card(
+                    onClick = onVerProductos,
+                    colors = CardDefaults.cardColors(containerColor = verdeItaliano),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 72.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(16.dp)
+                    ) {
+                        // Decorativo: el texto de al lado dice qué hace la tarjeta
+                        Icon(
+                            imageVector = Icons.Filled.Inventory2,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(32.dp)
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        // weight(1f): los textos usan el ancho que deja la flecha
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Nuestros productos",
+                                fontSize = 19.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+                            Text(
+                                text = "Margarinas, cremas, chocolates y más",
+                                fontSize = 15.sp,
+                                color = Color.White
+                            )
+                        }
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                            contentDescription = null,
+                            tint = Color.White
+                        )
                     }
                 }
             }

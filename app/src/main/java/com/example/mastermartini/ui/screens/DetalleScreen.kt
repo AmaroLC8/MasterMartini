@@ -11,6 +11,7 @@ import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.SignalCellularAlt
@@ -43,7 +44,9 @@ fun DetalleScreen(
     cursoId: Int,
     viewModel: DetalleViewModel,
     // MainActivity decide qué hacer al volver (popBackStack: regresa a Home)
-    onVolver: () -> Unit
+    onVolver: () -> Unit,
+    // Recibe el id del producto del insumo; MainActivity navega a "producto/{id}"
+    onVerProducto: (Int) -> Unit
 ) {
     // LaunchedEffect(cursoId) se ejecuta UNA vez al abrir la pantalla, y de nuevo solo si cambia cursoId.
     // Si llamáramos cargarCurso() directo en el composable, se repetiría en cada redibujo.
@@ -57,6 +60,9 @@ fun DetalleScreen(
     // Posiciones de los ingredientes marcados. Vienen de Room a través del ViewModel:
     // al marcar uno, Room avisa el cambio y esta lista se actualiza sola.
     val marcados by viewModel.marcados.collectAsState()
+
+    // Producto Master Martini del insumo (null si no se encontró por nombre)
+    val productoInsumo by viewModel.productoInsumo.collectAsState()
 
     Scaffold(
         containerColor = BlancoHueso,
@@ -163,12 +169,41 @@ fun DetalleScreen(
                             color = TextoOscuro
                         )
                         Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = "Insumo Master Martini: ${cursoActual.insumo}",
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = VerdeItaliano
-                        )
+                        // INSUMO: si el ViewModel encontró el producto, es un botón que abre su detalle;
+                        // si no, se muestra como texto normal (como antes).
+                        // Se copia a una variable local para poder revisar si es null y usarla sin "!!".
+                        val producto = productoInsumo
+                        if (producto != null) {
+                            // Botón a todo el ancho (mínimo 48 dp) con borde: se nota que se puede tocar
+                            OutlinedButton(
+                                onClick = { onVerProducto(producto.id) },
+                                border = BorderStroke(1.dp, VerdeItaliano),
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = VerdeOscuro),
+                                shape = RoundedCornerShape(10.dp),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .heightIn(min = 48.dp)
+                            ) {
+                                Text(
+                                    text = "Insumo Master Martini: ${cursoActual.insumo}",
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                // Flecha: indica que abre otra pantalla. Decorativa: el texto ya dice qué es
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                    contentDescription = null
+                                )
+                            }
+                        } else {
+                            Text(
+                                text = "Insumo Master Martini: ${cursoActual.insumo}",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = VerdeItaliano
+                            )
+                        }
                         Text(
                             text = "Instructor: ${cursoActual.chef}",
                             fontSize = 16.sp,
