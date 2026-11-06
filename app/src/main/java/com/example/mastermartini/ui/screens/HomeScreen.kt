@@ -168,7 +168,7 @@ fun HomeScreen(
             // 2. MasterClass Video Destacado (Reproductor Offline)
             item {
                 Text(
-                    text = "🎥 MasterClass Destacada (Video Offline):",
+                    text = "🎥 MasterClass Destacada",
                     fontWeight = FontWeight.Bold,
                     fontSize = 16.sp,
                     color = textoOscuro

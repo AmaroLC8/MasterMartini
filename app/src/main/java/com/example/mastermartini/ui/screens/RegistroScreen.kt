@@ -573,8 +573,8 @@ fun RegistroScreen(
             // BOTÓN PRINCIPAL (Altura 54dp para accesibilidad de mayores de 50 años)
             Button(
                 onClick = {
-                    ejecutarVibracion() // Dispara la vibración física
                     viewModel.guardarPerfil {
+                        ejecutarVibracion() // Dispara la vibración física
                         onRegistroCompletado() // Navega hacia HomeScreen
                     }
                 },
