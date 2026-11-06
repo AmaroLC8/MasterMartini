@@ -298,14 +298,36 @@ fun EncuestaScreen(
                         )
                     }
 
+                    // UBICACIÓN OBTENIDA: el nombre del lugar grande, con el ícono,
+                    // y debajo las coordenadas en letra chica y gris (solo si las hay)
                     if (state.ubicacionGps.isNotEmpty()) {
                         Spacer(modifier = Modifier.height(12.dp))
-                        Text(
-                            text = "📍 ${state.ubicacionGps}",
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = VerdeOscuro
-                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            // Decorativo: el texto de al lado ya dice la ubicación
+                            Icon(
+                                imageVector = Icons.Default.LocationOn,
+                                contentDescription = null,
+                                tint = VerdeItaliano,
+                                modifier = Modifier.size(28.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Column {
+                                // Nombre del lugar (o las coordenadas, si no se obtuvo el nombre)
+                                Text(
+                                    text = state.ubicacionGps,
+                                    fontSize = 18.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = VerdeOscuro
+                                )
+                                if (state.coordenadasGps.isNotEmpty()) {
+                                    Text(
+                                        text = state.coordenadasGps,
+                                        fontSize = 13.sp,
+                                        color = TextoOscuro.copy(alpha = 0.6f)
+                                    )
+                                }
+                            }
+                        }
                     }
 
                     // AVISO DEL GPS (sin permiso o sin señal). Igual que el aviso de la cámara
