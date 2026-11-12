@@ -22,6 +22,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.Badge
 import androidx.compose.material.icons.filled.Edit
@@ -85,7 +86,9 @@ fun PerfilScreen(
     // Botón "Responder encuesta": MainActivity abre "encuesta"
     onIrAEncuesta: () -> Unit,
     // Confirmación de "Cerrar sesión": MainActivity vuelve al login y borra la pila
-    onCerrarSesion: () -> Unit
+    onCerrarSesion: () -> Unit,
+    // Botón del "Panel de trabajo": recibe la ruta (ej. "panel/clientes") y MainActivity navega
+    onAbrirPanel: (String) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
@@ -185,6 +188,21 @@ fun PerfilScreen(
                             .background(DoradoCalidad, RoundedCornerShape(6.dp))
                             .padding(horizontal = 12.dp, vertical = 4.dp)
                     )
+                }
+            }
+
+            // PANEL DE TRABAJO (solo si el rol tiene opciones: Ventas y Administrador).
+            // La pantalla NO pregunta qué rol es: solo recorre la lista que le dio el rol
+            // (polimorfismo). Si mañana Instructor tiene opciones, aparecen aquí sin tocar este código.
+            if (uiState.opcionesPanel.isNotEmpty()) {
+                TarjetaPerfil(titulo = "Panel de trabajo") {
+                    uiState.opcionesPanel.forEach { opcion ->
+                        BotonPanel(
+                            titulo = opcion.titulo,
+                            descripcion = opcion.descripcion,
+                            onClick = { onAbrirPanel(opcion.ruta) }
+                        )
+                    }
                 }
             }
 
@@ -364,6 +382,41 @@ private fun TarjetaPerfil(
                 color = VerdeOscuro
             )
             contenido()
+        }
+    }
+}
+
+// UN BOTÓN GRANDE DEL PANEL DE TRABAJO: título + descripción + flecha (mínimo 56 dp).
+// Card con onClick: TODA la tarjeta se puede tocar, y TalkBack la anuncia como botón.
+@Composable
+private fun BotonPanel(
+    titulo: String,
+    descripcion: String,
+    onClick: () -> Unit
+) {
+    Card(
+        onClick = onClick,
+        colors = CardDefaults.cardColors(containerColor = VerdeItaliano.copy(alpha = 0.08f)),
+        border = BorderStroke(1.dp, VerdeItaliano),
+        shape = RoundedCornerShape(10.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 56.dp)
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(text = titulo, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = VerdeOscuro)
+                Text(text = descripcion, fontSize = 16.sp, color = TextoOscuro)
+            }
+            // Decorativo: indica que abre otra pantalla; el texto ya dice qué es
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = VerdeOscuro
+            )
         }
     }
 }

@@ -25,6 +25,9 @@ import com.example.mastermartini.ui.screens.CapacitacionesScreen
 import com.example.mastermartini.ui.screens.DetalleScreen
 import com.example.mastermartini.ui.screens.EncuestaScreen
 import com.example.mastermartini.ui.screens.FavoritosScreen
+import com.example.mastermartini.ui.screens.GestionClientesScreen
+import com.example.mastermartini.ui.screens.GestionUsuariosScreen
+import com.example.mastermartini.ui.screens.RecuperarPasswordScreen
 import com.example.mastermartini.ui.screens.HomeScreen
 import com.example.mastermartini.ui.screens.LoginScreen
 import com.example.mastermartini.ui.screens.PerfilScreen
@@ -39,6 +42,9 @@ import com.example.mastermartini.viewmodel.CapacitacionesViewModel
 import com.example.mastermartini.viewmodel.DetalleViewModel
 import com.example.mastermartini.viewmodel.EncuestaViewModel
 import com.example.mastermartini.viewmodel.FavoritosViewModel
+import com.example.mastermartini.viewmodel.GestionClientesViewModel
+import com.example.mastermartini.viewmodel.GestionUsuariosViewModel
+import com.example.mastermartini.viewmodel.RecuperarPasswordViewModel
 import com.example.mastermartini.viewmodel.HomeViewModel
 import com.example.mastermartini.viewmodel.LoginViewModel
 import com.example.mastermartini.viewmodel.PerfilViewModel
@@ -142,7 +148,22 @@ class MainActivity : ComponentActivity() {
                                 },
                                 onIrARegistro = {
                                     navController.navigate("registro")
+                                },
+                                // Pila [login, recuperar]: al terminar, popBackStack vuelve al login
+                                onOlvidePassword = {
+                                    navController.navigate("recuperar")
                                 }
+                            )
+                        }
+
+                        // RECUPERAR CONTRASEÑA (se abre desde el login, sin barra inferior)
+                        composable("recuperar") {
+                            val recuperarViewModel: RecuperarPasswordViewModel =
+                                viewModel(factory = RecuperarPasswordViewModel.Factory)
+                            RecuperarPasswordScreen(
+                                viewModel = recuperarViewModel,
+                                // Debajo de "recuperar" siempre está "login"
+                                onVolver = { navController.popBackStack() }
                             )
                         }
 
@@ -368,7 +389,30 @@ class MainActivity : ComponentActivity() {
                                         // no vuelve a Perfil. La encuesta y la foto NO se borran.
                                         popUpTo(navController.graph.id) { inclusive = true }
                                     }
-                                }
+                                },
+                                // Botones del "Panel de trabajo": la ruta viene de rol.opcionesPanel()
+                                // (ej. "panel/clientes"). Pila [home, perfil, panel/...] → Atrás vuelve a Perfil
+                                onAbrirPanel = { ruta -> navController.navigate(ruta) }
+                            )
+                        }
+
+                        // PANELES DE TRABAJO (se abren desde Perfil, sin barra inferior porque
+                        // sus rutas no están en itemsNavegacion). Los permisos los revisa el repositorio.
+                        composable("panel/clientes") {
+                            val gestionClientesViewModel: GestionClientesViewModel =
+                                viewModel(factory = GestionClientesViewModel.Factory)
+                            GestionClientesScreen(
+                                viewModel = gestionClientesViewModel,
+                                onVolver = { navController.popBackStack() }
+                            )
+                        }
+
+                        composable("panel/usuarios") {
+                            val gestionUsuariosViewModel: GestionUsuariosViewModel =
+                                viewModel(factory = GestionUsuariosViewModel.Factory)
+                            GestionUsuariosScreen(
+                                viewModel = gestionUsuariosViewModel,
+                                onVolver = { navController.popBackStack() }
                             )
                         }
                     }

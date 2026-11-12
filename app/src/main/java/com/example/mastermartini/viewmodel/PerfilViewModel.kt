@@ -8,6 +8,7 @@ import com.example.mastermartini.data.AlmacenamientoLocal
 import com.example.mastermartini.data.FavoritoRepository
 import com.example.mastermartini.data.FotoRepository
 import com.example.mastermartini.data.local.MasterMartiniDatabase
+import com.example.mastermartini.model.OpcionPanel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -41,7 +42,9 @@ data class PerfilUiState(
     // Datos de la sesión: el rol ya como texto para mostrar ("Cliente", "Ventas"...)
     // y si tiene el Plan Pro activo (para mostrar la etiqueta "Plan Pro activo")
     val rol: String = "",
-    val planPro: Boolean = false
+    val planPro: Boolean = false,
+    // Botones del "Panel de trabajo". Vacía = no se muestra la tarjeta (ej. Cliente)
+    val opcionesPanel: List<OpcionPanel> = emptyList()
 )
 
 // VIEWMODEL DE LA PANTALLA PERFIL
@@ -97,7 +100,10 @@ class PerfilViewModel(application: Application) : AndroidViewModel(application) 
                 respondioEncuesta = almacenamiento.existeEncuesta(),
                 // obtenerRol() devuelve un Rol (Cliente, Ventas...); nombreVisible es su texto
                 rol = almacenamiento.obtenerRol().nombreVisible,
-                planPro = almacenamiento.tienePlanPro()
+                planPro = almacenamiento.tienePlanPro(),
+                // POLIMORFISMO: se le pide al rol SUS opciones. No hay ningún if por rol:
+                // Ventas devuelve 1, Administrador 2, Cliente e Instructor ninguna.
+                opcionesPanel = almacenamiento.obtenerRol().opcionesPanel()
             )
         }
 

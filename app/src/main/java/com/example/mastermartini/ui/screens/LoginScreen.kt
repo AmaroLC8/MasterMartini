@@ -28,7 +28,9 @@ import com.example.mastermartini.viewmodel.LoginViewModel
 fun LoginScreen(
     viewModel: LoginViewModel,
     onLoginExitoso: () -> Unit,
-    onIrARegistro: () -> Unit
+    onIrARegistro: () -> Unit,
+    // "¿Olvidaste tu contraseña?": MainActivity navega a "recuperar"
+    onOlvidePassword: () -> Unit
 ) {
     // collectAsState() convierte el StateFlow en estado de Compose:
     // cuando el ViewModel cambia algo (texto o error), la pantalla se redibuja sola.
@@ -193,7 +195,21 @@ fun LoginScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            // "¿Olvidaste tu contraseña?": abre la pantalla Recuperar contraseña (ruta "recuperar").
+            // heightIn(min = 48.dp): área fácil de tocar aunque sea un botón de solo texto.
+            TextButton(
+                onClick = onOlvidePassword,
+                modifier = Modifier.heightIn(min = 48.dp)
+            ) {
+                Text(
+                    "¿Olvidaste tu contraseña?",
+                    color = VerdeOscuro,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+
+            Spacer(modifier = Modifier.height(4.dp))
 
             // Botón secundario para ir al Registro
             TextButton(onClick = onIrARegistro) {

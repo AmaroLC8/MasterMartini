@@ -1,5 +1,19 @@
 package com.example.mastermartini.model
 
+// OPCIONES DEL PANEL que comparten varios roles. Se escriben UNA vez aquí
+// (Ventas y Administrador usan la misma de clientes). Son private: solo las usa este archivo.
+private val OPCION_CLIENTES = OpcionPanel(
+    titulo = "Clientes y Plan Pro",
+    descripcion = "Busca clientes y activa o quita su Plan Pro",
+    ruta = "panel/clientes"
+)
+
+private val OPCION_USUARIOS = OpcionPanel(
+    titulo = "Usuarios y roles",
+    descripcion = "Cambia el rol de un usuario o elimina su cuenta",
+    ruta = "panel/usuarios"
+)
+
 // ROL DEL USUARIO (POO: HERENCIA Y POLIMORFISMO)
 //
 // "sealed class" (clase sellada) = una clase PADRE cuyas clases hijas están TODAS escritas
@@ -31,8 +45,9 @@ sealed class Rol(val codigo: String, val nombreVisible: String) {
     // ¿Puede responder las preguntas de los alumnos en los cursos?
     abstract val puedeResponderPreguntas: Boolean
 
-    // Títulos de las secciones de su "Panel de trabajo". Vacía para el Cliente (no tiene panel).
-    abstract fun opcionesPanel(): List<String>
+    // Botones de su "Panel de trabajo" en el Perfil (título, descripción y ruta).
+    // Vacía = no tiene panel. PerfilScreen solo recorre esta lista: NO pregunta qué rol es.
+    abstract fun opcionesPanel(): List<OpcionPanel>
 
     // "data object" = un objeto único (hay UN solo Cliente en toda la app, no se crea con "Cliente()")
     // que además se imprime bonito: println(Rol.Cliente) muestra "Cliente".
@@ -42,7 +57,8 @@ sealed class Rol(val codigo: String, val nombreVisible: String) {
         override val puedeGestionarPlanPro = false
         override val puedeGestionarUsuarios = false
         override val puedeResponderPreguntas = false
-        override fun opcionesPanel(): List<String> = emptyList()
+        // Sin panel de trabajo
+        override fun opcionesPanel(): List<OpcionPanel> = emptyList()
     }
 
     // INSTRUCTOR: dicta los cursos online y responde las dudas de sus alumnos
@@ -50,7 +66,9 @@ sealed class Rol(val codigo: String, val nombreVisible: String) {
         override val puedeGestionarPlanPro = false
         override val puedeGestionarUsuarios = false
         override val puedeResponderPreguntas = true
-        override fun opcionesPanel(): List<String> = listOf("Mis cursos", "Preguntas de alumnos")
+        // Ninguna por ahora. Se agregan cuando se conecten los cursos
+        // (ej. "Mis cursos" y "Preguntas de alumnos").
+        override fun opcionesPanel(): List<OpcionPanel> = emptyList()
     }
 
     // VENTAS: coordina las suscripciones al Plan Pro con los clientes
@@ -58,7 +76,7 @@ sealed class Rol(val codigo: String, val nombreVisible: String) {
         override val puedeGestionarPlanPro = true
         override val puedeGestionarUsuarios = false
         override val puedeResponderPreguntas = false
-        override fun opcionesPanel(): List<String> = listOf("Clientes", "Suscripciones Plan Pro")
+        override fun opcionesPanel(): List<OpcionPanel> = listOf(OPCION_CLIENTES)
     }
 
     // ADMINISTRADOR: puede hacer todo
@@ -66,8 +84,8 @@ sealed class Rol(val codigo: String, val nombreVisible: String) {
         override val puedeGestionarPlanPro = true
         override val puedeGestionarUsuarios = true
         override val puedeResponderPreguntas = true
-        override fun opcionesPanel(): List<String> =
-            listOf("Usuarios y roles", "Suscripciones Plan Pro", "Preguntas de alumnos")
+        // Lo mismo que Ventas, más la gestión de usuarios
+        override fun opcionesPanel(): List<OpcionPanel> = listOf(OPCION_CLIENTES, OPCION_USUARIOS)
     }
 
     // companion object = lo que pertenece a la CLASE Rol y no a un rol en particular.
