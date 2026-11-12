@@ -14,10 +14,12 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -49,7 +51,9 @@ fun RecetasScreen(
     // ViewModel con las recetas filtradas y ordenadas (lo crea MainActivity)
     viewModel: RecetasViewModel,
     // Recibe el id de la receta tocada; MainActivity navega a "detalle/{id}", igual que desde Home
-    onVerDetalle: (Int) -> Unit
+    onVerDetalle: (Int) -> Unit,
+    // Lupa de la barra superior: MainActivity navega a "buscar"
+    onBuscar: () -> Unit
 ) {
     // Escuchamos el estado del ViewModel. Cada vez que se toca un filtro o un orden,
     // el ViewModel arma un estado nuevo y esta pantalla se vuelve a dibujar sola.
@@ -61,6 +65,18 @@ fun RecetasScreen(
             // Barra verde con el título (sin flecha: se llega desde la barra inferior, no desde otra pantalla)
             TopAppBar(
                 title = { Text(text = "Recetas", fontWeight = FontWeight.Bold) },
+                // actions: botones a la derecha de la barra. La lupa abre "Buscar",
+                // que ya no está en la barra inferior. IconButton mide 48 dp (fácil de tocar).
+                actions = {
+                    IconButton(onClick = onBuscar) {
+                        Icon(
+                            imageVector = Icons.Filled.Search,
+                            // No es decorativo: es el único texto que TalkBack puede leer del botón
+                            contentDescription = "Buscar recetas",
+                            tint = BlancoPuro
+                        )
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = VerdeItaliano,
                     titleContentColor = BlancoPuro
@@ -204,9 +220,10 @@ fun RecetasScreen(
 
 // BOTÓN DE OPCIÓN (FilterChip) que usan las tres filas: secciones, orden y "Solo veganas".
 // Se escribe UNA vez aquí para no repetir los colores y el tamaño en los 9 botones.
-// Es private porque solo lo usa esta pantalla.
+// No es private porque también lo usa CapacitacionesScreen (mismo paquete ui.screens)
+// para sus filtros "Todos", "Gratis", "Plan Pro" y las categorías.
 @Composable
-private fun ChipOpcion(
+fun ChipOpcion(
     texto: String,
     seleccionado: Boolean,
     onClick: () -> Unit,

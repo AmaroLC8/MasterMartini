@@ -26,4 +26,10 @@ object DatosEmpresa {
 
     // Correo de ventas
     const val CORREO_VENTAS = "ventas@example.com"
+
+    // PRECIO DEL PLAN PRO (suscripción mensual que desbloquea los cursos intermedios y avanzados).
+    // DATOS DE EJEMPLO. No es un precio real de Master Martini hasta que la empresa lo defina.
+    // Va en pesos chilenos al mes y como Int (número entero): el peso chileno no usa decimales.
+    // Lo usa CapacitacionesViewModel, que lo convierte en el texto "$9.990".
+    const val PRECIO_PLAN_PRO = 9990
 }

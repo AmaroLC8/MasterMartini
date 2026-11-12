@@ -16,6 +16,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SearchOff
@@ -61,7 +62,10 @@ fun BuscarScreen(
     // ViewModel con el texto escrito y los resultados (lo crea MainActivity)
     viewModel: BuscarViewModel,
     // Recibe el id de la receta tocada; MainActivity navega a "detalle/{id}", igual que desde Home
-    onVerDetalle: (Int) -> Unit
+    onVerDetalle: (Int) -> Unit,
+    // Flecha para volver. Buscar ya no es una pestaña de la barra inferior: se abre con
+    // la lupa de Inicio o de Recetas, así que necesita su propio botón para regresar.
+    onVolver: () -> Unit
 ) {
     // Escuchamos el estado del ViewModel. Con cada letra, el ViewModel busca otra vez
     // y esta pantalla se vuelve a dibujar con los resultados nuevos.
@@ -73,12 +77,23 @@ fun BuscarScreen(
     Scaffold(
         containerColor = BlancoHueso,
         topBar = {
-            // Barra verde con el título (sin flecha: se llega desde la barra inferior)
+            // Barra verde con el título y flecha para volver (mismo estilo que DetalleScreen).
+            // Se llega desde la lupa de Inicio o Recetas, y la flecha vuelve a esa pantalla.
             TopAppBar(
                 title = { Text(text = "Buscar", fontWeight = FontWeight.Bold) },
+                navigationIcon = {
+                    IconButton(onClick = onVolver) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Volver",
+                            tint = BlancoPuro
+                        )
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = VerdeItaliano,
-                    titleContentColor = BlancoPuro
+                    titleContentColor = BlancoPuro,
+                    navigationIconContentColor = BlancoPuro
                 )
             )
         }

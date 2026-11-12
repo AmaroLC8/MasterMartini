@@ -20,6 +20,8 @@ import androidx.navigation.navArgument
 import com.example.mastermartini.ui.components.BarraNavegacion
 import com.example.mastermartini.ui.components.itemsNavegacion
 import com.example.mastermartini.ui.screens.BuscarScreen
+import com.example.mastermartini.ui.screens.CapacitacionDetalleScreen
+import com.example.mastermartini.ui.screens.CapacitacionesScreen
 import com.example.mastermartini.ui.screens.DetalleScreen
 import com.example.mastermartini.ui.screens.EncuestaScreen
 import com.example.mastermartini.ui.screens.FavoritosScreen
@@ -32,6 +34,8 @@ import com.example.mastermartini.ui.screens.RecetasScreen
 import com.example.mastermartini.ui.screens.RegistroScreen
 import com.example.mastermartini.ui.theme.MasterMartiniTheme
 import com.example.mastermartini.viewmodel.BuscarViewModel
+import com.example.mastermartini.viewmodel.CapacitacionDetalleViewModel
+import com.example.mastermartini.viewmodel.CapacitacionesViewModel
 import com.example.mastermartini.viewmodel.DetalleViewModel
 import com.example.mastermartini.viewmodel.EncuestaViewModel
 import com.example.mastermartini.viewmodel.FavoritosViewModel
@@ -72,7 +76,7 @@ class MainActivity : ComponentActivity() {
                 val rutasConBarra = itemsNavegacion.map { item -> item.ruta }
                 val mostrarBarra = rutaActual in rutasConBarra
 
-                // Navega a una de las 5 secciones de la barra inferior (home, recetas, buscar, favoritos, perfil).
+                // Navega a una de las 5 secciones de la barra inferior (home, recetas, cursos, favoritos, perfil).
                 // Es una función para escribir estas opciones UNA sola vez: la usan la barra
                 // y el botón "Ver recetas" de Favoritos, y así las dos navegan igual.
                 fun navegarASeccion(ruta: String) {
@@ -183,7 +187,9 @@ class MainActivity : ComponentActivity() {
                                 // Arma la ruta con el id del curso tocado: ej. "detalle/3". Pila [home, detalle]
                                 onVerDetalle = { id -> navController.navigate("detalle/$id") },
                                 // Abre el catálogo de productos encima de Home: pila [home, productos]
-                                onVerProductos = { navController.navigate("productos") }
+                                onVerProductos = { navController.navigate("productos") },
+                                // Lupa: abre Buscar encima de Home: pila [home, buscar]
+                                onBuscar = { navController.navigate("buscar") }
                             )
                         }
 
@@ -256,8 +262,8 @@ class MainActivity : ComponentActivity() {
                             )
                         }
 
-                        // 6. PANTALLAS DE LA BARRA INFERIOR (Recetas, Buscar, Favoritos y Perfil).
-                        // Recetas, Buscar y Favoritos abren el detalle igual que Home: "detalle/3".
+                        // 6. PANTALLAS DE LA BARRA INFERIOR (Recetas, Cursos, Favoritos y Perfil).
+                        // Recetas y Favoritos abren el detalle igual que Home: "detalle/3".
                         // Pila: [home, recetas, detalle] → Atrás vuelve a Recetas.
                         composable("recetas") {
                             // Se crea aquí dentro porque solo lo usa esta pantalla.
@@ -267,18 +273,56 @@ class MainActivity : ComponentActivity() {
                             val recetasViewModel: RecetasViewModel = viewModel()
                             RecetasScreen(
                                 viewModel = recetasViewModel,
-                                onVerDetalle = { id -> navController.navigate("detalle/$id") }
+                                onVerDetalle = { id -> navController.navigate("detalle/$id") },
+                                // Lupa: abre Buscar encima de Recetas: pila [home, recetas, buscar]
+                                onBuscar = { navController.navigate("buscar") }
                             )
                         }
 
+                        // BUSCAR: ya NO es una pestaña de la barra (su lugar lo tomó "Cursos").
+                        // Se abre con la lupa de Inicio o de Recetas, y como "buscar" no está en
+                        // itemsNavegacion, aquí no se ve la barra inferior. Por eso tiene flecha para volver.
                         composable("buscar") {
                             // Se crea aquí dentro porque solo lo usa esta pantalla.
                             // Es un ViewModel normal (no usa Room), igual que RecetasViewModel.
-                            // Con saveState/restoreState de la barra, lo escrito se conserva al volver.
                             val buscarViewModel: BuscarViewModel = viewModel()
                             BuscarScreen(
                                 viewModel = buscarViewModel,
-                                onVerDetalle = { id -> navController.navigate("detalle/$id") }
+                                onVerDetalle = { id -> navController.navigate("detalle/$id") },
+                                // Vuelve a la pantalla de abajo en la pila (Inicio o Recetas)
+                                onVolver = { navController.popBackStack() }
+                            )
+                        }
+
+                        // CURSOS ONLINE (pestaña "Cursos" de la barra inferior)
+                        composable("cursos") {
+                            // ViewModel normal (no usa Room). Con saveState/restoreState de la barra,
+                            // el filtro elegido se conserva al ir a otra pestaña y volver.
+                            val capacitacionesViewModel: CapacitacionesViewModel = viewModel()
+                            CapacitacionesScreen(
+                                viewModel = capacitacionesViewModel,
+                                // Arma la ruta con el id del curso tocado: ej. "capacitacion/4".
+                                // Pila [home, cursos, capacitacion] → Atrás vuelve a Cursos
+                                onVerCapacitacion = { id -> navController.navigate("capacitacion/$id") }
+                            )
+                        }
+
+                        // DETALLE DE UN CURSO ONLINE. Igual que "detalle/{cursoId}": {capacitacionId}
+                        // es un hueco en la ruta que se llena con el número, y navArgument dice que es un Int.
+                        // Se llama "capacitacion" (y no "curso") porque en esta app "curso" es una receta.
+                        composable(
+                            route = "capacitacion/{capacitacionId}",
+                            arguments = listOf(navArgument("capacitacionId") { type = NavType.IntType })
+                        ) { backStackEntry ->
+                            // Si no viene el argumento se usa 0 (no existe): la pantalla dice "Curso no encontrado"
+                            val capacitacionId = backStackEntry.arguments?.getInt("capacitacionId") ?: 0
+                            val capacitacionDetalleViewModel: CapacitacionDetalleViewModel = viewModel()
+                            CapacitacionDetalleScreen(
+                                capacitacionId = capacitacionId,
+                                viewModel = capacitacionDetalleViewModel,
+                                onVolver = { navController.popBackStack() },
+                                // El producto principal abre su detalle: ej. "producto/9"
+                                onVerProducto = { id -> navController.navigate("producto/$id") }
                             )
                         }
 

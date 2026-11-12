@@ -509,9 +509,10 @@ private fun FilaPaso(
 }
 
 // UN DATO CON SU ÍCONO (ej: 🕒 15 min). Lo usan duración, rendimiento y dificultad.
-// Es private porque solo lo usa esta pantalla.
+// No es private porque también lo usa CapacitacionDetalleScreen (nivel, duración,
+// módulos e instructor del curso online), así se ve igual en las dos pantallas.
 @Composable
-private fun DatoConIcono(icono: ImageVector, texto: String) {
+fun DatoConIcono(icono: ImageVector, texto: String) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         // Decorativo (contentDescription = null): el texto de al lado ya dice el dato
         Icon(

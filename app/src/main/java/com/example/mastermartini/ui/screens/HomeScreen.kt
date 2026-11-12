@@ -11,6 +11,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Inventory2
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -51,7 +52,9 @@ fun HomeScreen(
     // Recibe el id del curso tocado; MainActivity navega a "detalle/{id}"
     onVerDetalle: (Int) -> Unit,
     // Tarjeta "Nuestros productos": MainActivity navega a "productos"
-    onVerProductos: () -> Unit
+    onVerProductos: () -> Unit,
+    // Lupa de la barra superior: MainActivity navega a "buscar"
+    onBuscar: () -> Unit
 ) {
     // Colores estilo bandera italiana de Master Martini
     val verdeItaliano = Color(0xFF008C45)
@@ -121,6 +124,18 @@ fun HomeScreen(
                             }
                         }
                     }
+                    }
+                },
+                // actions: botones a la derecha de la barra. La lupa abre "Buscar",
+                // que ya no está en la barra inferior. IconButton mide 48 dp (fácil de tocar).
+                actions = {
+                    IconButton(onClick = onBuscar) {
+                        Icon(
+                            imageVector = Icons.Default.Search,
+                            // No es decorativo: es el único texto que TalkBack puede leer del botón
+                            contentDescription = "Buscar recetas",
+                            tint = Color.White
+                        )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(

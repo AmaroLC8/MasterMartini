@@ -5,7 +5,7 @@ import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.School
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -37,7 +37,9 @@ val itemsNavegacion = listOf(
     ItemNavegacion(ruta = "home", titulo = "Inicio", icono = Icons.Filled.Home),
     // AutoMirrored: el ícono del libro se da vuelta solo en idiomas que se leen de derecha a izquierda
     ItemNavegacion(ruta = "recetas", titulo = "Recetas", icono = Icons.AutoMirrored.Filled.MenuBook),
-    ItemNavegacion(ruta = "buscar", titulo = "Buscar", icono = Icons.Filled.Search),
+    // "Cursos" reemplazó a "Buscar": la búsqueda ahora se abre con la lupa de Inicio y Recetas
+    // (su ruta "buscar" y su pantalla siguen existiendo en MainActivity).
+    ItemNavegacion(ruta = "cursos", titulo = "Cursos", icono = Icons.Filled.School),
     ItemNavegacion(ruta = "favoritos", titulo = "Favoritos", icono = Icons.Filled.Favorite),
     ItemNavegacion(ruta = "perfil", titulo = "Perfil", icono = Icons.Filled.Person)
 )
