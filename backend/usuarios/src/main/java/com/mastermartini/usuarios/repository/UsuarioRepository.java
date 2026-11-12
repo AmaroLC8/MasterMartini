@@ -1,0 +1,18 @@
+package com.mastermartini.usuarios.repository;
+
+import com.mastermartini.usuarios.model.Rol;
+import com.mastermartini.usuarios.model.Usuario;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+import java.util.List;
+import java.util.Optional;
+
+public interface UsuarioRepository {
+    Optional<Usuario> findByCorreo(String Correo);
+    Optional<Usuario> findByRut(String rut);
+
+    boolean existByCorreo(String correo);
+    boolean existByRut(String rut);
+
+    List<Usuario> findByRol(Rol rol);
+}
