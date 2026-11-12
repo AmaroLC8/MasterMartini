@@ -60,8 +60,10 @@ class MainActivity : ComponentActivity() {
                 // Controla la navegación entre pantallas (qué pantalla se ve y la pila para "Atrás")
                 val navController = rememberNavController()
                 // Se crea afuera del NavHost porque lo usan dos pantallas:
-                // Registro (formulario) y Home (lee los datos guardados del perfil)
-                val registroViewModel: RegistroViewModel = viewModel()
+                // Registro (formulario) y Home (lee los datos guardados del perfil).
+                // factory = RegistroViewModel.Factory: la "receta" que le pasa al constructor
+                // el repositorio de usuarios y el almacenamiento (inyección por constructor).
+                val registroViewModel: RegistroViewModel = viewModel(factory = RegistroViewModel.Factory)
 
                 // Pantalla que se está viendo ahora. currentBackStackEntryAsState() es un estado:
                 // cada vez que se navega, cambia y este bloque se vuelve a dibujar (así la barra
@@ -124,10 +126,14 @@ class MainActivity : ComponentActivity() {
                         composable("login") {
                             // El Login tiene su propio ViewModel, con sus validaciones.
                             // Se crea aquí dentro, igual que HomeViewModel en "home".
-                            val loginViewModel: LoginViewModel = viewModel()
+                            // Usa su Factory para recibir el repositorio y el almacenamiento por el constructor.
+                            val loginViewModel: LoginViewModel = viewModel(factory = LoginViewModel.Factory)
                             LoginScreen(
                                 viewModel = loginViewModel,
                                 onLoginExitoso = {
+                                    // La sesión ya se guardó: el formulario de "Editar datos" se
+                                    // recarga con los datos de quien acaba de entrar
+                                    registroViewModel.cargarPerfilGuardado()
                                     navController.navigate("home") {
                                         // Saca "login" de la pila: el botón Atrás en Home cierra la app
                                         // en vez de volver al login
@@ -350,11 +356,16 @@ class MainActivity : ComponentActivity() {
                                 // Pila [home, perfil, encuesta]: el botón volver de la encuesta regresa a Perfil
                                 onIrAEncuesta = { navController.navigate("encuesta") },
                                 onCerrarSesion = {
+                                    // Borra la sesión guardada (id, rol, Plan Pro y datos del usuario)
+                                    perfilViewModel.cerrarSesion()
+                                    // Deja vacío el formulario de Registro, para que la próxima
+                                    // persona no vea los datos de la anterior
+                                    registroViewModel.cargarPerfilGuardado()
                                     navController.navigate("login") {
                                         // graph.id = el NavHost completo: saca TODAS las pantallas de la pila
                                         // (home, perfil...). inclusive = true saca también la raíz.
                                         // Queda solo [login]: Atrás desde el login cierra la app,
-                                        // no vuelve a Perfil. Los datos guardados NO se borran.
+                                        // no vuelve a Perfil. La encuesta y la foto NO se borran.
                                         popUpTo(navController.graph.id) { inclusive = true }
                                     }
                                 }

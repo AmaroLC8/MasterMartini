@@ -37,7 +37,11 @@ data class PerfilUiState(
     // los intereses o el botón "Responder encuesta".
     val respondioEncuesta: Boolean = false,
     // Cantidad de recetas favoritas (viene de Room y se actualiza sola)
-    val totalFavoritos: Int = 0
+    val totalFavoritos: Int = 0,
+    // Datos de la sesión: el rol ya como texto para mostrar ("Cliente", "Ventas"...)
+    // y si tiene el Plan Pro activo (para mostrar la etiqueta "Plan Pro activo")
+    val rol: String = "",
+    val planPro: Boolean = false
 )
 
 // VIEWMODEL DE LA PANTALLA PERFIL
@@ -90,7 +94,10 @@ class PerfilViewModel(application: Application) : AndroidViewModel(application) 
                 intereses = almacenamiento.obtenerInteresesEncuesta().sorted(),
                 nivel = almacenamiento.obtenerNivelEncuesta(),
                 ubicacion = almacenamiento.obtenerUbicacionEncuesta(),
-                respondioEncuesta = almacenamiento.existeEncuesta()
+                respondioEncuesta = almacenamiento.existeEncuesta(),
+                // obtenerRol() devuelve un Rol (Cliente, Ventas...); nombreVisible es su texto
+                rol = almacenamiento.obtenerRol().nombreVisible,
+                planPro = almacenamiento.tienePlanPro()
             )
         }
 
@@ -100,6 +107,12 @@ class PerfilViewModel(application: Application) : AndroidViewModel(application) 
             val fotoGuardada = fotoRepository.obtenerFoto()
             _uiState.update { it.copy(foto = fotoGuardada) }
         }
+    }
+
+    // Se llama al confirmar "Cerrar sesión": borra la sesión guardada (id, rol, Plan Pro y datos).
+    // Después MainActivity vuelve al login. La encuesta y la foto no se borran.
+    fun cerrarSesion() {
+        almacenamiento.cerrarSesion()
     }
 
     // Convierte la respuesta guardada en el texto que se muestra en el Perfil.

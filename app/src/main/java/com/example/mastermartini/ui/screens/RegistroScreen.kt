@@ -378,10 +378,23 @@ fun RegistroScreen(
                 shape = RoundedCornerShape(10.dp)
             )
 
+            // Al EDITAR los datos, el RUT y el correo se muestran pero no se pueden cambiar
+            // (el backend no los cambia en PUT /{id}). Se avisa con texto para que no parezca un error.
+            if (uiState.esEdicion) {
+                Text(
+                    text = "El RUT y el correo no se pueden cambiar desde aquí.",
+                    fontSize = 16.sp,
+                    color = TextoOscuro,
+                    modifier = Modifier.align(Alignment.Start)
+                )
+            }
+
             // CAMPO 2: RUT EMPRESA (SINTÉTICO). El ViewModel revisa formato y dígito verificador
+            // readOnly: al editar se ve normal (buen contraste) pero no se puede escribir
             OutlinedTextField(
                 value = uiState.rut,
                 onValueChange = { viewModel.onRutChange(it) },
+                readOnly = uiState.esEdicion,
                 label = { Text("RUT Empresa (Ej: 12345678-5)") },
                 leadingIcon = { Icon(Icons.Filled.Badge, contentDescription = "RUT") },
                 trailingIcon = { IconoValidacion(valor = uiState.rut, error = uiState.errorRut) },
@@ -400,6 +413,7 @@ fun RegistroScreen(
             OutlinedTextField(
                 value = uiState.correo,
                 onValueChange = { viewModel.onCorreoChange(it) },
+                readOnly = uiState.esEdicion,
                 label = { Text("Correo Electrónico de Contacto") },
                 leadingIcon = { Icon(Icons.Filled.Email, contentDescription = "Correo") },
                 trailingIcon = { IconoValidacion(valor = uiState.correo, error = uiState.errorCorreo) },
@@ -414,24 +428,27 @@ fun RegistroScreen(
                 shape = RoundedCornerShape(10.dp)
             )
 
-            // CAMPO CONTRASEÑA: la que después se pide en el login (mínimo 4 caracteres, lo revisa el ViewModel)
-            OutlinedTextField(
-                value = uiState.password,
-                onValueChange = { viewModel.onPasswordChange(it) },
-                label = { Text("Crea una Contraseña") },
-                leadingIcon = { Icon(Icons.Filled.Lock, contentDescription = "Contraseña") },
-                trailingIcon = { IconoValidacion(valor = uiState.password, error = uiState.errorPassword) },
-                // Muestra puntos en vez de las letras, para que no se lea la contraseña en pantalla
-                visualTransformation = PasswordVisualTransformation(),
-                isError = uiState.errorPassword != null,
-                supportingText = {
-                    AnimatedVisibility(visible = uiState.errorPassword != null) {
-                        Text(uiState.errorPassword ?: "", color = MaterialTheme.colorScheme.error)
-                    }
-                },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(10.dp)
-            )
+            // CAMPO CONTRASEÑA: la que después se pide en el login (mínimo 4 caracteres, lo revisa el ViewModel).
+            // Solo al crear la cuenta: al editar los datos no se pide (no se cambia desde aquí).
+            if (!uiState.esEdicion) {
+                OutlinedTextField(
+                    value = uiState.password,
+                    onValueChange = { viewModel.onPasswordChange(it) },
+                    label = { Text("Crea una Contraseña") },
+                    leadingIcon = { Icon(Icons.Filled.Lock, contentDescription = "Contraseña") },
+                    trailingIcon = { IconoValidacion(valor = uiState.password, error = uiState.errorPassword) },
+                    // Muestra puntos en vez de las letras, para que no se lea la contraseña en pantalla
+                    visualTransformation = PasswordVisualTransformation(),
+                    isError = uiState.errorPassword != null,
+                    supportingText = {
+                        AnimatedVisibility(visible = uiState.errorPassword != null) {
+                            Text(uiState.errorPassword ?: "", color = MaterialTheme.colorScheme.error)
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(10.dp)
+                )
+            }
 
             // CAMPO 4: TELÉFONO CELULAR
             OutlinedTextField(
@@ -570,9 +587,33 @@ fun RegistroScreen(
                 }
             }
 
+            // ERROR DEL REPOSITORIO (ej. "Ya existe una cuenta con ese correo..."): es el mensaje
+            // de la UsuarioException que atrapó el ViewModel. Ícono + texto, no solo color.
+            AnimatedVisibility(visible = uiState.errorGeneral != null) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Warning,
+                        contentDescription = "Aviso",
+                        tint = RojoItaliano
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = uiState.errorGeneral ?: "",
+                        color = RojoItaliano,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+            }
+
             // BOTÓN PRINCIPAL (Altura 54dp para accesibilidad de mayores de 50 años)
             Button(
                 onClick = {
+                    // El ViewModel llama a este bloque SOLO si el repositorio respondió bien:
+                    // por eso la vibración sigue siendo solo en el éxito
                     viewModel.guardarPerfil {
                         ejecutarVibracion() // Dispara la vibración física
                         onRegistroCompletado() // Navega hacia HomeScreen
@@ -580,7 +621,8 @@ fun RegistroScreen(
                 },
                 // Se puede tocar cuando los campos de texto están bien. Si falta elegir cuántas
                 // personas trabajan, al tocarlo guardarPerfil() muestra ese error y no guarda.
-                enabled = uiState.puedeIntentarRegistrar,
+                // Mientras carga se desactiva, para no enviar el registro dos veces.
+                enabled = uiState.puedeIntentarRegistrar && !uiState.cargando,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = VerdeItaliano,
                     contentColor = BlancoPuro,
@@ -592,7 +634,20 @@ fun RegistroScreen(
                     .height(54.dp),
                 shape = RoundedCornerShape(10.dp)
             ) {
-                Text("REGISTRAR Y ACCEDER", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                if (uiState.cargando) {
+                    // Círculo pequeño que gira mientras se espera la respuesta
+                    CircularProgressIndicator(
+                        color = TextoOscuro,
+                        strokeWidth = 2.dp,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text("GUARDANDO...", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                } else if (uiState.esEdicion) {
+                    Text("GUARDAR CAMBIOS", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                } else {
+                    Text("REGISTRAR Y ACCEDER", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                }
             }
 
             Spacer(modifier = Modifier.height(16.dp))

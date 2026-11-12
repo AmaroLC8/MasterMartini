@@ -165,6 +165,27 @@ fun PerfilScreen(
                     fontWeight = FontWeight.SemiBold,
                     color = VerdeOscuro
                 )
+                // Rol de la cuenta (ej. "Cliente", "Ventas"). Viene de la sesión guardada
+                Text(
+                    text = "Rol: ${uiState.rol}",
+                    fontSize = 16.sp,
+                    color = TextoOscuro
+                )
+                // Etiqueta "Plan Pro activo" solo si tiene la suscripción.
+                // Dorado con texto oscuro (mismo estilo que "★ PLAN PRO" en Cursos): dice con TEXTO
+                // que está activo, no depende solo del color.
+                if (uiState.planPro) {
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = "★ Plan Pro activo",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = TextoOscuro,
+                        modifier = Modifier
+                            .background(DoradoCalidad, RoundedCornerShape(6.dp))
+                            .padding(horizontal = 12.dp, vertical = 4.dp)
+                    )
+                }
             }
 
             // 2. TARJETA "DATOS DEL NEGOCIO"
@@ -287,7 +308,9 @@ fun PerfilScreen(
             title = { Text(text = "Cerrar sesión", fontWeight = FontWeight.Bold) },
             text = {
                 Text(
-                    text = "¿Quieres cerrar sesión? Tus datos quedan guardados en este celular.",
+                    // Al cerrar sesión se borran los datos de la cuenta del celular
+                    // (AlmacenamientoLocal.cerrarSesion), por eso se avisa qué se necesita para volver
+                    text = "¿Quieres cerrar sesión? Para volver a entrar necesitarás tu RUT o correo y tu contraseña.",
                     fontSize = 17.sp
                 )
             },

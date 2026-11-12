@@ -133,7 +133,8 @@ fun LoginScreen(
                 shape = RoundedCornerShape(10.dp)
             )
 
-            // Error general (RUT/correo o contraseña no coinciden con el registro).
+            // Error general: el mensaje de la UsuarioException que atrapó el ViewModel
+            // (ej. "RUT/correo o contraseña incorrectos").
             // Aparece y desaparece con animación; se borra solo cuando el usuario vuelve a escribir.
             AnimatedVisibility(visible = uiState.errorGeneral != null) {
                 Row(
@@ -162,15 +163,34 @@ fun LoginScreen(
             // Botón principal de Iniciar Sesión con verde italiano.
             // Solo le pide al ViewModel que intente iniciar sesión; si todo está bien,
             // el ViewModel llama a onLoginExitoso y MainActivity navega a "home".
+            // Mientras se espera la respuesta (cargando), el botón se desactiva para no
+            // mandar el login dos veces, y muestra un círculo de carga junto al texto.
             Button(
                 onClick = { viewModel.iniciarSesion(onExito = onLoginExitoso) },
-                colors = ButtonDefaults.buttonColors(containerColor = VerdeItaliano),
+                enabled = !uiState.cargando,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = VerdeItaliano,
+                    // Desactivado (cargando): verde más claro, pero con texto blanco legible
+                    disabledContainerColor = VerdeItaliano.copy(alpha = 0.7f),
+                    disabledContentColor = BlancoPuro
+                ),
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(54.dp), // Altura para accesibilidad
                 shape = RoundedCornerShape(10.dp)
             ) {
-                Text("INGRESAR", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = BlancoPuro)
+                if (uiState.cargando) {
+                    // Círculo pequeño que gira: avisa que la app está trabajando
+                    CircularProgressIndicator(
+                        color = BlancoPuro,
+                        strokeWidth = 2.dp,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text("INGRESANDO...", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = BlancoPuro)
+                } else {
+                    Text("INGRESAR", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = BlancoPuro)
+                }
             }
 
             Spacer(modifier = Modifier.height(12.dp))

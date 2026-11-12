@@ -4,9 +4,16 @@ import android.app.Application
 import android.graphics.Bitmap
 import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
 import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.mastermartini.data.AlmacenamientoLocal
 import com.example.mastermartini.data.FotoRepository
+import com.example.mastermartini.data.ProveedorRepositorios
+import com.example.mastermartini.data.UsuarioException
+import com.example.mastermartini.data.UsuarioRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -45,13 +52,29 @@ data class RegistroUiState(
     // true cuando los campos de TEXTO están completos y sin errores. Con esto se habilita
     // el botón "REGISTRAR Y ACCEDER": así, si falta elegir cuántas personas trabajan,
     // el usuario puede tocarlo y ver el error de esa pregunta (con el botón apagado no lo vería).
-    val puedeIntentarRegistrar: Boolean = false
+    val puedeIntentarRegistrar: Boolean = false,
+    // true mientras se espera la respuesta del repositorio: el botón se desactiva y muestra carga
+    val cargando: Boolean = false,
+    // Error que devolvió el repositorio (ej. "Ya existe una cuenta con ese correo..."). null = sin error
+    val errorGeneral: String? = null,
+    // true = "Editar datos" (ya hay una sesión iniciada); false = crear una cuenta nueva.
+    // Al editar se llama a actualizarPerfil() en vez de registrar(), porque registrar()
+    // respondería "dato duplicado" con el propio RUT y correo del usuario.
+    // El RUT, el correo y la contraseña no se cambian al editar (el backend no lo permite
+    // en PUT /{id}), por eso la pantalla los muestra fijos o los esconde.
+    val esEdicion: Boolean = false
 )
 
-class RegistroViewModel(application: Application) : AndroidViewModel(application) {
-
+// INYECCIÓN POR CONSTRUCTOR: igual que LoginViewModel, recibe el repositorio de usuarios
+// y el almacenamiento en vez de crearlos (así se puede probar con MockK).
+// Sigue siendo AndroidViewModel porque FotoRepository necesita la Application para
+// guardar la foto del local en la memoria interna.
+class RegistroViewModel(
+    application: Application,
+    private val usuarioRepository: UsuarioRepository,
     // Capa de persistencia local (IE 2.3.1)
-    private val almacenamiento = AlmacenamientoLocal(application)
+    private val almacenamiento: AlmacenamientoLocal
+) : AndroidViewModel(application) {
 
     // Guarda y lee la foto del local como archivo JPEG en la memoria interna
     private val fotoRepository = FotoRepository(application)
@@ -77,13 +100,33 @@ class RegistroViewModel(application: Application) : AndroidViewModel(application
     // si estuviera antes, _uiState todavía no existiría.
     init {
         cargarPerfilGuardado()
+
+        // La foto se carga AUNQUE no haya perfil completo, porque se guarda apenas se elige
+        // (antes de tocar "Registrar"). Leer un archivo es lento, por eso va en una corrutina:
+        // obtenerFoto() trabaja en Dispatchers.IO y aquí solo se espera el resultado.
+        viewModelScope.launch {
+            val fotoGuardada = fotoRepository.obtenerFoto()
+            _uiState.update { it.copy(fotoLocal = fotoGuardada) }
+        }
     }
 
-    // Si ya hay un perfil en SharedPreferences, lo copia al formulario (queda precargado al editar).
+    // Deja el formulario igual a lo que hay guardado en la sesión.
+    // Si hay sesión, copia sus datos (queda precargado para "Editar datos").
+    // Si no hay sesión, el formulario queda vacío (para crear una cuenta nueva).
+    // Es pública porque este ViewModel vive en MainActivity (lo comparten Registro y Home):
+    // MainActivity la llama al iniciar sesión y al cerrarla, para que el formulario
+    // muestre los datos de la persona que está usando la app y no los de la anterior.
     // Usa las mismas funciones onXChange() que el usuario al escribir, así los datos
     // pasan por las mismas validaciones y revisarValidez() habilita el botón.
-    // La contraseña no se precarga: al editar los datos hay que volver a escribirla.
-    private fun cargarPerfilGuardado() {
+    // La contraseña no se precarga (no se guarda en el celular) y al editar no se pide.
+    fun cargarPerfilGuardado() {
+        // Se parte de un formulario vacío, conservando solo la foto (que es del celular).
+        // esEdicion = true si hay un usuario con sesión iniciada.
+        _uiState.value = RegistroUiState(
+            fotoLocal = _uiState.value.fotoLocal,
+            esEdicion = almacenamiento.obtenerIdUsuario() != null
+        )
+
         if (almacenamiento.existePerfil()) {
             onNombreChange(almacenamiento.obtenerNombre())
             onRutChange(almacenamiento.obtenerRut())
@@ -100,14 +143,6 @@ class RegistroViewModel(application: Application) : AndroidViewModel(application
             if (personasGuardado in opcionesPersonas) {
                 onPersonasNegocioChange(personasGuardado)
             }
-        }
-
-        // La foto se carga AUNQUE no haya perfil completo, porque se guarda apenas se elige
-        // (antes de tocar "Registrar"). Leer un archivo es lento, por eso va en una corrutina:
-        // obtenerFoto() trabaja en Dispatchers.IO y aquí solo se espera el resultado.
-        viewModelScope.launch {
-            val fotoGuardada = fotoRepository.obtenerFoto()
-            _uiState.update { it.copy(fotoLocal = fotoGuardada) }
         }
     }
 
@@ -237,7 +272,7 @@ class RegistroViewModel(application: Application) : AndroidViewModel(application
     }
 
     // Contraseña del registro: mínimo 4 caracteres.
-    // Es la que después pide el LoginViewModel para iniciar sesión.
+    // Se envía al repositorio al registrarse y es la que después pide el login.
     fun onPasswordChange(nuevoTexto: String) {
         val error = if (nuevoTexto.length < 4) "La contraseña debe tener al menos 4 caracteres" else null
         _uiState.update { it.copy(password = nuevoTexto, errorPassword = error) }
@@ -313,11 +348,14 @@ class RegistroViewModel(application: Application) : AndroidViewModel(application
     //    Con esto aparece el banner verde y se permite guardar.
     private fun revisarValidez() {
         val actual = _uiState.value
+        // Al editar los datos la contraseña no se pide (no se cambia desde aquí), así que cuenta como lista
+        val passwordValida = actual.esEdicion ||
+                (actual.password.isNotBlank() && actual.errorPassword == null)
         val camposTextoValidos = actual.nombre.isNotBlank() && actual.errorNombre == null &&
                 actual.rut.isNotBlank() && actual.errorRut == null &&
                 actual.correo.isNotBlank() && actual.errorCorreo == null &&
                 actual.telefono.isNotBlank() && actual.errorTelefono == null &&
-                actual.password.isNotBlank() && actual.errorPassword == null
+                passwordValida
 
         val valido = camposTextoValidos && actual.personasNegocio.isNotBlank()
 
@@ -326,10 +364,14 @@ class RegistroViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
-    // Guarda en el disco del celular mediante SharedPreferences (también la contraseña,
-    // para que el login pueda compararla después)
+    // Se llama al tocar "REGISTRAR Y ACCEDER" (o "GUARDAR CAMBIOS" al editar).
+    // Envía los datos al repositorio (el backend) y, si sale bien, guarda la sesión
+    // en SharedPreferences. La contraseña NO se guarda en el celular.
     fun guardarPerfil(onExito: () -> Unit) {
         val actual = _uiState.value
+
+        // Si ya se está esperando una respuesta, no se manda otra (evita el doble toque)
+        if (actual.cargando) return
 
         // Si falta la pregunta de personas, se muestra su error AHORA (al intentar registrar)
         // y no se guarda nada. No se muestra antes para no recibir al usuario con un error en rojo.
@@ -340,17 +382,47 @@ class RegistroViewModel(application: Application) : AndroidViewModel(application
             return
         }
 
-        if (actual.esFormularioValido) {
-            almacenamiento.guardarPerfil(
-                nombre = actual.nombre,
-                rut = actual.rut,
-                correo = actual.correo,
-                rubro = actual.rubro,
-                telefono = actual.telefono,
-                personasNegocio = actual.personasNegocio,
-                password = actual.password
-            )
-            onExito() // Dispara la navegación hacia Home (la decide MainActivity)
+        if (!actual.esFormularioValido) return
+
+        // Empieza la espera: se borra el error anterior y se muestra el indicador de carga
+        _uiState.update { it.copy(cargando = true, errorGeneral = null) }
+
+        viewModelScope.launch {
+            // try/catch: si el repositorio LANZA una UsuarioException (ej. DatoDuplicado),
+            // el catch la ATRAPA, se muestra su mensaje y la app no se cae.
+            try {
+                val usuario = if (actual.esEdicion) {
+                    // EDITAR DATOS: se actualiza la cuenta de la sesión actual.
+                    // Si no hubiera id (no debería pasar), se trata como "usuario no encontrado".
+                    val id = almacenamiento.obtenerIdUsuario() ?: throw UsuarioException.NoEncontrado()
+                    usuarioRepository.actualizarPerfil(
+                        id = id,
+                        nombre = actual.nombre,
+                        telefono = actual.telefono,
+                        rubro = actual.rubro,
+                        personasNegocio = actual.personasNegocio
+                    )
+                } else {
+                    // CUENTA NUEVA: si el correo o el RUT ya existen, lanza DatoDuplicado
+                    usuarioRepository.registrar(
+                        nombre = actual.nombre,
+                        rut = actual.rut,
+                        correo = actual.correo,
+                        telefono = actual.telefono,
+                        rubro = actual.rubro,
+                        personasNegocio = actual.personasNegocio,
+                        password = actual.password
+                    )
+                }
+                // Salió bien: se guarda la sesión con lo que devolvió el repositorio
+                almacenamiento.guardarSesion(usuario)
+                // Se recarga el formulario desde la sesión: queda en modo edición,
+                // sin la contraseña escrita y con cargando = false
+                cargarPerfilGuardado()
+                onExito() // Vibra y navega (lo decide la pantalla y MainActivity). Solo en el éxito.
+            } catch (e: UsuarioException) {
+                _uiState.update { it.copy(cargando = false, errorGeneral = e.message) }
+            }
         }
     }
 
@@ -369,5 +441,21 @@ class RegistroViewModel(application: Application) : AndroidViewModel(application
 
     fun obtenerRubroGuardado(): String {
         return almacenamiento.obtenerRubro()
+    }
+
+    // FACTORY: la "receta" para crear este ViewModel con sus dependencias
+    // (MainActivity lo usa así: viewModel(factory = RegistroViewModel.Factory)).
+    companion object {
+        val Factory: ViewModelProvider.Factory = viewModelFactory {
+            initializer {
+                // La Application la necesitan AndroidViewModel, FotoRepository y AlmacenamientoLocal
+                val application = checkNotNull(this[APPLICATION_KEY])
+                RegistroViewModel(
+                    application = application,
+                    usuarioRepository = ProveedorRepositorios.usuarioRepository,
+                    almacenamiento = AlmacenamientoLocal(application)
+                )
+            }
+        }
     }
 }
