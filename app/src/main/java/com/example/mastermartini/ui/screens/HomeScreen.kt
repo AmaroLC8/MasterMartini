@@ -180,7 +180,7 @@ fun HomeScreen(
                 }
             }
 
-            // 2. MasterClass Video Destacado (Reproductor Offline)
+            // 2. MasterClass: video destacado
             item {
                 Text(
                     text = "🎥 MasterClass Destacada",

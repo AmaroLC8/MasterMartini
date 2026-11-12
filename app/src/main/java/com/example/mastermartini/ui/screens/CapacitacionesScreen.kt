@@ -41,6 +41,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.mastermartini.model.Capacitacion
+import com.example.mastermartini.ui.components.ChipOpcion
 import com.example.mastermartini.ui.components.EtiquetaAcceso
 import com.example.mastermartini.ui.components.EtiquetaVegana
 import com.example.mastermartini.ui.theme.BlancoHueso
@@ -116,7 +117,7 @@ fun CapacitacionesScreen(
                         .fillMaxWidth()
                         .horizontalScroll(rememberScrollState())
                 ) {
-                    // ChipOpcion es el mismo botón de filtro de RecetasScreen (misma apariencia)
+                    // ChipOpcion (ui/components) es el mismo botón de filtro de RecetasScreen
                     uiState.filtros.forEach { filtro ->
                         ChipOpcion(
                             texto = filtro,

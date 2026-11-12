@@ -7,17 +7,13 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
@@ -32,6 +28,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.mastermartini.ui.components.ChipOpcion
 import com.example.mastermartini.ui.components.TarjetaReceta
 import com.example.mastermartini.ui.theme.BlancoHueso
 import com.example.mastermartini.ui.theme.BlancoPuro
@@ -216,40 +213,4 @@ fun RecetasScreen(
             }
         }
     }
-}
-
-// BOTÓN DE OPCIÓN (FilterChip) que usan las tres filas: secciones, orden y "Solo veganas".
-// Se escribe UNA vez aquí para no repetir los colores y el tamaño en los 9 botones.
-// No es private porque también lo usa CapacitacionesScreen (mismo paquete ui.screens)
-// para sus filtros "Todos", "Gratis", "Plan Pro" y las categorías.
-@Composable
-fun ChipOpcion(
-    texto: String,
-    seleccionado: Boolean,
-    onClick: () -> Unit,
-    // Margen extra opcional (lo usa "Solo veganas", que no está dentro de una Row con padding)
-    modifier: Modifier = Modifier
-) {
-    FilterChip(
-        selected = seleccionado,
-        onClick = onClick,
-        label = { Text(text = texto, fontSize = 16.sp) },
-        // Check cuando está elegido: así se nota cuál está marcado sin depender solo del color.
-        // Si no está elegido, se pasa null y no se dibuja ningún ícono.
-        leadingIcon = if (seleccionado) {
-            { Icon(imageVector = Icons.Filled.Check, contentDescription = null) }
-        } else {
-            null
-        },
-        // Mismos colores que los chips del Registro
-        colors = FilterChipDefaults.filterChipColors(
-            selectedContainerColor = VerdeItaliano,
-            selectedLabelColor = BlancoPuro,
-            selectedLeadingIconColor = BlancoPuro,
-            containerColor = BlancoPuro,
-            labelColor = TextoOscuro
-        ),
-        // 48 dp de alto: botón grande y fácil de tocar (el normal mide 32 dp)
-        modifier = modifier.height(48.dp)
-    )
 }

@@ -26,7 +26,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -35,6 +34,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.mastermartini.ui.components.ContactoVentas
+import com.example.mastermartini.ui.components.DatoConIcono
 import com.example.mastermartini.ui.components.EtiquetaVegana
 import com.example.mastermartini.ui.theme.*
 import com.example.mastermartini.viewmodel.DetalleViewModel
@@ -504,29 +504,6 @@ private fun FilaPaso(
             fontSize = 16.sp,
             color = if (completado) Color(0xFF666666) else TextoOscuro,
             modifier = Modifier.weight(1f)
-        )
-    }
-}
-
-// UN DATO CON SU ÍCONO (ej: 🕒 15 min). Lo usan duración, rendimiento y dificultad.
-// No es private porque también lo usa CapacitacionDetalleScreen (nivel, duración,
-// módulos e instructor del curso online), así se ve igual en las dos pantallas.
-@Composable
-fun DatoConIcono(icono: ImageVector, texto: String) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        // Decorativo (contentDescription = null): el texto de al lado ya dice el dato
-        Icon(
-            imageVector = icono,
-            contentDescription = null,
-            tint = RojoItaliano,
-            modifier = Modifier.size(22.dp)
-        )
-        Spacer(modifier = Modifier.width(6.dp))
-        Text(
-            text = texto,
-            fontSize = 16.sp,
-            fontWeight = FontWeight.Bold,
-            color = TextoOscuro
         )
     }
 }

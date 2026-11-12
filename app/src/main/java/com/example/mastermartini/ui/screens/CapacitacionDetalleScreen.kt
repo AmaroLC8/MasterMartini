@@ -62,6 +62,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.mastermartini.model.Leccion
 import com.example.mastermartini.model.Modulo
+import com.example.mastermartini.ui.components.DatoConIcono
 import com.example.mastermartini.ui.components.EtiquetaAcceso
 import com.example.mastermartini.ui.components.EtiquetaVegana
 import com.example.mastermartini.ui.theme.BlancoHueso
@@ -191,7 +192,7 @@ fun CapacitacionDetalleScreen(
                 // Por ahora se reutiliza el video local de res/raw como reemplazo temporal.
                 ReproductorVideoLocal()
 
-                // c. Datos con íconos (DatoConIcono es el mismo de DetalleScreen) y la descripción
+                // c. Datos con íconos (DatoConIcono, en ui/components, el mismo de DetalleScreen) y la descripción
                 Card(
                     colors = CardDefaults.cardColors(containerColor = BlancoPuro),
                     border = BorderStroke(1.dp, DoradoCalidad.copy(alpha = 0.6f)),
