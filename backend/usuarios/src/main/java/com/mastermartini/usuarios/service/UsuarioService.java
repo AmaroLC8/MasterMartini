@@ -29,10 +29,10 @@ public class UsuarioService {
         this.passwordEncoder = passwordEncoder;
     }
     public UsuarioResponse registrar(RegistroRequest req){
-        if(usuarioRepository.existByCorreo(req.correo())){
+        if(usuarioRepository.existsByCorreo(req.correo())){
             throw new ApiException(HttpStatus.CONFLICT, "El correo ya esta registrado");
         }
-        if(usuarioRepository.existByRut(req.rut())){
+        if(usuarioRepository.existsByRut(req.rut())){
             throw new ApiException(HttpStatus.CONFLICT, "El rut ya esta registrado");
         }
         Usuario nuevo = new Usuario(
