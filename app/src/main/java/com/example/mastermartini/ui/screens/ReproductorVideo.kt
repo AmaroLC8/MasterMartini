@@ -27,7 +27,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 
-// URL de respaldo (Cloudinary / CDN) por si un curso aún tiene videoUrl en null
+// URL de respaldo (Cloudinary) por si un curso aún tiene videoUrl en null
 const val VIDEO_DEFAULT_ONLINE =
     "https://res.cloudinary.com/demo/video/upload/elephants.mp4"
 
@@ -50,7 +50,7 @@ fun ReproductorVideoOnline(
     ) {
         if (hayError) {
             Text(
-                text = "⚠️ No se pudo reproducir el video.\nVerifica que sea un enlace directo .mp4 (ej. Cloudinary) y tengas internet.",
+                text = "⚠️ No se pudo reproducir el video.\nVerifica que sea un enlace directo .mp4 y tengas internet.",
                 color = Color.White,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Medium,

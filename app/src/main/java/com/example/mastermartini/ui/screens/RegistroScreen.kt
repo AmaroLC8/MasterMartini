@@ -4,9 +4,9 @@ import android.Manifest
 import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.pm.PackageManager
-import android.graphics.Bitmap
 import android.os.Vibrator
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -14,6 +14,9 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -21,11 +24,14 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AddAPhoto
 import androidx.compose.material.icons.filled.Badge
-import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material.icons.filled.PhotoCamera
+import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.Store
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
@@ -35,8 +41,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -44,6 +53,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import com.example.mastermartini.R
+import com.example.mastermartini.ui.components.IconoValidacion // Ícono ✓/⚠ compartido con LoginScreen
 import com.example.mastermartini.ui.theme.*
 import com.example.mastermartini.viewmodel.RegistroViewModel
 
@@ -55,18 +65,47 @@ fun RegistroScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
-    var fotoBitmap by remember { mutableStateOf<Bitmap?>(null) }
 
-    // RECURSO NATIVO 1: Cámara fotográfica mediante ActivityResultLauncher
+    // ¿Se está mostrando el panel de abajo con las 3 opciones de foto?
+    // Es estado SOLO visual (abrir/cerrar un panel), por eso puede vivir en un remember de la pantalla.
+    // La foto en sí NO: esa la guarda el ViewModel (uiState.fotoLocal) para que no se pierda.
+    var mostrarOpcionesFoto by remember { mutableStateOf(false) }
+
+    // RECURSO NATIVO 1: Cámara fotográfica mediante ActivityResultLauncher (IE 2.4.1)
+    // TakePicturePreview() abre la cámara y devuelve la foto como Bitmap (o null si se cancela).
+    // Si se cancela no se hace nada: queda la foto que había.
     val camaraLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicturePreview()
     ) { foto ->
         if (foto != null) {
-            fotoBitmap = foto
-            viewModel.registrarFotoCapturada()
+            viewModel.onFotoTomada(foto)
         }
     }
 
+    // GALERÍA: PickVisualMedia() abre el selector de fotos del sistema (Photo Picker).
+    // NO necesita permiso: el usuario elige UNA foto y Android solo nos da acceso a esa,
+    // no a toda la galería. Devuelve un Uri (la "dirección" de la foto) o null si se cancela.
+    val galeriaLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        if (uri != null) {
+            viewModel.onFotoElegida(uri)
+        }
+    }
+
+    // ARCHIVOS: GetContent() abre el explorador de archivos del celular (Descargas, Drive, etc.).
+    // Tampoco necesita permiso, por la misma razón: el usuario elige el archivo.
+    // Devuelve un Uri o null si se cancela.
+    val archivosLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri ->
+        if (uri != null) {
+            viewModel.onFotoElegida(uri)
+        }
+    }
+
+    // Abre la cámara. El try/catch evita que la app se caiga si el
+    // dispositivo no tiene una app de cámara instalada.
     fun abrirCamara() {
         try {
             camaraLauncher.launch(null)
@@ -75,7 +114,9 @@ fun RegistroScreen(
         }
     }
 
-    // PERMISO DE CÁMARA EN TIEMPO DE EJECUCIÓN
+    // PERMISO DE CÁMARA EN TIEMPO DE EJECUCIÓN (IE 2.4.1)
+    // Desde Android 6 los permisos "peligrosos" como CAMERA se piden mientras la app se usa.
+    // Este launcher muestra el diálogo del sistema y nos devuelve true (aceptó) o false (rechazó).
     val permisoCamaraLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { concedido ->
@@ -86,11 +127,47 @@ fun RegistroScreen(
         }
     }
 
-    // RECURSO NATIVO 2: Motor de vibración física
+    // Opción "Tomar foto": si el permiso ya fue aceptado antes, abrimos la cámara directo;
+    // si no, primero lo pedimos con el diálogo del sistema.
+    fun tomarFoto() {
+        val tienePermiso = ContextCompat.checkSelfPermission(
+            context, Manifest.permission.CAMERA
+        ) == PackageManager.PERMISSION_GRANTED
+
+        if (tienePermiso) {
+            abrirCamara()
+        } else {
+            permisoCamaraLauncher.launch(Manifest.permission.CAMERA)
+        }
+    }
+
+    // Opción "Elegir de la galería". ImageOnly: solo muestra fotos (no videos).
+    // try/catch por si el celular no tiene cómo abrir el selector (la app no se cae).
+    fun elegirDeGaleria() {
+        try {
+            galeriaLauncher.launch(
+                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+            )
+        } catch (e: ActivityNotFoundException) {
+            viewModel.onImagenNoDisponible()
+        }
+    }
+
+    // Opción "Buscar en archivos". "image/*" = cualquier tipo de imagen (JPG, PNG, WEBP...)
+    fun buscarEnArchivos() {
+        try {
+            archivosLauncher.launch("image/*")
+        } catch (e: ActivityNotFoundException) {
+            viewModel.onImagenNoDisponible()
+        }
+    }
+
+    // RECURSO NATIVO 2: Motor de vibración física del celular (IE 2.4.1)
+    // "as?" devuelve null si el celular no tiene vibrador, y "?." evita que la app se caiga en ese caso
     fun ejecutarVibracion() {
         val vibrador = context.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
         @Suppress("DEPRECATION")
-        vibrador?.vibrate(100)
+        vibrador?.vibrate(100) // Pulso háptico de 100 ms al validar
     }
 
     // Estilo unificado para los campos de texto con los colores corporativos
@@ -148,7 +225,7 @@ fun RegistroScreen(
                     .padding(bottom = 6.dp)
             )
 
-            // Detalle tricolor de la bandera italiana
+            // Detalle tricolor de la bandera italiana (corporativo Master Martini)
             Row(
                 modifier = Modifier
                     .width(120.dp)
@@ -172,7 +249,10 @@ fun RegistroScreen(
                 color = TextoOscuro.copy(alpha = 0.7f)
             )
 
-            // PREVISUALIZACIÓN DE FOTO
+            // PREVISUALIZACIÓN DE LA FOTO DEL LOCAL (círculo con 📷 si aún no hay foto).
+            // La foto viene del ViewModel: así se ve también al volver a abrir la app.
+            // Se copia a una variable local para poder revisar si es null y usarla sin "!!".
+            val fotoLocal = uiState.fotoLocal
             Box(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier
@@ -181,10 +261,13 @@ fun RegistroScreen(
                     .background(BlancoPuro)
                     .border(2.dp, DoradoCalidad, CircleShape)
             ) {
-                if (fotoBitmap != null) {
+                if (fotoLocal != null) {
                     Image(
-                        bitmap = fotoBitmap!!.asImageBitmap(),
-                        contentDescription = "Foto capturada",
+                        bitmap = fotoLocal.asImageBitmap(),
+                        contentDescription = "Foto del local",
+                        // Crop: agranda la foto hasta llenar todo el círculo y recorta lo que sobra
+                        // (sin deformarla). Sin esto, una foto alargada dejaría bordes vacíos.
+                        contentScale = ContentScale.Crop,
                         modifier = Modifier.fillMaxSize()
                     )
                 } else {
@@ -192,19 +275,9 @@ fun RegistroScreen(
                 }
             }
 
-            // BOTÓN CÁMARA
+            // BOTÓN QUE ABRE LAS OPCIONES DE FOTO (cámara, galería o archivos)
             OutlinedButton(
-                onClick = {
-                    val tienePermiso = ContextCompat.checkSelfPermission(
-                        context, Manifest.permission.CAMERA
-                    ) == PackageManager.PERMISSION_GRANTED
-
-                    if (tienePermiso) {
-                        abrirCamara()
-                    } else {
-                        permisoCamaraLauncher.launch(Manifest.permission.CAMERA)
-                    }
-                },
+                onClick = { mostrarOpcionesFoto = true },
                 colors = ButtonDefaults.outlinedButtonColors(
                     contentColor = VerdeItaliano
                 ),
@@ -213,10 +286,58 @@ fun RegistroScreen(
                 ),
                 modifier = Modifier.height(48.dp)
             ) {
-                Text("Tomar foto del local", fontWeight = FontWeight.SemiBold)
+                Icon(imageVector = Icons.Filled.AddAPhoto, contentDescription = null)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Agregar foto del local", fontWeight = FontWeight.SemiBold)
             }
 
-            // AVISO DE CÁMARA
+            // PANEL DE ABAJO (ModalBottomSheet) con las 3 formas de agregar la foto.
+            // Solo se dibuja mientras mostrarOpcionesFoto sea true.
+            // onDismissRequest: se llama si el usuario lo cierra deslizando hacia abajo,
+            // tocando fuera o con Atrás. En ese caso no pasa nada más.
+            if (mostrarOpcionesFoto) {
+                ModalBottomSheet(
+                    onDismissRequest = { mostrarOpcionesFoto = false },
+                    containerColor = BlancoPuro
+                ) {
+                    Column(modifier = Modifier.padding(bottom = 24.dp)) {
+                        Text(
+                            text = "Foto del local",
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = TextoOscuro,
+                            modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)
+                        )
+                        // Cada opción primero cierra el panel y después abre lo que corresponda
+                        OpcionFoto(
+                            icono = Icons.Filled.PhotoCamera,
+                            texto = "Tomar foto",
+                            onClick = {
+                                mostrarOpcionesFoto = false
+                                tomarFoto()
+                            }
+                        )
+                        OpcionFoto(
+                            icono = Icons.Filled.PhotoLibrary,
+                            texto = "Elegir de la galería",
+                            onClick = {
+                                mostrarOpcionesFoto = false
+                                elegirDeGaleria()
+                            }
+                        )
+                        OpcionFoto(
+                            icono = Icons.Filled.Folder,
+                            texto = "Buscar en archivos",
+                            onClick = {
+                                mostrarOpcionesFoto = false
+                                buscarEnArchivos()
+                            }
+                        )
+                    }
+                }
+            }
+
+            // AVISO DE CÁMARA: aparece con animación si se negó el permiso o no hay cámara
             AnimatedVisibility(visible = uiState.avisoCamara != null) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -236,16 +357,19 @@ fun RegistroScreen(
                 }
             }
 
-            // CAMPO 1: NOMBRE
+            // CAMPO 1: NOMBRE DEL LOCAL O DUEÑO
+            // La pantalla solo muestra uiState y avisa al ViewModel cada vez que el usuario escribe
             OutlinedTextField(
                 value = uiState.nombre,
                 onValueChange = { viewModel.onNombreChange(it) },
                 label = { Text("Nombre del Local o Dueño") },
+                // ÍCONOS (IE 2.1.2): a la izquierda indica qué dato va; a la derecha, si está bien o mal
                 leadingIcon = { Icon(Icons.Filled.Store, contentDescription = "Nombre del local") },
                 trailingIcon = { IconoValidacion(valor = uiState.nombre, error = uiState.errorNombre) },
                 isError = uiState.errorNombre != null,
                 colors = textFieldColors,
                 supportingText = {
+                    // ANIMACIÓN (IE 2.2.2): Transición suave para el mensaje de error
                     AnimatedVisibility(visible = uiState.errorNombre != null) {
                         Text(uiState.errorNombre ?: "", color = RojoItaliano)
                     }
@@ -254,10 +378,23 @@ fun RegistroScreen(
                 shape = RoundedCornerShape(10.dp)
             )
 
-            // CAMPO 2: RUT
+            // Al EDITAR los datos, el RUT y el correo se muestran pero no se pueden cambiar
+            // (el backend no los cambia en PUT /{id}). Se avisa con texto para que no parezca un error.
+            if (uiState.esEdicion) {
+                Text(
+                    text = "El RUT y el correo no se pueden cambiar desde aquí.",
+                    fontSize = 16.sp,
+                    color = TextoOscuro,
+                    modifier = Modifier.align(Alignment.Start)
+                )
+            }
+
+            // CAMPO 2: RUT EMPRESA (SINTÉTICO). El ViewModel revisa formato y dígito verificador
+            // readOnly: al editar se ve normal (buen contraste) pero no se puede escribir
             OutlinedTextField(
                 value = uiState.rut,
                 onValueChange = { viewModel.onRutChange(it) },
+                readOnly = uiState.esEdicion,
                 label = { Text("RUT Empresa (Ej: 12345678-5)") },
                 leadingIcon = { Icon(Icons.Filled.Badge, contentDescription = "RUT") },
                 trailingIcon = { IconoValidacion(valor = uiState.rut, error = uiState.errorRut) },
@@ -272,10 +409,11 @@ fun RegistroScreen(
                 shape = RoundedCornerShape(10.dp)
             )
 
-            // CAMPO 3: CORREO
+            // CAMPO 3: CORREO ELECTRÓNICO
             OutlinedTextField(
                 value = uiState.correo,
                 onValueChange = { viewModel.onCorreoChange(it) },
+                readOnly = uiState.esEdicion,
                 label = { Text("Correo Electrónico de Contacto") },
                 leadingIcon = { Icon(Icons.Filled.Email, contentDescription = "Correo") },
                 trailingIcon = { IconoValidacion(valor = uiState.correo, error = uiState.errorCorreo) },
@@ -290,31 +428,36 @@ fun RegistroScreen(
                 shape = RoundedCornerShape(10.dp)
             )
 
-            // CAMPO CONTRASENA EN REGISTRO
-            OutlinedTextField(
-                value = uiState.password,
-                onValueChange = { viewModel.onPasswordChange(it) },
-                label = { Text("Crea una Contraseña") },
-                leadingIcon = { Icon(Icons.Filled.Lock, contentDescription = "Contraseña") },
-                trailingIcon = { IconoValidacion(valor = uiState.password, error = uiState.errorPassword) },
-                visualTransformation = PasswordVisualTransformation(),
-                isError = uiState.errorPassword != null,
-                supportingText = {
-                    AnimatedVisibility(visible = uiState.errorPassword != null) {
-                        Text(uiState.errorPassword ?: "", color = MaterialTheme.colorScheme.error)
-                    }
-                },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(10.dp)
-            )
+            // CAMPO CONTRASEÑA: la que después se pide en el login (mínimo 4 caracteres, lo revisa el ViewModel).
+            // Solo al crear la cuenta: al editar los datos no se pide (no se cambia desde aquí).
+            if (!uiState.esEdicion) {
+                OutlinedTextField(
+                    value = uiState.password,
+                    onValueChange = { viewModel.onPasswordChange(it) },
+                    label = { Text("Crea una Contraseña") },
+                    leadingIcon = { Icon(Icons.Filled.Lock, contentDescription = "Contraseña") },
+                    trailingIcon = { IconoValidacion(valor = uiState.password, error = uiState.errorPassword) },
+                    // Muestra puntos en vez de las letras, para que no se lea la contraseña en pantalla
+                    visualTransformation = PasswordVisualTransformation(),
+                    isError = uiState.errorPassword != null,
+                    supportingText = {
+                        AnimatedVisibility(visible = uiState.errorPassword != null) {
+                            Text(uiState.errorPassword ?: "", color = MaterialTheme.colorScheme.error)
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(10.dp)
+                )
+            }
 
-            // CAMPO 4: TELÉFONO
+            // CAMPO 4: TELÉFONO CELULAR
             OutlinedTextField(
                 value = uiState.telefono,
                 onValueChange = { viewModel.onTelefonoChange(it) },
                 label = { Text("Celular (Ej: 9 1234 5678)") },
                 leadingIcon = { Icon(Icons.Filled.Phone, contentDescription = "Teléfono") },
                 trailingIcon = { IconoValidacion(valor = uiState.telefono, error = uiState.errorTelefono) },
+                // Abre el teclado numérico del celular: más fácil para usuarios mayores
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                 isError = uiState.errorTelefono != null,
                 colors = textFieldColors,
@@ -327,7 +470,7 @@ fun RegistroScreen(
                 shape = RoundedCornerShape(10.dp)
             )
 
-            // SELECTOR DE ESPECIALIDAD TÉCNICA
+            // SELECTOR DE ESPECIALIDAD TÉCNICA (FilterChips)
             Text(
                 text = "Especialidad Técnica:",
                 fontWeight = FontWeight.SemiBold,
@@ -353,33 +496,77 @@ fun RegistroScreen(
                 }
             }
 
-            // SELECTOR DE TAMAÑO DEL NEGOCIO
+            // PREGUNTA: ¿CUÁNTAS PERSONAS TRABAJAN EN TU NEGOCIO? (RadioButton, se elige una sola)
+            // Reemplaza a "Tamaño del negocio: Micro / Pequeño / Mediano": una pregunta concreta
+            // que cualquiera puede responder, y con la opción "Prefiero no decirlo".
             Text(
-                text = "Tamaño del Negocio:",
-                fontWeight = FontWeight.SemiBold,
+                text = "¿Cuántas personas trabajan en tu negocio?",
+                fontSize = 17.sp,
+                fontWeight = FontWeight.Bold,
                 color = TextoOscuro,
                 modifier = Modifier.align(Alignment.Start)
             )
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+            // selectableGroup(): le avisa a TalkBack que estas filas son UN grupo de opciones
+            // (lee "opción 2 de 5"), igual que un grupo de radio buttons.
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .selectableGroup()
             ) {
-                listOf("Micro", "Pequeño", "Mediano").forEach { tamanoOpcion ->
-                    FilterChip(
-                        selected = uiState.tamanoNegocio == tamanoOpcion,
-                        onClick = { viewModel.onTamanoNegocioChange(tamanoOpcion) },
-                        label = { Text(tamanoOpcion) },
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = VerdeItaliano,
-                            selectedLabelColor = BlancoPuro,
-                            containerColor = BlancoPuro,
-                            labelColor = TextoOscuro
+                // Las opciones vienen del ViewModel (no se escriben en la pantalla)
+                viewModel.opcionesPersonas.forEach { opcion ->
+                    // Toda la FILA se puede tocar (no solo el circulito), de 48 dp como mínimo.
+                    // selectable + Role.RadioButton: TalkBack la lee como "botón de opción, seleccionado/no".
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 48.dp)
+                            .selectable(
+                                selected = uiState.personasNegocio == opcion,
+                                onClick = { viewModel.onPersonasNegocioChange(opcion) },
+                                role = Role.RadioButton
+                            )
+                    ) {
+                        // onClick = null: el toque lo maneja la fila completa (selectable),
+                        // así no se registra dos veces al tocar justo el círculo
+                        RadioButton(
+                            selected = uiState.personasNegocio == opcion,
+                            onClick = null,
+                            colors = RadioButtonDefaults.colors(
+                                selectedColor = VerdeItaliano,
+                                unselectedColor = TextoOscuro.copy(alpha = 0.6f)
+                            )
                         )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(text = opcion, fontSize = 16.sp, color = TextoOscuro)
+                    }
+                }
+            }
+            // ERROR DE LA PREGUNTA: aparece con animación solo al tocar "Registrar" sin haber elegido,
+            // y se va apenas se elige una opción (onPersonasNegocioChange lo borra)
+            AnimatedVisibility(visible = uiState.errorPersonas != null) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Warning,
+                        contentDescription = null,
+                        tint = RojoItaliano,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = uiState.errorPersonas ?: "",
+                        color = RojoItaliano,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.SemiBold
                     )
                 }
             }
 
-            // BANNER DE VALIDACIÓN
+            // ANIMACIÓN FUNCIONAL: Banner reactivo cuando todos los datos son válidos
             AnimatedVisibility(
                 visible = uiState.esFormularioValido,
                 enter = fadeIn(),
@@ -400,15 +587,42 @@ fun RegistroScreen(
                 }
             }
 
-            // BOTÓN PRINCIPAL
+            // ERROR DEL REPOSITORIO (ej. "Ya existe una cuenta con ese correo..."): es el mensaje
+            // de la UsuarioException que atrapó el ViewModel. Ícono + texto, no solo color.
+            AnimatedVisibility(visible = uiState.errorGeneral != null) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Warning,
+                        contentDescription = "Aviso",
+                        tint = RojoItaliano
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = uiState.errorGeneral ?: "",
+                        color = RojoItaliano,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+            }
+
+            // BOTÓN PRINCIPAL (Altura 54dp para accesibilidad de mayores de 50 años)
             Button(
                 onClick = {
-                    ejecutarVibracion()
+                    // El ViewModel llama a este bloque SOLO si el repositorio respondió bien:
+                    // por eso la vibración sigue siendo solo en el éxito
                     viewModel.guardarPerfil {
-                        onRegistroCompletado()
+                        ejecutarVibracion() // Dispara la vibración física
+                        onRegistroCompletado() // Navega hacia HomeScreen
                     }
                 },
-                enabled = uiState.esFormularioValido,
+                // Se puede tocar cuando los campos de texto están bien. Si falta elegir cuántas
+                // personas trabajan, al tocarlo guardarPerfil() muestra ese error y no guarda.
+                // Mientras carga se desactiva, para no enviar el registro dos veces.
+                enabled = uiState.puedeIntentarRegistrar && !uiState.cargando,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = VerdeItaliano,
                     contentColor = BlancoPuro,
@@ -420,7 +634,20 @@ fun RegistroScreen(
                     .height(54.dp),
                 shape = RoundedCornerShape(10.dp)
             ) {
-                Text("REGISTRAR Y ACCEDER", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                if (uiState.cargando) {
+                    // Círculo pequeño que gira mientras se espera la respuesta
+                    CircularProgressIndicator(
+                        color = TextoOscuro,
+                        strokeWidth = 2.dp,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text("GUARDANDO...", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                } else if (uiState.esEdicion) {
+                    Text("GUARDAR CAMBIOS", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                } else {
+                    Text("REGISTRAR Y ACCEDER", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -428,19 +655,32 @@ fun RegistroScreen(
     }
 }
 
+// UNA OPCIÓN DEL PANEL DE FOTO: fila completa de 56 dp con ícono + texto.
+// Toda la fila se puede tocar (no solo el texto): blanco grande para usuarios mayores.
+// Es private porque solo la usa esta pantalla.
 @Composable
-private fun IconoValidacion(valor: String, error: String?) {
-    if (error != null) {
+private fun OpcionFoto(
+    icono: ImageVector,
+    texto: String,
+    onClick: () -> Unit
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(56.dp)
+            // role = Button: TalkBack la anuncia como "botón"
+            .clickable(role = Role.Button, onClick = onClick)
+            .padding(horizontal = 24.dp)
+    ) {
+        // contentDescription = null: el texto de al lado ya dice qué hace
         Icon(
-            imageVector = Icons.Filled.Warning,
-            contentDescription = "Dato con error",
-            tint = RojoItaliano
+            imageVector = icono,
+            contentDescription = null,
+            tint = VerdeItaliano,
+            modifier = Modifier.size(28.dp)
         )
-    } else if (valor.isNotBlank()) {
-        Icon(
-            imageVector = Icons.Filled.CheckCircle,
-            contentDescription = "Dato correcto",
-            tint = VerdeItaliano
-        )
+        Spacer(modifier = Modifier.width(16.dp))
+        Text(text = texto, fontSize = 18.sp, color = TextoOscuro)
     }
 }

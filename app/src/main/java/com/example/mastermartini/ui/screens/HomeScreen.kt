@@ -10,7 +10,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.Inventory2
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -29,6 +30,7 @@ import com.example.mastermartini.R
 import com.example.mastermartini.viewmodel.HomeViewModel
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.FavoriteBorder
 
@@ -46,10 +48,14 @@ fun HomeScreen(
     rutUsuario: String,
     correoUsuario: String,
     onEditarDatos: () -> Unit,// MainActivity decide a dónde navegar (abre "registro"
-    onIrAEncuesta: () -> Unit
+    onIrAEncuesta: () -> Unit,
+    // Recibe el id del curso tocado; MainActivity navega a "detalle/{id}"
+    onVerDetalle: (Int) -> Unit,
+    // Tarjeta "Nuestros productos": MainActivity navega a "productos"
+    onVerProductos: () -> Unit,
+    // Lupa de la barra superior: MainActivity navega a "buscar"
+    onBuscar: () -> Unit
 ) {
-    val cursos by viewModel.cursos.collectAsState()
-
     // Colores estilo bandera italiana de Master Martini
     val verdeItaliano = Color(0xFF008C45)
     val rojoItaliano = Color(0xFFCD212A)
@@ -120,6 +126,18 @@ fun HomeScreen(
                     }
                     }
                 },
+                // actions: botones a la derecha de la barra. La lupa abre "Buscar",
+                // que ya no está en la barra inferior. IconButton mide 48 dp (fácil de tocar).
+                actions = {
+                    IconButton(onClick = onBuscar) {
+                        Icon(
+                            imageVector = Icons.Default.Search,
+                            // No es decorativo: es el único texto que TalkBack puede leer del botón
+                            contentDescription = "Buscar recetas",
+                            tint = Color.White
+                        )
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = verdeItaliano,
                     titleContentColor = Color.White
@@ -162,10 +180,10 @@ fun HomeScreen(
                 }
             }
 
-            // 2. MasterClass Video Destacado (Reproductor Offline)
+            // 2. MasterClass: video destacado
             item {
                 Text(
-                    text = "🎥 MasterClass Destacada (Video Offline):",
+                    text = "🎥 MasterClass Destacada",
                     fontWeight = FontWeight.Bold,
                     fontSize = 16.sp,
                     color = textoOscuro
@@ -210,6 +228,53 @@ fun HomeScreen(
                 }
             }
 
+            // 3b. Tarjeta "Nuestros productos" (arriba del catálogo de recetas, bien visible).
+            // Card con onClick: toda la tarjeta abre el catálogo de productos.
+            // Fondo verde con texto blanco para que se distinga de las tarjetas de recetas (blancas).
+            item {
+                Card(
+                    onClick = onVerProductos,
+                    colors = CardDefaults.cardColors(containerColor = verdeItaliano),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 72.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(16.dp)
+                    ) {
+                        // Decorativo: el texto de al lado dice qué hace la tarjeta
+                        Icon(
+                            imageVector = Icons.Filled.Inventory2,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(32.dp)
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        // weight(1f): los textos usan el ancho que deja la flecha
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Nuestros productos",
+                                fontSize = 19.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+                            Text(
+                                text = "Margarinas, cremas, chocolates y más",
+                                fontSize = 15.sp,
+                                color = Color.White
+                            )
+                        }
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                            contentDescription = null,
+                            tint = Color.White
+                        )
+                    }
+                }
+            }
+
             // 4. Título del Catálogo de Recetas
             item {
                 Text(
@@ -224,7 +289,22 @@ fun HomeScreen(
             items(catalogoCursos, key = { it.id }) { curso ->
                 val esFavorito = favoritos.contains(curso.id)
 
+                // Animación del corazón: crece a 1.3 veces su tamaño cuando es favorito y vuelve a 1 al quitarlo.
+                // animateFloatAsState no salta de golpe: Compose calcula los valores intermedios en cada cuadro.
+                // spring con DampingRatioMediumBouncy da un pequeño rebote, como un resorte.
+                // Va dentro de items() para que cada curso tenga su propia animación
+                // (key = id hace que cada corazón conserve la suya aunque la lista cambie).
+                val escalaCorazon by animateFloatAsState(
+                    targetValue = if (esFavorito) 1.3f else 1f,
+                    animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
+                    label = "escalaCorazon"
+                )
+
+                // Card con onClick: toda la tarjeta se puede tocar para abrir la receta.
+                // El corazón (IconButton) tiene su propio onClick y "se queda" con el toque,
+                // por eso tocar el corazón NO abre el detalle.
                 Card(
+                    onClick = { onVerDetalle(curso.id) },
                     colors = CardDefaults.cardColors(containerColor = Color.White),
                     border = BorderStroke(1.dp, doradoCalidad.copy(alpha = 0.6f)),
                     shape = RoundedCornerShape(10.dp),
@@ -255,12 +335,22 @@ fun HomeScreen(
                                 )
                             }
 
-                            // Botón de Favorito (Corazón)
-                            IconButton(onClick = { viewModel.alternarFavorito(curso.id) }) {
+                            // Botón de Favorito (Corazón).
+                            // 56.dp: área táctil grande, pensada para usuarios mayores.
+                            // contentDescription dice el curso y la acción, para que TalkBack lea qué hace el botón.
+                            IconButton(
+                                onClick = { viewModel.alternarFavorito(curso.id) },
+                                modifier = Modifier.size(56.dp)
+                            ) {
                                 Icon(
                                     imageVector = if (esFavorito) Icons.Default.Favorite else Icons.Outlined.FavoriteBorder,
-                                    contentDescription = "Favorito",
-                                    tint = if (esFavorito) rojoItaliano else Color.Gray
+                                    contentDescription = if (esFavorito) {
+                                        "Quitar ${curso.titulo} de favoritos"
+                                    } else {
+                                        "Agregar ${curso.titulo} a favoritos"
+                                    },
+                                    tint = if (esFavorito) rojoItaliano else Color.Gray,
+                                    modifier = Modifier.scale(escalaCorazon) // aplica la animación
                                 )
                             }
                         }
@@ -295,11 +385,34 @@ fun HomeScreen(
                                 color = doradoCalidad
                             )
                         }
+
+                        // Botón visible "Ver receta": hace lo mismo que tocar la tarjeta,
+                        // pero deja claro que hay más información (útil para usuarios mayores
+                        // que no saben que la tarjeta completa se puede tocar). 48 dp de alto mínimo.
+                        TextButton(
+                            onClick = { onVerDetalle(curso.id) },
+                            modifier = Modifier
+                                .align(Alignment.End)
+                                .heightIn(min = 48.dp)
+                        ) {
+                            Text(
+                                text = "Ver receta",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = verdeItaliano
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                                contentDescription = null, // el texto "Ver receta" ya lo explica
+                                tint = verdeItaliano
+                            )
+                        }
                     }
                 }
             }
 
-            // 6. Botón Encuesta de Preferencias &amp; GPS
+            // 6. Botón Encuesta de Preferencias y Ubicación (GPS)
             item {
                 Button(
                     onClick = onIrAEncuesta,
@@ -310,7 +423,7 @@ fun HomeScreen(
                     colors = ButtonDefaults.buttonColors(containerColor = verdeItaliano)
                 ) {
                     Text(
-                        text = "📝 Encuesta de Preferencias &amp; Ubicación (GPS)",
+                        text = "📝 Encuesta de Preferencias y Ubicación (GPS)",
                         fontWeight = FontWeight.Bold,
                         fontSize = 15.sp,
                         color = Color.White

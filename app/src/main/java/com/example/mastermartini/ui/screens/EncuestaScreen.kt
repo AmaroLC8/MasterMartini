@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -16,6 +17,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -44,7 +46,7 @@ fun EncuestaScreen(
         val coarseGranted = permissions[Manifest.permission.ACCESS_COARSE_LOCATION] ?: false
 
         if (fineGranted || coarseGranted) {
-            encuestaViewModel.obtenerUbicacion(context)
+            encuestaViewModel.obtenerUbicacion()
         } else {
             encuestaViewModel.registrarRespuestaSinGps()
         }
@@ -265,7 +267,7 @@ fun EncuestaScreen(
                             ) == PackageManager.PERMISSION_GRANTED
 
                             if (hasFine || hasCoarse) {
-                                encuestaViewModel.obtenerUbicacion(context)
+                                encuestaViewModel.obtenerUbicacion()
                             } else {
                                 permissionLauncher.launch(
                                     arrayOf(
@@ -296,14 +298,59 @@ fun EncuestaScreen(
                         )
                     }
 
+                    // UBICACIÓN OBTENIDA: el nombre del lugar grande, con el ícono,
+                    // y debajo las coordenadas en letra chica y gris (solo si las hay)
                     if (state.ubicacionGps.isNotEmpty()) {
                         Spacer(modifier = Modifier.height(12.dp))
-                        Text(
-                            text = "📍 ${state.ubicacionGps}",
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = VerdeOscuro
-                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            // Decorativo: el texto de al lado ya dice la ubicación
+                            Icon(
+                                imageVector = Icons.Default.LocationOn,
+                                contentDescription = null,
+                                tint = VerdeItaliano,
+                                modifier = Modifier.size(28.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Column {
+                                // Nombre del lugar (o las coordenadas, si no se obtuvo el nombre)
+                                Text(
+                                    text = state.ubicacionGps,
+                                    fontSize = 18.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = VerdeOscuro
+                                )
+                                if (state.coordenadasGps.isNotEmpty()) {
+                                    Text(
+                                        text = state.coordenadasGps,
+                                        fontSize = 13.sp,
+                                        color = TextoOscuro.copy(alpha = 0.6f)
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // AVISO DEL GPS (sin permiso o sin señal). Igual que el aviso de la cámara
+                    // en el registro: aparece con animación y desaparece al volver a intentar.
+                    AnimatedVisibility(visible = state.avisoGps != null) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 12.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Warning,
+                                contentDescription = "Aviso",
+                                tint = RojoItaliano
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = state.avisoGps ?: "",
+                                color = RojoItaliano,
+                                fontSize = 14.sp
+                            )
+                        }
                     }
                 }
             }

@@ -1,35 +1,52 @@
 package com.example.mastermartini.ui.screens
 
-import androidx.compose.foundation.background
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Badge
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.mastermartini.ui.components.IconoValidacion
 import com.example.mastermartini.ui.components.LogoMasterMartini
 import com.example.mastermartini.ui.theme.*
-import com.example.mastermartini.viewmodel.RegistroViewModel
+import com.example.mastermartini.viewmodel.LoginViewModel
 
+// Pantalla de inicio de sesión.
+// No valida nada por su cuenta: lee el estado del LoginViewModel y le avisa
+// cada vez que el usuario escribe o toca "INGRESAR" (MVVM, IE 2.2.1).
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LoginScreen(
-    viewModel: RegistroViewModel,
+    viewModel: LoginViewModel,
     onLoginExitoso: () -> Unit,
-    onIrARegistro: () -> Unit
+    onIrARegistro: () -> Unit,
+    // "¿Olvidaste tu contraseña?": MainActivity navega a "recuperar"
+    onOlvidePassword: () -> Unit
 ) {
-    var rutOCorreo by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
-    var mensajeError by remember { mutableStateOf<String?>(null) }
+    // collectAsState() convierte el StateFlow en estado de Compose:
+    // cuando el ViewModel cambia algo (texto o error), la pantalla se redibuja sola.
+    val uiState by viewModel.uiState.collectAsState()
+
+    // Mismos colores para los dos campos: verde de la marca normal y rojo cuando hay error
+    val textFieldColors = OutlinedTextFieldDefaults.colors(
+        focusedBorderColor = VerdeItaliano,
+        focusedLabelColor = VerdeItaliano,
+        cursorColor = VerdeItaliano,
+        focusedLeadingIconColor = VerdeItaliano,
+        unfocusedLeadingIconColor = VerdeItaliano,
+        errorBorderColor = RojoItaliano,
+        errorLabelColor = RojoItaliano,
+        errorLeadingIconColor = RojoItaliano
+    )
 
     Scaffold(
         containerColor = BlancoHueso, // Fondo de la marca
@@ -79,26 +96,20 @@ fun LoginScreen(
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // Campo RUT o Correo
+            // Campo RUT o Correo: el texto y el error vienen del ViewModel
             OutlinedTextField(
-                value = rutOCorreo,
-                onValueChange = {
-                    rutOCorreo = it
-                    mensajeError = null
-                },
+                value = uiState.usuario,
+                onValueChange = { viewModel.onUsuarioChange(it) },
                 label = { Text("RUT o Correo Electrónico") },
-                leadingIcon = {
-                    Icon(
-                        Icons.Default.Badge,
-                        contentDescription = "Usuario",
-                        tint = VerdeItaliano
-                    )
+                leadingIcon = { Icon(Icons.Default.Badge, contentDescription = "Usuario") },
+                trailingIcon = { IconoValidacion(valor = uiState.usuario, error = uiState.errorUsuario) },
+                isError = uiState.errorUsuario != null,
+                supportingText = {
+                    AnimatedVisibility(visible = uiState.errorUsuario != null) {
+                        Text(uiState.errorUsuario ?: "", color = RojoItaliano)
+                    }
                 },
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = VerdeItaliano,
-                    focusedLabelColor = VerdeItaliano,
-                    cursorColor = VerdeItaliano
-                ),
+                colors = textFieldColors,
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(10.dp)
             )
@@ -107,67 +118,98 @@ fun LoginScreen(
 
             // Campo Contraseña
             OutlinedTextField(
-                value = password,
-                onValueChange = {
-                    password = it
-                    mensajeError = null
-                },
+                value = uiState.password,
+                onValueChange = { viewModel.onPasswordChange(it) },
                 label = { Text("Contraseña") },
-                leadingIcon = {
-                    Icon(
-                        Icons.Default.Lock,
-                        contentDescription = "Contraseña",
-                        tint = VerdeItaliano
-                    )
-                },
+                leadingIcon = { Icon(Icons.Default.Lock, contentDescription = "Contraseña") },
+                trailingIcon = { IconoValidacion(valor = uiState.password, error = uiState.errorPassword) },
                 visualTransformation = PasswordVisualTransformation(),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = VerdeItaliano,
-                    focusedLabelColor = VerdeItaliano,
-                    cursorColor = VerdeItaliano
-                ),
+                isError = uiState.errorPassword != null,
+                supportingText = {
+                    AnimatedVisibility(visible = uiState.errorPassword != null) {
+                        Text(uiState.errorPassword ?: "", color = RojoItaliano)
+                    }
+                },
+                colors = textFieldColors,
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(10.dp)
             )
 
-            // Mensaje de error si falla la validación
-            if (mensajeError != null) {
-                Spacer(modifier = Modifier.height(10.dp))
-                Text(
-                    text = mensajeError!!,
-                    color = RojoItaliano,
-                    fontWeight = FontWeight.Medium,
-                    fontSize = 14.sp
-                )
+            // Error general: el mensaje de la UsuarioException que atrapó el ViewModel
+            // (ej. "RUT/correo o contraseña incorrectos").
+            // Aparece y desaparece con animación; se borra solo cuando el usuario vuelve a escribir.
+            AnimatedVisibility(visible = uiState.errorGeneral != null) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 10.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Warning,
+                        contentDescription = "Aviso",
+                        tint = RojoItaliano
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = uiState.errorGeneral ?: "",
+                        color = RojoItaliano,
+                        fontWeight = FontWeight.Medium,
+                        fontSize = 14.sp
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Botón principal de Iniciar Sesión con verde italiano
+            // Botón principal de Iniciar Sesión con verde italiano.
+            // Solo le pide al ViewModel que intente iniciar sesión; si todo está bien,
+            // el ViewModel llama a onLoginExitoso y MainActivity navega a "home".
+            // Mientras se espera la respuesta (cargando), el botón se desactiva para no
+            // mandar el login dos veces, y muestra un círculo de carga junto al texto.
             Button(
-                onClick = {
-                    if (rutOCorreo.isBlank() || password.isBlank()) {
-                        mensajeError = "Por favor ingresa tus credenciales"
-                    } else {
-                        val esValido = viewModel.validarLogin(rutOCorreo, password)
-                        if (esValido) {
-                            mensajeError = null
-                            onLoginExitoso()
-                        } else {
-                            mensajeError = "Credenciales incorrectas o usuario no registrado"
-                        }
-                    }
-                },
-                colors = ButtonDefaults.buttonColors(containerColor = VerdeItaliano),
+                onClick = { viewModel.iniciarSesion(onExito = onLoginExitoso) },
+                enabled = !uiState.cargando,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = VerdeItaliano,
+                    // Desactivado (cargando): verde más claro, pero con texto blanco legible
+                    disabledContainerColor = VerdeItaliano.copy(alpha = 0.7f),
+                    disabledContentColor = BlancoPuro
+                ),
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(54.dp), // Altura para accesibilidad
                 shape = RoundedCornerShape(10.dp)
             ) {
-                Text("INGRESAR", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = BlancoPuro)
+                if (uiState.cargando) {
+                    // Círculo pequeño que gira: avisa que la app está trabajando
+                    CircularProgressIndicator(
+                        color = BlancoPuro,
+                        strokeWidth = 2.dp,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text("INGRESANDO...", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = BlancoPuro)
+                } else {
+                    Text("INGRESAR", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = BlancoPuro)
+                }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            // "¿Olvidaste tu contraseña?": abre la pantalla Recuperar contraseña (ruta "recuperar").
+            // heightIn(min = 48.dp): área fácil de tocar aunque sea un botón de solo texto.
+            TextButton(
+                onClick = onOlvidePassword,
+                modifier = Modifier.heightIn(min = 48.dp)
+            ) {
+                Text(
+                    "¿Olvidaste tu contraseña?",
+                    color = VerdeOscuro,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+
+            Spacer(modifier = Modifier.height(4.dp))
 
             // Botón secundario para ir al Registro
             TextButton(onClick = onIrARegistro) {
