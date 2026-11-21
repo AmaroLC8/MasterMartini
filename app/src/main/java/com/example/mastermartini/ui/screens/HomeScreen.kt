@@ -171,7 +171,7 @@ fun HomeScreen(
                     color = textoOscuro
                 )
                 Spacer(modifier = Modifier.height(6.dp))
-                ReproductorVideoLocal()
+                ReproductorVideoOnline(urlVideo = null)
             }
 
             // 3. Tarjeta de Bienvenida con Datos del Perfil

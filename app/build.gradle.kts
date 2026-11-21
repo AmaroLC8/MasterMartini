@@ -65,6 +65,8 @@ dependencies {
     implementation(libs.androidx.room.ktx)
     ksp(libs.androidx.room.compiler)
 
-    implementation("com.google.android.gms:play-services-location:21.0.1")
-
+    // Retrofit y Gson (conexión HTTP con los microservicios y Cloudinary)
+    implementation("com.squareup.retrofit2:retrofit:2.11.0")
+    implementation("com.squareup.retrofit2:converter-gson:2.11.0")
+    implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
 }
