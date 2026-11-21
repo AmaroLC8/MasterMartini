@@ -1,5 +1,6 @@
 package com.example.mastermartini.data
 
+import com.example.mastermartini.data.remote.RetrofitClient
 import com.example.mastermartini.model.Curso
 
 // REPOSITORIO DE CURSOS
@@ -17,6 +18,18 @@ import com.example.mastermartini.model.Curso
 class CursoRepository {
 
     // Devuelve el catálogo completo (lista inmutable: nadie puede agregar ni borrar cursos desde afuera)
+
+    // Llama al microservicio de cursos (puerto 9092) mediante Retrofit.
+    // Si el servidor está apagado o falla la red, devuelve la lista local de respaldo.
+    suspend fun obtenerCursosRemotos(): List<Curso> {
+        return try {
+            val remotos = RetrofitClient.cursosApi.obtenerCursos()
+            remotos.ifEmpty { obtenerCursos() }
+        } catch (e: Exception) {
+            obtenerCursos()
+        }
+    }
+
     fun obtenerCursos(): List<Curso> {
         return listOf(
             Curso(
