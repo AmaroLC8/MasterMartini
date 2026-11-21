@@ -64,4 +64,9 @@ dependencies {
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
     ksp(libs.androidx.room.compiler)
+
+    // Retrofit y Gson (conexión HTTP con los microservicios y Cloudinary)
+    implementation("com.squareup.retrofit2:retrofit:2.11.0")
+    implementation("com.squareup.retrofit2:converter-gson:2.11.0")
+    implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
 }
