@@ -23,7 +23,7 @@ class CursoRepository {
     // Si el servidor está apagado o falla la red, devuelve la lista local de respaldo.
     suspend fun obtenerCursosRemotos(): List<Curso> {
         return try {
-            val remotos = RetrofitClient.cursosApi.obtenerCursos()
+            val remotos = RetrofitClient.cursosApi.obtenerCursos().map { it.toCurso() }
             remotos.ifEmpty { obtenerCursos() }
         } catch (e: Exception) {
             obtenerCursos()
