@@ -235,17 +235,14 @@ fun DetalleScreen(
                     }
                 }
 
-                // 2. Video de la receta (se reutiliza el mismo reproductor de Home)
+                // 2. Video de la receta (reproduce Cloudinary si existe, o video local de respaldo)
                 Text(
                     text = "🎥 Video de la receta",
                     fontSize = 17.sp,
                     fontWeight = FontWeight.Bold,
                     color = TextoOscuro
                 )
-                // Por ahora todos los cursos tienen videoUrl = null (aún no se suben a AWS),
-                // así que siempre se muestra el video local de res/raw, igual que antes.
-                // Cuando un curso tenga videoUrl, aquí se elegirá entre el video en la nube y el local.
-                ReproductorVideoLocal()
+                ReproductorVideoLocal(videoUrl = cursoActual.videoUrl)
 
                 // 3. Ingredientes como checklist (las marcas se guardan en Room)
                 Text(
