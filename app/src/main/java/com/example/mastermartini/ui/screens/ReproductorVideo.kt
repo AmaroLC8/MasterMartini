@@ -1,98 +1,68 @@
 package com.example.mastermartini.ui.screens
 
 import android.net.Uri
-import android.widget.MediaController
-import android.widget.VideoView
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.annotation.OptIn
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.media3.common.MediaItem
+import androidx.media3.common.Player
+import androidx.media3.common.util.UnstableApi
+import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.ui.PlayerView
+import com.example.mastermartini.R
 
-// URL de respaldo (Cloudinary) por si un curso aún tiene videoUrl en null
-const val VIDEO_DEFAULT_ONLINE =
-    "https://res.cloudinary.com/demo/video/upload/elephants.mp4"
-
+@OptIn(UnstableApi::class)
 @Composable
-fun ReproductorVideoOnline(
-    urlVideo: String?,
+fun ReproductorVideoLocal(
+    videoUrl: String? = null,
     modifier: Modifier = Modifier
 ) {
-    val urlFinal = if (!urlVideo.isNullOrBlank()) urlVideo.trim() else VIDEO_DEFAULT_ONLINE
-    var cargando by remember(urlFinal) { mutableStateOf(true) }
-    var hayError by remember(urlFinal) { mutableStateOf(false) }
+    val context = LocalContext.current
 
-    Box(
-        contentAlignment = Alignment.Center,
+    // Si hay URL de Cloudinary la usa; si no, usa el video local de res/raw
+    val uriVideo = remember(videoUrl) {
+        if (!videoUrl.isNullOrBlank()) {
+            Uri.parse(videoUrl)
+        } else {
+            Uri.parse("android.resource://${context.packageName}/${R.raw.video_receta_master}")
+        }
+    }
+
+    val exoPlayer = remember(uriVideo) {
+        ExoPlayer.Builder(context).build().apply {
+            setMediaItem(MediaItem.fromUri(uriVideo))
+            repeatMode = Player.REPEAT_MODE_ONE
+            prepare()
+            playWhenReady = false // No arranca solo con sonido hasta que el usuario toque Play
+        }
+    }
+
+    // Libera el reproductor al salir de la pantalla para no consumir memoria
+    DisposableEffect(exoPlayer) {
+        onDispose {
+            exoPlayer.release()
+        }
+    }
+
+    AndroidView(
         modifier = modifier
             .fillMaxWidth()
             .height(210.dp)
-            .clip(RoundedCornerShape(12.dp))
-            .background(Color(0xFF14181F))
-    ) {
-        if (hayError) {
-            Text(
-                text = "⚠️ No se pudo reproducir el video.\nVerifica que sea un enlace directo .mp4 y tengas internet.",
-                color = Color.White,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Medium,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.padding(16.dp)
-            )
-        } else {
-            AndroidView(
-                modifier = Modifier.fillMaxSize(),
-                factory = { context ->
-                    VideoView(context).apply {
-                        val controlador = MediaController(context)
-                        controlador.setAnchorView(this)
-                        setMediaController(controlador)
-
-                        setOnPreparedListener { mediaPlayer ->
-                            cargando = false
-                            mediaPlayer.isLooping = true
-                            start()
-                        }
-
-                        setOnErrorListener { _, _, _ ->
-                            cargando = false
-                            hayError = true
-                            true
-                        }
-                    }
-                },
-                update = { videoView ->
-                    val tagActual = videoView.tag as? String
-                    if (tagActual != urlFinal) {
-                        videoView.tag = urlFinal
-                        cargando = true
-                        hayError = false
-                        videoView.setVideoURI(Uri.parse(urlFinal))
-                    }
-                }
-            )
-
-            if (cargando) {
-                CircularProgressIndicator(color = Color(0xFF008C45))
+            .clip(RoundedCornerShape(12.dp)),
+        factory = { ctx ->
+            PlayerView(ctx).apply {
+                player = exoPlayer
+                useController = true
             }
         }
-    }
+    )
 }
