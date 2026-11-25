@@ -71,6 +71,7 @@ import com.example.mastermartini.ui.theme.TextoOscuro
 import com.example.mastermartini.ui.theme.VerdeItaliano
 import com.example.mastermartini.ui.theme.VerdeOscuro
 import com.example.mastermartini.viewmodel.PerfilViewModel
+import androidx.compose.material.icons.filled.Thermostat
 
 // PANTALLA DE PERFIL
 // Muestra los datos del emprendedor: foto, datos del negocio, encuesta y favoritos.
@@ -201,6 +202,29 @@ fun PerfilScreen(
                             titulo = opcion.titulo,
                             descripcion = opcion.descripcion,
                             onClick = { onAbrirPanel(opcion.ruta) }
+                        )
+                    }
+                }
+            }
+            // CONDICIONES DEL TALLER HOY (API Externa Open-Meteo — IE 3.1.3)
+            if (uiState.condicionesTaller.isNotEmpty()) {
+                TarjetaPerfil(titulo = "Condiciones del taller hoy") {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Thermostat,
+                            contentDescription = null,
+                            tint = DoradoCalidad,
+                            modifier = Modifier.size(28.dp)
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(
+                            text = uiState.condicionesTaller,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = TextoOscuro
                         )
                     }
                 }

@@ -44,7 +44,8 @@ data class PerfilUiState(
     val rol: String = "",
     val planPro: Boolean = false,
     // Botones del "Panel de trabajo". Vacía = no se muestra la tarjeta (ej. Cliente)
-    val opcionesPanel: List<OpcionPanel> = emptyList()
+    val opcionesPanel: List<OpcionPanel> = emptyList(),
+    val condicionesTaller: String = ""
 )
 
 // VIEWMODEL DE LA PANTALLA PERFIL
@@ -73,8 +74,20 @@ class PerfilViewModel(application: Application) : AndroidViewModel(application) 
     // Se usa collect (como en DetalleViewModel) porque totalFavoritos va DENTRO de PerfilUiState.
     init {
         viewModelScope.launch {
-            favoritoRepository.contarFavoritos().collect { total ->
-                _uiState.update { it.copy(totalFavoritos = total) }
+            try {
+                val resp = com.example.mastermartini.data.remote.RetrofitClient.climaApi
+                    .obtenerClimaActual()
+                val temp = resp.climaActual?.temperature
+                if (temp != null) {
+                    val recomendacion = when {
+                        temp > 26.0 -> "Condiciones del taller hoy: ${temp.toInt()} °C — Mantén las cremas refrigeradas antes de batir"
+                        temp < 16.0 -> "Condiciones del taller hoy: ${temp.toInt()} °C — Ideal para templado de chocolate y laminado"
+                        else -> "Condiciones del taller hoy: ${temp.toInt()} °C — Ideal para templado de chocolate"
+                    }
+                    _uiState.update { it.copy(condicionesTaller = recomendacion) }
+                }
+            } catch (_: Exception) {
+                // Si no hay conexión, no muestra nada y no falla
             }
         }
     }
