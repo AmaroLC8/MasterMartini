@@ -27,4 +27,13 @@ object RetrofitClient {
             .build()
             .create(CursosApiService::class.java)
     }
+
+    val climaApi: ClimaApiService by lazy {
+        Retrofit.Builder()
+            .baseUrl("https://api.open-meteo.com/")
+            .client(httpClient)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(ClimaApiService::class.java)
+    }
 }
