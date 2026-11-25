@@ -180,17 +180,7 @@ fun HomeScreen(
                 }
             }
 
-            // 2. MasterClass: video destacado
-            item {
-                Text(
-                    text = "🎥 MasterClass Destacada",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 16.sp,
-                    color = textoOscuro
-                )
-                Spacer(modifier = Modifier.height(6.dp))
-                ReproductorVideoOnline(urlVideo = null)
-            }
+
 
             // 3. Tarjeta de Bienvenida con Datos del Perfil
             item {
