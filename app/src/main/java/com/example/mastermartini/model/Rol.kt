@@ -2,6 +2,12 @@ package com.example.mastermartini.model
 
 // OPCIONES DEL PANEL que comparten varios roles. Se escriben UNA vez aquí
 // (Ventas y Administrador usan la misma de clientes). Son private: solo las usa este archivo.
+
+private val OPCION_CREAR_CURSO = OpcionPanel(
+    titulo = "Crear curso online",
+    descripcion = "Publica un curso con video de Cloudinary en el catálogo",
+    ruta = "panel/crear-curso"
+)
 private val OPCION_CLIENTES = OpcionPanel(
     titulo = "Clientes y Plan Pro",
     descripcion = "Busca clientes y activa o quita su Plan Pro",
@@ -68,7 +74,7 @@ sealed class Rol(val codigo: String, val nombreVisible: String) {
         override val puedeResponderPreguntas = true
         // Ninguna por ahora. Se agregan cuando se conecten los cursos
         // (ej. "Mis cursos" y "Preguntas de alumnos").
-        override fun opcionesPanel(): List<OpcionPanel> = emptyList()
+        override fun opcionesPanel(): List<OpcionPanel> = listOf(OPCION_CREAR_CURSO)
     }
 
     // VENTAS: coordina las suscripciones al Plan Pro con los clientes
@@ -85,7 +91,7 @@ sealed class Rol(val codigo: String, val nombreVisible: String) {
         override val puedeGestionarUsuarios = true
         override val puedeResponderPreguntas = true
         // Lo mismo que Ventas, más la gestión de usuarios
-        override fun opcionesPanel(): List<OpcionPanel> = listOf(OPCION_CLIENTES, OPCION_USUARIOS)
+        override fun opcionesPanel(): List<OpcionPanel> = listOf(OPCION_CLIENTES, OPCION_USUARIOS,OPCION_CREAR_CURSO)
     }
 
     // companion object = lo que pertenece a la CLASE Rol y no a un rol en particular.

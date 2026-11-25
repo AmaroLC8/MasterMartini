@@ -1,5 +1,6 @@
 package com.example.mastermartini.data
 
+import com.example.mastermartini.data.remote.RetrofitClient
 import com.example.mastermartini.model.Capacitacion
 import com.example.mastermartini.model.Leccion
 import com.example.mastermartini.model.Modulo
@@ -15,6 +16,34 @@ import com.example.mastermartini.model.Modulo
 // (con mayúsculas y tildes), porque el Detalle lo busca por su nombre exacto.
 // La duración total de cada curso es la suma de los minutos de sus lecciones.
 class CapacitacionRepository {
+
+    // Trae los cursos online desde el microservicio (puerto 9092).
+    // Si el servidor está apagado, devuelve la lista local de respaldo.
+    suspend fun obtenerCapacitacionesRemotas(): List<Capacitacion> {
+        return try {
+            val remotos = RetrofitClient.cursosApi.obtenerCapacitaciones()
+            remotos.ifEmpty { obtenerCapacitaciones() }
+        } catch (e: Exception) {
+            obtenerCapacitaciones()
+        }
+    }
+
+    // Envía un curso nuevo al microservicio con el header X-Usuario-Id
+    suspend fun crearCapacitacion(
+        usuarioId: Int,
+        nuevaCapacitacion: Capacitacion
+    ): Result<Capacitacion> {
+        return try {
+            val response = RetrofitClient.cursosApi.crearCapacitacion(usuarioId, nuevaCapacitacion)
+            if (response.isSuccessful && response.body() != null) {
+                Result.success(response.body()!!)
+            } else {
+                Result.failure(Exception("Error ${response.code()}: verifica permisos o campos"))
+            }
+        } catch (e: Exception) {
+            Result.failure(Exception("No se pudo conectar con el servidor de cursos (9092)"))
+        }
+    }
 
     // Devuelve los 6 cursos: primero los gratis y luego los del Plan Pro
     fun obtenerCapacitaciones(): List<Capacitacion> {
@@ -535,4 +564,6 @@ class CapacitacionRepository {
     fun obtenerCapacitacionPorId(id: Int): Capacitacion? {
         return obtenerCapacitaciones().find { capacitacion -> capacitacion.id == id }
     }
+
+
 }
