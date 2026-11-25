@@ -415,6 +415,13 @@ class MainActivity : ComponentActivity() {
                                 onVolver = { navController.popBackStack() }
                             )
                         }
+                        composable("panel/crear-curso") {
+                            val crearCursoViewModel: com.example.mastermartini.viewmodel.CrearCursoViewModel = viewModel()
+                            com.example.mastermartini.ui.screens.CrearCursoScreen(
+                                viewModel = crearCursoViewModel,
+                                onVolver = { navController.popBackStack() }
+                            )
+                        }
                     }
                 }
             }
