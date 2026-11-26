@@ -6,6 +6,8 @@ import retrofit2.http.Query
 
 interface ClimaApiService {
 
+    // Valores por defecto: coordenadas de Santiago de Chile (latitud -33.45, longitud -70.66).
+    // ClimaRepository la llama sin parámetros, así que siempre se consulta el clima de Santiago.
     @GET("v1/forecast")
     suspend fun obtenerClimaActual(
         @Query("latitude") latitud: Double = -33.45,
