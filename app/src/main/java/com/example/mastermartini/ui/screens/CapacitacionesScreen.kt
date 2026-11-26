@@ -69,6 +69,10 @@ fun CapacitacionesScreen(
     // Escuchamos el estado: al tocar un filtro, el ViewModel arma un estado nuevo
     // y esta pantalla se vuelve a dibujar sola
     val uiState by viewModel.uiState.collectAsState()
+
+    // LaunchedEffect(Unit) se ejecuta cada vez que esta pantalla ENTRA a la composición.
+    // Al ir a "Crear curso" (o a un detalle) la pantalla sale, y al volver entra de nuevo:
+    // así se le piden otra vez los cursos al servidor y aparece el curso recién creado.
     LaunchedEffect(Unit) {
         viewModel.recargarCapacitaciones()
     }

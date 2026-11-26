@@ -74,23 +74,35 @@ import com.example.mastermartini.ui.theme.VerdeItaliano
 import com.example.mastermartini.ui.theme.VerdeOscuro
 import com.example.mastermartini.viewmodel.CapacitacionDetalleViewModel
 
+// PANTALLA DE DETALLE DE UN CURSO ONLINE
+// Muestra todo el curso: video resumen (desde Cloudinary), datos, qué se logra, módulos con
+// sus lecciones, qué incluye, el producto principal y el botón para empezar.
+// Solo DIBUJA lo que le entrega el CapacitacionDetalleViewModel (MVVM): incluso qué módulos
+// están abiertos y qué lecciones llevan candado lo decide el ViewModel.
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CapacitacionDetalleScreen(
+    // Id del curso, que llega por la ruta "capacitacion/{capacitacionId}" (lo saca MainActivity)
     capacitacionId: Int,
     viewModel: CapacitacionDetalleViewModel,
+    // Vuelve a la lista de cursos (popBackStack en MainActivity)
     onVolver: () -> Unit,
+    // Recibe el id del producto principal; MainActivity navega a "producto/{id}"
     onVerProducto: (Int) -> Unit
 ) {
+    // Se ejecuta UNA vez al abrir la pantalla (y de nuevo solo si cambia el id),
+    // igual que en DetalleScreen. El ViewModel busca el curso en el servidor.
     LaunchedEffect(capacitacionId) {
         viewModel.cargarCapacitacion(capacitacionId)
     }
 
+    // Escuchamos el estado: al llegar el curso o al abrir/cerrar un módulo, la pantalla se redibuja sola
     val uiState by viewModel.uiState.collectAsState()
 
     Scaffold(
         containerColor = BlancoHueso,
         topBar = {
+            // a. Barra verde con la flecha para volver (mismo estilo que DetalleScreen)
             TopAppBar(
                 title = {
                     Text(
@@ -118,9 +130,11 @@ fun CapacitacionDetalleScreen(
             )
         }
     ) { innerPadding ->
+        // Variable local para que Kotlin sepa que no cambia entre el "if" y su uso
         val capacitacion = uiState.capacitacion
 
         if (capacitacion == null) {
+            // Mientras llega la respuesta del servidor, o si el id no existe: se avisa en vez de cerrar la app
             Box(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier
@@ -136,11 +150,15 @@ fun CapacitacionDetalleScreen(
                 )
             }
         } else {
-            // Usa videoResumenUrl del curso o, si es null, el videoUrl de su primera lección
+            // ENLACE DEL VIDEO (subido a Cloudinary). Usa videoResumenUrl del curso o, si es null
+            // o está vacío, el videoUrl de su primera lección. takeIf { it.isNotBlank() } convierte
+            // un texto vacío "" en null, para que el ?: pase a la siguiente opción.
+            // Si ninguno tiene video, queda null y el reproductor muestra un aviso en vez de fallar.
             val urlVideo = capacitacion.videoResumenUrl?.takeIf { it.isNotBlank() }
                 ?: capacitacion.modulos.firstOrNull()?.lecciones?.firstOrNull()?.videoUrl
                     ?.takeIf { it.isNotBlank() }
 
+            // Column con verticalScroll: el contenido es corto (máx. 4 módulos), no hace falta LazyColumn
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -149,6 +167,7 @@ fun CapacitacionDetalleScreen(
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
+                // a. Etiquetas y título completo (en la barra de arriba puede quedar cortado)
                 FlowRow(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalArrangement = Arrangement.spacedBy(6.dp)
@@ -174,8 +193,13 @@ fun CapacitacionDetalleScreen(
                     color = VerdeOscuro
                 )
 
+                // b. Video resumen. Se ve SIEMPRE, aunque el curso sea del Plan Pro:
+                //    sirve para que la persona conozca el curso antes de suscribirse.
+                //    Se reproduce por internet desde Cloudinary (el video no va dentro de la app).
                 TituloSeccion(texto = "🎥 Video resumen")
                 ReproductorVideoLocal(videoUrl = urlVideo)
+
+                // c. Datos con íconos (DatoConIcono, en ui/components, el mismo de DetalleScreen) y la descripción
 
                 Card(
                     colors = CardDefaults.cardColors(containerColor = BlancoPuro),
@@ -184,6 +208,7 @@ fun CapacitacionDetalleScreen(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
+                        // FlowRow: si no caben en una línea, bajan a la siguiente
                         FlowRow(
                             horizontalArrangement = Arrangement.spacedBy(16.dp),
                             verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -208,6 +233,7 @@ fun CapacitacionDetalleScreen(
                     }
                 }
 
+                // d. Lo que la persona podrá hacer al terminar
                 TituloSeccion(texto = "Al terminar este curso podrás:")
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     capacitacion.loQueLograras.forEach { logro ->
@@ -215,14 +241,18 @@ fun CapacitacionDetalleScreen(
                     }
                 }
 
+                // e. Contenido del curso: un bloque desplegable por módulo.
+                //    forEachIndexed entrega la posición (indice) que guarda el ViewModel.
                 TituloSeccion(texto = "Contenido del curso")
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     capacitacion.modulos.forEachIndexed { indiceModulo, modulo ->
                         BloqueModulo(
                             numero = indiceModulo + 1,
                             modulo = modulo,
+                            // El estado abierto/cerrado viene del ViewModel, no de un remember
                             abierto = uiState.modulosAbiertos.contains(indiceModulo),
                             onAlternar = { viewModel.alternarModulo(indiceModulo) },
+                            // Se le pasan las reglas del ViewModel ya respondidas para cada lección
                             esMuestraGratis = { indiceLeccion ->
                                 viewModel.esMuestraGratis(indiceModulo, indiceLeccion)
                             },
@@ -233,6 +263,7 @@ fun CapacitacionDetalleScreen(
                     }
                 }
 
+                // f. Qué incluye el curso
                 TituloSeccion(texto = "Incluye")
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     capacitacion.incluye.forEach { item ->
@@ -240,6 +271,8 @@ fun CapacitacionDetalleScreen(
                     }
                 }
 
+                // g. Producto principal: si se encontró, es un botón que abre su detalle
+                //    (igual que el insumo en DetalleScreen); si no, texto normal.
                 val producto = uiState.producto
                 if (producto != null) {
                     OutlinedButton(
@@ -257,6 +290,7 @@ fun CapacitacionDetalleScreen(
                             fontWeight = FontWeight.SemiBold,
                             modifier = Modifier.weight(1f)
                         )
+                        // Decorativo: el texto ya dice qué es; la flecha indica que abre otra pantalla
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                             contentDescription = null
@@ -271,7 +305,10 @@ fun CapacitacionDetalleScreen(
                     )
                 }
 
+                // h. Botón grande al final (56 dp de alto)
                 Button(
+                    // FASE 2: aquí se inscribirá al usuario (o se abrirá el Plan Pro).
+                    // Por ahora no hace nada.
                     onClick = { },
                     colors = ButtonDefaults.buttonColors(
                         containerColor = VerdeItaliano,
@@ -288,6 +325,7 @@ fun CapacitacionDetalleScreen(
                         fontWeight = FontWeight.Bold
                     )
                 }
+                // Solo en los cursos del Plan Pro: la suscripción todavía no se paga en la app
                 if (!capacitacion.esGratis) {
                     Text(
                         text = "La suscripción se coordina con nuestro equipo de ventas",
@@ -302,6 +340,8 @@ fun CapacitacionDetalleScreen(
     }
 }
 
+// TÍTULO DE CADA SECCIÓN DEL DETALLE (mismo tamaño que los títulos de DetalleScreen).
+// Se escribe una vez para no repetir el estilo en las 4 secciones.
 @Composable
 private fun TituloSeccion(texto: String) {
     Text(
@@ -312,6 +352,8 @@ private fun TituloSeccion(texto: String) {
     )
 }
 
+// UNA FILA CON ✓ VERDE Y SU TEXTO. La usan "Al terminar este curso podrás" e "Incluye".
+// El ✓ es un texto (no un ícono), así TalkBack lo lee junto con la frase como un solo elemento.
 @Composable
 private fun FilaConCheck(texto: String) {
     Row(verticalAlignment = Alignment.Top) {
@@ -322,6 +364,7 @@ private fun FilaConCheck(texto: String) {
             color = VerdeItaliano
         )
         Spacer(modifier = Modifier.width(10.dp))
+        // weight(1f): el texto usa el ancho que sobra y baja de línea si es largo
         Text(
             text = texto,
             fontSize = 16.sp,
@@ -331,20 +374,25 @@ private fun FilaConCheck(texto: String) {
     }
 }
 
+// UN MÓDULO DESPLEGABLE: encabezado que se toca + sus lecciones.
+// No guarda nada: recibe si está abierto y avisa el toque con onAlternar (el ViewModel decide).
 @Composable
 private fun BloqueModulo(
     numero: Int,
     modulo: Modulo,
     abierto: Boolean,
     onAlternar: () -> Unit,
+    // Funciones que reciben la posición de la lección y responden true/false (reglas del ViewModel)
     esMuestraGratis: (Int) -> Boolean,
     estaBloqueada: (Int) -> Boolean
 ) {
+    // La flecha gira suave de 0° (cerrado, apunta abajo) a 180° (abierto, apunta arriba)
     val rotacionFlecha by animateFloatAsState(
         targetValue = if (abierto) 180f else 0f,
         label = "rotacionFlecha"
     )
 
+    // Texto que lee TalkBack en el encabezado: dice todo el módulo y si está abierto o cerrado
     val estado = if (abierto) "Abierto" else "Cerrado"
     val descripcionEncabezado =
         "Módulo $numero: ${modulo.titulo}. ${modulo.lecciones.size} lecciones, " +
@@ -356,6 +404,10 @@ private fun BloqueModulo(
         shape = RoundedCornerShape(12.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
+        // ENCABEZADO: TODA la fila se puede tocar (no solo la flecha), mínimo 56 dp de alto.
+        // clickable con Role.Button: TalkBack lo anuncia como botón.
+        // onClickLabel: TalkBack dice "toca dos veces para abrir/cerrar el módulo".
+        // semantics { contentDescription }: lo que TalkBack lee al llegar al encabezado.
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
@@ -388,6 +440,7 @@ private fun BloqueModulo(
                     color = TextoOscuro
                 )
             }
+            // Decorativo (null): el estado abierto/cerrado ya lo dice el contentDescription del encabezado
             Icon(
                 imageVector = Icons.Filled.KeyboardArrowDown,
                 contentDescription = null,
@@ -398,6 +451,7 @@ private fun BloqueModulo(
             )
         }
 
+        // LECCIONES: AnimatedVisibility las muestra desplegándose al abrir y las esconde al cerrar
         AnimatedVisibility(visible = abierto) {
             Column(modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 12.dp)) {
                 HorizontalDivider(color = GrisBorde)
@@ -414,6 +468,9 @@ private fun BloqueModulo(
     }
 }
 
+// UNA LECCIÓN: número en un círculo, título, duración y, a la derecha,
+// la etiqueta "Muestra gratis" o el candado (solo en cursos del Plan Pro).
+// FASE 2: las lecciones se podrán tocar para ver su video. Por ahora solo se muestran.
 @Composable
 private fun FilaLeccion(
     numero: Int,
@@ -428,6 +485,7 @@ private fun FilaLeccion(
             .heightIn(min = 48.dp)
             .padding(vertical = 6.dp)
     ) {
+        // Círculo con el número (mismo estilo que los pasos de la receta en DetalleScreen)
         Box(
             contentAlignment = Alignment.Center,
             modifier = Modifier
@@ -458,6 +516,7 @@ private fun FilaLeccion(
         }
         Spacer(modifier = Modifier.width(8.dp))
         if (esMuestraGratis) {
+            // Texto además del color: se entiende aunque no se distingan los colores
             Text(
                 text = "Muestra gratis",
                 fontSize = 16.sp,
@@ -468,6 +527,8 @@ private fun FilaLeccion(
                     .padding(horizontal = 8.dp, vertical = 4.dp)
             )
         } else if (bloqueada) {
+            // NO es decorativo: es la única forma de saber que la lección está bloqueada,
+            // por eso lleva contentDescription para TalkBack
             Icon(
                 imageVector = Icons.Filled.Lock,
                 contentDescription = "Lección bloqueada",
