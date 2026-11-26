@@ -39,51 +39,33 @@ import com.example.mastermartini.ui.components.EtiquetaVegana
 import com.example.mastermartini.ui.theme.*
 import com.example.mastermartini.viewmodel.DetalleViewModel
 
-// PANTALLA DE DETALLE DE UN CURSO
-// Muestra la receta paso a paso del curso que se tocó en Home, con el video local.
-// Solo DIBUJA el curso que le entrega el DetalleViewModel (MVVM): no busca datos por su cuenta.
+// Pantalla de detalle de receta con video, checklist de ingredientes y pasos en Room
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DetalleScreen(
-    // Id del curso, que llega por la ruta "detalle/{cursoId}" (lo saca MainActivity)
     cursoId: Int,
     viewModel: DetalleViewModel,
-    // MainActivity decide qué hacer al volver (popBackStack: regresa a Home)
     onVolver: () -> Unit,
-    // Recibe el id del producto del insumo; MainActivity navega a "producto/{id}"
     onVerProducto: (Int) -> Unit
 ) {
-    // LaunchedEffect(cursoId) se ejecuta UNA vez al abrir la pantalla, y de nuevo solo si cambia cursoId.
-    // Si llamáramos cargarCurso() directo en el composable, se repetiría en cada redibujo.
     LaunchedEffect(cursoId) {
         viewModel.cargarCurso(cursoId)
     }
 
-    // Escuchamos el curso del ViewModel: cuando cargarCurso() lo encuentra, la pantalla se redibuja sola
     val curso by viewModel.curso.collectAsState()
-
-    // Posiciones de los ingredientes marcados. Vienen de Room a través del ViewModel:
-    // al marcar uno, Room avisa el cambio y esta lista se actualiza sola.
     val marcados by viewModel.marcados.collectAsState()
-
-    // Posiciones de los pasos completados (también vienen de Room, tabla "checklist_pasos")
     val pasosCompletados by viewModel.pasosCompletados.collectAsState()
-
-    // Producto Master Martini del insumo (null si no se encontró por nombre)
     val productoInsumo by viewModel.productoInsumo.collectAsState()
 
     Scaffold(
         containerColor = BlancoHueso,
         topBar = {
-            // Barra verde con flecha para volver (mismo estilo que EncuestaScreen)
             TopAppBar(
                 title = {
                     Text(
-                        // Mientras no hay curso (o no existe) se muestra un título genérico
                         text = curso?.titulo ?: "Receta",
                         fontWeight = FontWeight.Bold,
                         color = BlancoPuro,
-                        // Los títulos largos se cortan con "..." para no romper la barra
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -105,11 +87,9 @@ fun DetalleScreen(
             )
         }
     ) { innerPadding ->
-        // Se guarda en una variable local para que Kotlin sepa que no cambia entre el "if" y su uso
         val cursoActual = curso
 
         if (cursoActual == null) {
-            // Id que no existe en el repositorio: se avisa en vez de cerrar la app
             Box(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier
@@ -125,7 +105,6 @@ fun DetalleScreen(
                 )
             }
         } else {
-            // Column con verticalScroll: el contenido es corto y fijo, no hace falta LazyColumn
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -134,7 +113,6 @@ fun DetalleScreen(
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // 1. Datos del curso (mismo estilo de tarjeta que en Home)
                 Card(
                     colors = CardDefaults.cardColors(containerColor = BlancoPuro),
                     border = BorderStroke(1.dp, DoradoCalidad.copy(alpha = 0.6f)),
@@ -146,8 +124,6 @@ fun DetalleScreen(
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            // Etiqueta (chip) con la sección de la receta: texto blanco sobre verde
-                            // para buen contraste. No es un botón, solo informa, por eso no usa onClick.
                             Text(
                                 text = cursoActual.categoria,
                                 fontSize = 15.sp,
@@ -157,7 +133,6 @@ fun DetalleScreen(
                                     .background(VerdeItaliano, RoundedCornerShape(50))
                                     .padding(horizontal = 14.dp, vertical = 6.dp)
                             )
-                            // "Apto vegano 🌱" al lado, solo si la receta es vegana
                             if (cursoActual.esVegano) {
                                 EtiquetaVegana(tamanoTexto = 15)
                             }
@@ -170,19 +145,14 @@ fun DetalleScreen(
                             color = VerdeOscuro
                         )
                         Spacer(modifier = Modifier.height(4.dp))
-                        // Descripción breve: qué se aprende en este curso
                         Text(
                             text = cursoActual.descripcion,
                             fontSize = 16.sp,
                             color = TextoOscuro
                         )
                         Spacer(modifier = Modifier.height(8.dp))
-                        // INSUMO: si el ViewModel encontró el producto, es un botón que abre su detalle;
-                        // si no, se muestra como texto normal (como antes).
-                        // Se copia a una variable local para poder revisar si es null y usarla sin "!!".
                         val producto = productoInsumo
                         if (producto != null) {
-                            // Botón a todo el ancho (mínimo 48 dp) con borde: se nota que se puede tocar
                             OutlinedButton(
                                 onClick = { onVerProducto(producto.id) },
                                 border = BorderStroke(1.dp, VerdeItaliano),
@@ -198,7 +168,6 @@ fun DetalleScreen(
                                     fontWeight = FontWeight.SemiBold,
                                     modifier = Modifier.weight(1f)
                                 )
-                                // Flecha: indica que abre otra pantalla. Decorativa: el texto ya dice qué es
                                 Icon(
                                     imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                                     contentDescription = null
@@ -218,9 +187,6 @@ fun DetalleScreen(
                             color = TextoOscuro
                         )
                         Spacer(modifier = Modifier.height(8.dp))
-                        // Fila con duración, rendimiento y dificultad, cada uno con su ícono.
-                        // FlowRow: si no caben en una línea (celular angosto o letra grande),
-                        // los que sobran bajan a la línea siguiente en vez de cortarse.
                         FlowRow(
                             horizontalArrangement = Arrangement.spacedBy(16.dp),
                             verticalArrangement = Arrangement.spacedBy(6.dp)
@@ -235,7 +201,6 @@ fun DetalleScreen(
                     }
                 }
 
-                // 2. Video de la receta (reproduce Cloudinary si existe, o video local de respaldo)
                 Text(
                     text = "🎥 Video de la receta",
                     fontSize = 17.sp,
@@ -244,7 +209,6 @@ fun DetalleScreen(
                 )
                 ReproductorVideoLocal(videoUrl = cursoActual.videoUrl)
 
-                // 3. Ingredientes como checklist (las marcas se guardan en Room)
                 Text(
                     text = "🧺 Ingredientes",
                     fontSize = 17.sp,
@@ -252,18 +216,14 @@ fun DetalleScreen(
                     color = TextoOscuro
                 )
 
-                // Cuántos hay listos y cuántos son en total (solo para dibujar; la lista la maneja el ViewModel)
                 val totalIngredientes = cursoActual.ingredientes.size
                 val totalListos = marcados.size
 
-                // Progreso de 0f (ninguno) a 1f (todos). Se revisa que el total no sea 0 para no dividir por cero.
                 val progreso = if (totalIngredientes > 0) {
                     totalListos.toFloat() / totalIngredientes
                 } else {
                     0f
                 }
-                // animateFloatAsState: al marcar un ingrediente la barra avanza suave en vez de saltar
-                // (mismo tipo de animación que el corazón de favoritos en Home)
                 val progresoAnimado by animateFloatAsState(
                     targetValue = progreso,
                     label = "progresoIngredientes"
@@ -276,7 +236,6 @@ fun DetalleScreen(
                     color = VerdeOscuro
                 )
                 LinearProgressIndicator(
-                    // progress se pasa como función { } para que Compose lea el valor animado en cada cuadro
                     progress = { progresoAnimado },
                     color = VerdeItaliano,
                     trackColor = GrisBorde,
@@ -285,14 +244,10 @@ fun DetalleScreen(
                         .height(8.dp)
                 )
 
-                // Column con espacio 0: las filas ya miden 48 dp, no hace falta separarlas más
                 Column {
-                    // forEachIndexed entrega la posición (indice) que se guarda en Room
                     cursoActual.ingredientes.forEachIndexed { indice, ingrediente ->
                         val estaMarcado = marcados.contains(indice)
 
-                        // Toda la fila se puede tocar (no solo la casilla pequeña), más fácil para usuarios mayores.
-                        // toggleable con Role.Checkbox: TalkBack lee la fila como una casilla "marcada/no marcada".
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier
@@ -304,8 +259,6 @@ fun DetalleScreen(
                                     onValueChange = { viewModel.alternarIngrediente(indice) }
                                 )
                         ) {
-                            // onCheckedChange = null: el toque lo maneja la fila completa (toggleable),
-                            // así no se registra dos veces al tocar justo la casilla
                             Checkbox(
                                 checked = estaMarcado,
                                 onCheckedChange = null,
@@ -316,9 +269,6 @@ fun DetalleScreen(
                                 )
                             )
                             Spacer(modifier = Modifier.width(12.dp))
-                            // Marcado: texto tachado y gris, para ver de un vistazo lo que ya está listo.
-                            // Gris oscuro (0xFF666666) y no Color.Gray: el gris claro casi no se lee
-                            // sobre el fondo blanco hueso (poco contraste para usuarios mayores).
                             Text(
                                 text = ingrediente,
                                 fontSize = 16.sp,
@@ -332,7 +282,6 @@ fun DetalleScreen(
                     }
                 }
 
-                // Botón para desmarcar todo: solo aparece si hay al menos un ingrediente marcado
                 if (totalListos > 0) {
                     TextButton(
                         onClick = { viewModel.reiniciarChecklist() },
@@ -347,7 +296,6 @@ fun DetalleScreen(
                     }
                 }
 
-                // 4. Paso a paso
                 Text(
                     text = "📖 Paso a paso",
                     fontSize = 17.sp,
@@ -355,17 +303,14 @@ fun DetalleScreen(
                     color = TextoOscuro
                 )
 
-                // Cuántos pasos están hechos y cuántos son en total (igual que con los ingredientes)
                 val totalPasos = cursoActual.pasos.size
                 val totalCompletados = pasosCompletados.size
 
-                // Progreso de 0f a 1f, revisando que no se divida por cero
                 val progresoPasos = if (totalPasos > 0) {
                     totalCompletados.toFloat() / totalPasos
                 } else {
                     0f
                 }
-                // La barra avanza suave al completar un paso
                 val progresoPasosAnimado by animateFloatAsState(
                     targetValue = progresoPasos,
                     label = "progresoPasos"
@@ -386,8 +331,6 @@ fun DetalleScreen(
                         .height(8.dp)
                 )
 
-                // forEachIndexed entrega la posición (indice, parte en 0) y el texto de cada paso.
-                // El indice es lo que se guarda en Room; en pantalla se muestra indice + 1.
                 Column {
                     cursoActual.pasos.forEachIndexed { indice, paso ->
                         FilaPaso(
@@ -399,7 +342,6 @@ fun DetalleScreen(
                     }
                 }
 
-                // Botón para desmarcar todos los pasos: solo aparece si hay al menos uno completado
                 if (totalCompletados > 0) {
                     TextButton(
                         onClick = { viewModel.reiniciarPasos() },
@@ -414,10 +356,6 @@ fun DetalleScreen(
                     }
                 }
 
-                // Mensaje de felicitación cuando se completan TODOS los pasos.
-                // AnimatedVisibility: en vez de aparecer de golpe, el mensaje entra con una
-                // animación (se despliega) y sale igual al desmarcar un paso o reiniciar.
-                // totalPasos > 0: una receta sin pasos no debe mostrarse como "terminada".
                 AnimatedVisibility(visible = totalPasos > 0 && totalCompletados == totalPasos) {
                     Text(
                         text = "¡Receta terminada! 🎉",
@@ -432,8 +370,6 @@ fun DetalleScreen(
                     )
                 }
 
-                // 5. Contacto con ventas, al final de la receta.
-                // \" escribe una comilla dentro del texto: ...para preparar "Brioche Tradicional Italiano".
                 ContactoVentas(
                     mensaje = "Hola, quiero información sobre ${cursoActual.insumo} para preparar \"${cursoActual.titulo}\"."
                 )
@@ -442,9 +378,7 @@ fun DetalleScreen(
     }
 }
 
-// UNA FILA DEL "PASO A PASO" (número o ✓ + texto del paso).
-// Es private porque solo la usa esta pantalla. No guarda nada: recibe si está completado
-// y avisa el toque con onAlternar; el ViewModel decide qué hacer (MVVM).
+// Fila de paso de la receta con estado completado persistido en Room
 @Composable
 private fun FilaPaso(
     numero: Int,
@@ -452,9 +386,6 @@ private fun FilaPaso(
     completado: Boolean,
     onAlternar: () -> Unit
 ) {
-    // animateColorAsState: al completar el paso el color cambia de a poco (no de golpe).
-    // Sin completar: círculo blanco con borde y número verde.
-    // Completado: círculo verde relleno con ✓ blanco (como una casilla marcada).
     val colorFondo by animateColorAsState(
         targetValue = if (completado) VerdeItaliano else BlancoPuro,
         label = "fondoPaso"
@@ -464,8 +395,6 @@ private fun FilaPaso(
         label = "contenidoPaso"
     )
 
-    // Toda la fila se puede tocar (mínimo 48 dp de alto), más fácil para usuarios mayores.
-    // toggleable con Role.Checkbox: TalkBack lee el paso como una casilla "marcada/no marcada".
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
@@ -478,7 +407,6 @@ private fun FilaPaso(
             )
             .padding(vertical = 6.dp)
     ) {
-        // Círculo de 36 dp: muestra el número o el ✓ según el estado
         Box(
             contentAlignment = Alignment.Center,
             modifier = Modifier
@@ -494,8 +422,6 @@ private fun FilaPaso(
             )
         }
         Spacer(modifier = Modifier.width(12.dp))
-        // Completado: texto en gris oscuro (0xFF666666), igual que los ingredientes marcados.
-        // weight(1f): el texto usa el ancho que sobra y baja de línea si es largo.
         Text(
             text = texto,
             fontSize = 16.sp,

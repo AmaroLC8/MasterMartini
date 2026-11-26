@@ -61,6 +61,7 @@ import com.example.mastermartini.ui.theme.BlancoPuro
 import com.example.mastermartini.ui.theme.DoradoCalidad
 import com.example.mastermartini.ui.theme.TextoOscuro
 
+// Reproductor ExoPlayer reutilizable con soporte de pantalla completa y ajuste de aspecto
 @OptIn(UnstableApi::class)
 @Composable
 fun ReproductorVideoLocal(
@@ -136,8 +137,7 @@ fun ReproductorVideoLocal(
     var modoAjusteActual by remember(modoAjusteInicial) { mutableIntStateOf(modoAjusteInicial) }
     val activity = remember(context) { context.encontrarActivity() }
 
-    // Al entrar en pantalla completa gira a horizontal y, al salir o cerrar la pantalla,
-    // restaura la orientación automática del sistema.
+    // Fuerza orientación horizontal en pantalla completa y la restaura al salir
     DisposableEffect(enPantallaCompleta, activity) {
         if (enPantallaCompleta) {
             activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
@@ -235,8 +235,6 @@ fun ReproductorVideoLocal(
                     }
                 )
 
-                // Botones rápidos en la esquina superior derecha para cambiar el ajuste de pantalla
-                // (Ajustar / Zoom / Rellenar) y salir de pantalla completa.
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     modifier = Modifier

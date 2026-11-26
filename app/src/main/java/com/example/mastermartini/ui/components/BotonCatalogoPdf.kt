@@ -28,12 +28,9 @@ import com.example.mastermartini.data.DatosEmpresa
 import com.example.mastermartini.ui.theme.RojoItaliano
 import com.example.mastermartini.ui.theme.TextoOscuro
 
-// BOTÓN "VER CATÁLOGO COMPLETO (PDF)" (componente reutilizable)
-// Lo usan ProductosScreen y ProductoDetalleScreen.
-// Abre el catálogo público de Master Martini en el NAVEGADOR del celular (o en un lector de PDF).
+// Botón reutilizable que abre el catálogo PDF de Master Martini en el navegador
 @Composable
 fun BotonCatalogoPdf(modifier: Modifier = Modifier) {
-    // El Context hace falta para lanzar el Intent y para mostrar el Toast
     val context = LocalContext.current
 
     Column(
@@ -42,14 +39,10 @@ fun BotonCatalogoPdf(modifier: Modifier = Modifier) {
     ) {
         OutlinedButton(
             onClick = {
-                // Intent ACTION_VIEW + una dirección web = "ábrele esto al usuario con la app que sepa".
-                // Android elige el navegador (o un lector de PDF). Nuestra app NO descarga nada:
-                // por eso NO necesita el permiso INTERNET (el que usa internet es el navegador).
                 val intent = Intent(Intent.ACTION_VIEW, Uri.parse(DatosEmpresa.URL_CATALOGO))
                 try {
                     context.startActivity(intent)
                 } catch (e: ActivityNotFoundException) {
-                    // El celular no tiene ninguna app que abra páginas web: se avisa y la app sigue
                     Toast.makeText(
                         context,
                         "No encontramos un navegador para abrir el catálogo.",
@@ -68,7 +61,6 @@ fun BotonCatalogoPdf(modifier: Modifier = Modifier) {
             Spacer(modifier = Modifier.width(8.dp))
             Text(text = "Ver catálogo completo (PDF)", fontSize = 17.sp, fontWeight = FontWeight.Bold)
         }
-        // Aviso pequeño: así el usuario no se sorprende cuando la app abre el navegador
         Text(
             text = "Se abre en el navegador",
             fontSize = 14.sp,

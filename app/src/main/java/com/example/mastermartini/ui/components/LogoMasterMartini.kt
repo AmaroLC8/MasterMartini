@@ -18,13 +18,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.mastermartini.ui.theme.*
 
+// Logo corporativo de Master Martini con franja tricolor italiana
 @Composable
 fun LogoMasterMartini(modifier: Modifier = Modifier) {
     Column(
         modifier = modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Franja tricolor de la bandera italiana
         Row(
             modifier = Modifier
                 .width(140.dp)
@@ -38,7 +38,6 @@ fun LogoMasterMartini(modifier: Modifier = Modifier) {
 
         Spacer(modifier = Modifier.height(6.dp))
 
-        // Nombre de la marca
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(
                 imageVector = Icons.Default.Star,

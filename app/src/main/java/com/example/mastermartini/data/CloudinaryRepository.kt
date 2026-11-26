@@ -19,11 +19,7 @@ import java.io.FileOutputStream
 import java.io.IOException
 import java.util.concurrent.TimeUnit
 
-/**
- * Repositorio encargado de la subida directa de videos a Cloudinary.
- * Encapsula la configuración de Retrofit/OkHttp y el manejo de archivos temporales
- * para que el ViewModel solo reciba un [Result] con la URL segura del video.
- */
+// Repositorio para subir videos a Cloudinary y obtener su URL HTTPS pública
 class CloudinaryRepository {
 
     companion object {
@@ -32,8 +28,6 @@ class CloudinaryRepository {
         private const val UPLOAD_PRESET = "mastermartini_videos"
     }
 
-    // Cliente HTTP con timeouts amplios pensados para archivos de video pesados.
-    // No se agrega logging de cuerpo (BODY) para evitar consumir memoria al subir binarios grandes.
     private val httpClient: OkHttpClient by lazy {
         OkHttpClient.Builder()
             .connectTimeout(60, TimeUnit.SECONDS)
@@ -42,7 +36,6 @@ class CloudinaryRepository {
             .build()
     }
 
-    // Instancia Retrofit dedicada a la API de Cloudinary usando Gson.
     private val api: CloudinaryApiService by lazy {
         Retrofit.Builder()
             .baseUrl(BASE_URL_CLOUDINARY)
@@ -52,29 +45,22 @@ class CloudinaryRepository {
             .create(CloudinaryApiService::class.java)
     }
 
-    /**
-     * Copia el video apuntado por [videoUri] a un archivo temporal en [Context.getCacheDir],
-     * lo sube a Cloudinary en un hilo de entrada/salida ([Dispatchers.IO]) y elimina siempre
-     * el archivo temporal en el bloque `finally`.
-     */
+    // Copia el video a caché temporal, lo sube por multipart a Cloudinary y limpia el temporal
     suspend fun subirVideoDesdeUri(context: Context, videoUri: Uri): Result<String> =
         withContext(Dispatchers.IO) {
             var archivoTemporal: File? = null
             try {
-                // Detecta el tipo MIME real del video (por defecto video/mp4) y su extensión.
                 val mimeType = context.contentResolver.getType(videoUri) ?: "video/mp4"
                 val extension = MimeTypeMap.getSingleton()
                     .getExtensionFromMimeType(mimeType)
                     ?.takeIf { it.isNotBlank() }
                     ?: "mp4"
 
-                // Abre el flujo de lectura desde la Uri seleccionada por el usuario.
                 val inputStream = context.contentResolver.openInputStream(videoUri)
                     ?: return@withContext Result.failure(
                         IllegalStateException("No se pudo abrir el video seleccionado.")
                     )
 
-                // Crea un archivo temporal en cacheDir y copia el contenido del video.
                 archivoTemporal = File.createTempFile("video_curso_", ".$extension", context.cacheDir)
                 inputStream.use { entrada ->
                     FileOutputStream(archivoTemporal).use { salida ->
@@ -82,7 +68,6 @@ class CloudinaryRepository {
                     }
                 }
 
-                // Prepara las partes Multipart requeridas por Cloudinary: archivo y upload_preset.
                 val requestBodyVideo = archivoTemporal.asRequestBody(mimeType.toMediaTypeOrNull())
                 val parteVideo = MultipartBody.Part.createFormData(
                     name = "file",
@@ -91,7 +76,6 @@ class CloudinaryRepository {
                 )
                 val partePreset = UPLOAD_PRESET.toRequestBody("text/plain".toMediaTypeOrNull())
 
-                // Ejecuta la subida a Cloudinary y valida la URL segura devuelta.
                 val respuesta = api.subirVideo(
                     cloudName = CLOUD_NAME,
                     file = parteVideo,
@@ -118,7 +102,6 @@ class CloudinaryRepository {
                     Exception("Ocurrió un error al procesar el video.", e)
                 )
             } finally {
-                // Garantiza que el archivo temporal siempre se borre para no llenar el caché.
                 archivoTemporal?.let { archivo ->
                     if (archivo.exists()) {
                         archivo.delete()

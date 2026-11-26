@@ -57,26 +57,16 @@ import com.example.mastermartini.viewmodel.CapacitacionesViewModel
 import com.example.mastermartini.viewmodel.MiCurso
 import androidx.compose.runtime.LaunchedEffect
 
-// PANTALLA "CURSOS ONLINE" (pestaña Cursos de la barra inferior)
-// Muestra el catálogo de cursos online con filtros, igual que RecetasScreen.
-// Solo DIBUJA lo que le entrega el CapacitacionesViewModel (MVVM): el filtro y el precio
-// en pesos se arman en el ViewModel. Aquí solo se avisa qué botón tocó el usuario.
+// Pantalla del catálogo de cursos online con filtros, sección "Mis cursos" y Plan Pro
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CapacitacionesScreen(
-    // ViewModel con los cursos filtrados (lo crea MainActivity)
     viewModel: CapacitacionesViewModel,
-    // Recibe el id del curso tocado; MainActivity navega a "capacitacion/{id}"
     onVerCapacitacion: (Int) -> Unit
 ) {
-    // Escuchamos el estado: al tocar un filtro, el ViewModel arma un estado nuevo
-    // y esta pantalla se vuelve a dibujar sola
     val uiState by viewModel.uiState.collectAsState()
 
-    // LaunchedEffect(Unit) se ejecuta cada vez que esta pantalla ENTRA a la composición.
-    // Al ir a "Crear curso" (o a un detalle) la pantalla sale, y al volver entra de nuevo:
-    // así se le piden otra vez los cursos al servidor y aparece el curso recién creado.
-    // También se recarga "Mis cursos", para ver el avance que se marcó en el detalle.
+    // Recarga catálogo y progreso al volver a la pantalla
     LaunchedEffect(Unit) {
         viewModel.recargarCapacitaciones()
     }
@@ -84,7 +74,6 @@ fun CapacitacionesScreen(
     Scaffold(
         containerColor = BlancoHueso,
         topBar = {
-            // Barra verde sin flecha: se llega desde la barra inferior, igual que Recetas
             TopAppBar(
                 title = { Text(text = "Cursos online", fontWeight = FontWeight.Bold) },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -94,8 +83,6 @@ fun CapacitacionesScreen(
             )
         }
     ) { innerPadding ->
-        // Todo va dentro de la LazyColumn (y no fijo arriba como en Recetas) porque el texto
-        // y la tarjeta del Plan Pro ocupan bastante: así en un celular chico todo se puede desplazar.
         LazyColumn(
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
@@ -103,7 +90,6 @@ fun CapacitacionesScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
-            // 1. Texto de bienvenida
             item {
                 Text(
                     text = "Aprende a tu ritmo con nuestros productos y obtén tu certificado",
@@ -112,8 +98,6 @@ fun CapacitacionesScreen(
                 )
             }
 
-            // 2. MIS CURSOS: los cursos en los que el usuario se inscribió, con su avance.
-            // La lista ya viene armada del ViewModel (título y porcentaje calculados allá).
             item {
                 Text(
                     text = "Mis cursos",
@@ -131,8 +115,6 @@ fun CapacitacionesScreen(
                     )
                 }
             } else {
-                // key: "mi-" + id, para que no se repita con las keys del catálogo de abajo
-                // (un mismo curso puede estar en las dos listas y las keys deben ser únicas)
                 items(uiState.misCursos, key = { miCurso -> "mi-${miCurso.cursoId}" }) { miCurso ->
                     TarjetaMiCurso(
                         miCurso = miCurso,
@@ -141,13 +123,10 @@ fun CapacitacionesScreen(
                 }
             }
 
-            // 3. Tarjeta destacada del Plan Pro
             item {
                 TarjetaPlanPro(precio = uiState.precioPlanPro)
             }
 
-            // 4. Filtros: "Todos", "Gratis", "Plan Pro" y las categorías.
-            // horizontalScroll: si no caben, se deslizan hacia el lado en vez de cortarse.
             item {
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -155,7 +134,6 @@ fun CapacitacionesScreen(
                         .fillMaxWidth()
                         .horizontalScroll(rememberScrollState())
                 ) {
-                    // ChipOpcion (ui/components) es el mismo botón de filtro de RecetasScreen
                     uiState.filtros.forEach { filtro ->
                         ChipOpcion(
                             texto = filtro,
@@ -166,9 +144,7 @@ fun CapacitacionesScreen(
                 }
             }
 
-            // 5. Lista de cursos
             if (uiState.capacitaciones.isEmpty()) {
-                // Si un filtro no tiene cursos, se avisa en vez de dejar la pantalla en blanco
                 item {
                     Text(
                         text = "Todavía no hay cursos en esta sección.",
@@ -177,7 +153,6 @@ fun CapacitacionesScreen(
                     )
                 }
             } else {
-                // key = el id: así, al cambiar de filtro, las tarjetas se animan a su nuevo lugar
                 items(uiState.capacitaciones, key = { capacitacion -> capacitacion.id }) { capacitacion ->
                     TarjetaCapacitacion(
                         capacitacion = capacitacion,
@@ -190,9 +165,7 @@ fun CapacitacionesScreen(
     }
 }
 
-// UNA TARJETA DE "MIS CURSOS": título, barra de progreso y "Z% completado".
-// Card con onClick: TODA la tarjeta se puede tocar (y TalkBack la anuncia como botón);
-// abre el detalle del curso, donde se marcan las lecciones. Mínimo 56 dp de alto.
+// Tarjeta resumen del avance en un curso inscrito
 @Composable
 private fun TarjetaMiCurso(
     miCurso: MiCurso,
@@ -217,7 +190,6 @@ private fun TarjetaMiCurso(
                 fontWeight = FontWeight.Bold,
                 color = TextoOscuro
             )
-            // LinearProgressIndicator usa un número de 0f a 1f: 40 % -> 0.4f
             LinearProgressIndicator(
                 progress = { miCurso.porcentaje / 100f },
                 color = VerdeItaliano,
@@ -236,14 +208,11 @@ private fun TarjetaMiCurso(
     }
 }
 
-// TARJETA DESTACADA DEL PLAN PRO
-// Solo informa: la suscripción todavía no se puede contratar desde la app (fase 2).
-// El precio llega YA escrito ("$9.990") desde el ViewModel.
+// Tarjeta informativa destacada de la suscripción Plan Pro
 @Composable
 private fun TarjetaPlanPro(precio: String) {
     Card(
         colors = CardDefaults.cardColors(containerColor = BlancoPuro),
-        // Borde dorado más grueso: la destaca de las tarjetas de curso
         border = BorderStroke(2.dp, DoradoCalidad),
         shape = RoundedCornerShape(12.dp),
         modifier = Modifier.fillMaxWidth()
@@ -252,7 +221,6 @@ private fun TarjetaPlanPro(precio: String) {
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.padding(16.dp)
         ) {
-            // Decorativo (contentDescription = null): el texto de al lado ya lo explica
             Icon(
                 imageVector = Icons.Filled.WorkspacePremium,
                 contentDescription = null,
@@ -278,14 +246,11 @@ private fun TarjetaPlanPro(precio: String) {
     }
 }
 
-// TARJETA DE UN CURSO ONLINE
-// Mismo estilo que TarjetaReceta: toda la tarjeta se puede tocar y abre el detalle.
-// Es private porque solo la usa esta pantalla.
+// Tarjeta de curso online dentro del catálogo
 @Composable
 private fun TarjetaCapacitacion(
     capacitacion: Capacitacion,
     onVerCapacitacion: (Int) -> Unit,
-    // Lo usa la LazyColumn para pasarle Modifier.animateItem() (igual que en Recetas)
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -296,14 +261,11 @@ private fun TarjetaCapacitacion(
         modifier = modifier.fillMaxWidth()
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            // Etiquetas: GRATIS o PLAN PRO, la categoría y (si corresponde) "Apto vegano".
-            // FlowRow: si no caben en una línea, la última baja a la siguiente en vez de cortarse.
             FlowRow(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 EtiquetaAcceso(esGratis = capacitacion.esGratis)
-                // Categoría con el mismo estilo que en TarjetaReceta
                 Text(
                     text = capacitacion.categoria,
                     fontSize = 14.sp,
@@ -331,7 +293,6 @@ private fun TarjetaCapacitacion(
                 fontWeight = FontWeight.SemiBold,
                 color = VerdeOscuro
             )
-            // modulos.size = cuántos módulos; totalLecciones es la propiedad calculada del modelo
             Text(
                 text = "${capacitacion.modulos.size} módulos · ${capacitacion.totalLecciones} lecciones",
                 fontSize = 16.sp,
@@ -349,7 +310,6 @@ private fun TarjetaCapacitacion(
                 color = TextoOscuro
             )
 
-            // Botón visible "Ver curso": hace lo mismo que tocar la tarjeta (48 dp de alto mínimo)
             TextButton(
                 onClick = { onVerCapacitacion(capacitacion.id) },
                 modifier = Modifier
@@ -363,7 +323,6 @@ private fun TarjetaCapacitacion(
                     color = VerdeOscuro
                 )
                 Spacer(modifier = Modifier.width(4.dp))
-                // Decorativo: el texto "Ver curso" ya dice qué hace el botón
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowForward,
                     contentDescription = null,

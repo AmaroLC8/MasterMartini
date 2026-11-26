@@ -5,33 +5,13 @@ import com.example.mastermartini.model.Rol
 import com.example.mastermartini.model.Usuario
 import kotlinx.coroutines.delay
 
-// REPOSITORIO DE USUARIOS FALSO
-// Se usa cuando ProveedorRepositorios.USAR_BACKEND = false (plan B si el backend falla)
-// y sirve para probar sin servidor. El repositorio real es UsuarioRepositoryRemoto.
-// Lo registrado se pierde al cerrar la app (vive en una lista en memoria, no en una base de datos).
-//
-// Cumple el contrato UsuarioRepository (": UsuarioRepository") y aplica las MISMAS reglas
-// que tendrá el backend: datos duplicados, contraseña incorrecta, permisos por rol y
-// código de recuperación que vence. Así las pantallas se prueban hoy como si el servidor existiera.
-//
-// USUARIOS DE PRUEBA (todos con la contraseña Demo1234). DATOS DE EJEMPLO:
-//   cliente@example.com     -> Cliente
-//   instructor@example.com  -> Instructor
-//   ventas@example.com      -> Ventas
-//   admin@example.com       -> Administrador
-// Los RUT son inventados (11111111-1, 22222222-2...) pero tienen el dígito verificador
-// correcto, así pasan la misma validación del formulario de Registro.
+// Implementación en memoria de UsuarioRepository para pruebas locales sin backend
 class UsuarioRepositoryFalso : UsuarioRepository {
 
-    // Lo que guarda el "servidor" de cada cuenta: el usuario y su contraseña.
-    // La contraseña va aparte porque Usuario NO la incluye (nunca se devuelve a la app).
-    // Es private: solo este archivo la conoce.
     private data class Cuenta(val usuario: Usuario, val password: String)
 
-    // Código para recuperar la contraseña y el momento en que vence (en milisegundos)
     private data class CodigoRecuperacion(val codigo: String, val venceEn: Long)
 
-    // "Base de datos" en memoria. mutableListOf permite agregar, cambiar y borrar cuentas.
     private val cuentas = mutableListOf(
         Cuenta(
             Usuario(
@@ -67,49 +47,32 @@ class UsuarioRepositoryFalso : UsuarioRepository {
         )
     )
 
-    // Id que recibirá la próxima cuenta registrada (los de prueba usan del 1 al 4)
     private var siguienteId = 5L
-
-    // Códigos de recuperación pendientes: clave = correo, valor = código y vencimiento
     private val codigos = mutableMapOf<String, CodigoRecuperacion>()
 
-    // Simula lo que demora la red (600 milisegundos), para ver el indicador de carga
-    // igual que con el servidor de verdad. delay() espera SIN congelar la pantalla.
     private suspend fun esperarRed() {
         delay(600)
     }
 
-    // --- AYUDANTES PRIVADOS ---
-
-    // Deja el RUT sin puntos ni espacios y con la K en mayúscula: "11.111.111-k" -> "11111111-K".
-    // Así "11.111.111-1" y "11111111-1" se reconocen como el mismo RUT.
     private fun normalizarRut(rut: String): String {
         return rut.replace(".", "").replace(" ", "").trim().uppercase()
     }
 
-    // Correo sin espacios y en minúsculas: "Cliente@Example.com " -> "cliente@example.com"
     private fun normalizarCorreo(correo: String): String {
         return correo.trim().lowercase()
     }
 
-    // Busca la cuenta de un id, o lanza NoEncontrado (404) si no existe
     private fun buscarCuenta(id: Long): Cuenta {
         return cuentas.find { cuenta -> cuenta.usuario.id == id }
             ?: throw UsuarioException.NoEncontrado()
     }
 
-    // Reemplaza una cuenta por su versión nueva (las data class no se cambian: se copian con copy())
     private fun guardarCuenta(cuentaNueva: Cuenta) {
         val posicion = cuentas.indexOfFirst { cuenta -> cuenta.usuario.id == cuentaNueva.usuario.id }
         cuentas[posicion] = cuentaNueva
     }
 
-    // REVISA LOS PERMISOS (403) de quien pide la acción.
-    // "permiso" es una función que recibe el Rol y responde true o false, por ejemplo:
-    //     revisarPermiso(idSolicitante) { rol -> rol.puedeGestionarUsuarios }
-    // Aquí se ve el POLIMORFISMO de Rol: no se pregunta "¿es ADMINISTRADOR?", se le pregunta
-    // al rol si PUEDE, y cada rol responde lo suyo.
-    // Si quien pide no existe, también es AccesoDenegado.
+    // Valida el permiso del solicitante según su rol antes de ejecutar acciones protegidas
     private fun revisarPermiso(idSolicitante: Long, permiso: (Rol) -> Boolean) {
         val solicitante = cuentas.find { cuenta -> cuenta.usuario.id == idSolicitante }
         if (solicitante == null || !permiso(solicitante.usuario.rol)) {
@@ -117,17 +80,12 @@ class UsuarioRepositoryFalso : UsuarioRepository {
         }
     }
 
-    // --- FUNCIONES DEL CONTRATO (override = "cumplo lo que pide la interfaz") ---
-
     override suspend fun login(usuario: String, password: String): Usuario {
         esperarRed()
-        // Se busca por RUT o por correo
         val cuenta = cuentas.find { cuenta ->
             cuenta.usuario.rut == normalizarRut(usuario) ||
                 cuenta.usuario.correo == normalizarCorreo(usuario)
         }
-        // MISMO error si no existe el usuario o si la contraseña no coincide,
-        // para no revelar qué cuentas existen. La contraseña distingue mayúsculas.
         if (cuenta == null || cuenta.password != password) {
             throw UsuarioException.CredencialesInvalidas()
         }
@@ -147,7 +105,6 @@ class UsuarioRepositoryFalso : UsuarioRepository {
         val rutLimpio = normalizarRut(rut)
         val correoLimpio = normalizarCorreo(correo)
 
-        // 409: no puede haber dos cuentas con el mismo correo ni con el mismo RUT
         if (cuentas.any { cuenta -> cuenta.usuario.correo == correoLimpio }) {
             throw UsuarioException.DatoDuplicado("correo")
         }
@@ -155,7 +112,6 @@ class UsuarioRepositoryFalso : UsuarioRepository {
             throw UsuarioException.DatoDuplicado("RUT")
         }
 
-        // Toda cuenta nueva parte como Cliente y sin Plan Pro (igual que en el backend)
         val nuevo = Usuario(
             id = siguienteId,
             nombre = nombre.trim(),
@@ -172,21 +128,16 @@ class UsuarioRepositoryFalso : UsuarioRepository {
         return nuevo
     }
 
+    // Genera un código de recuperación temporal de 10 minutos y lo imprime en Logcat
     override suspend fun solicitarCodigo(correo: String) {
         esperarRed()
         val correoLimpio = normalizarCorreo(correo)
-        // Si el correo no tiene cuenta, no se avisa: se responde igual que si existiera,
-        // para no revelar qué correos están registrados.
         if (cuentas.none { cuenta -> cuenta.usuario.correo == correoLimpio }) return
 
-        // Código de 6 dígitos: un número al azar entre 100000 y 999999
         val codigo = (100000..999999).random().toString()
-        // Vence en 10 minutos: la hora actual + 10 min (en milisegundos)
         val venceEn = System.currentTimeMillis() + 10 * 60 * 1000
         codigos[correoLimpio] = CodigoRecuperacion(codigo, venceEn)
 
-        // El backend lo enviaría por correo. Aquí se escribe en el Logcat de Android Studio
-        // (buscar la etiqueta "RecuperarPassword") para poder probarlo.
         Log.d("RecuperarPassword", "Código para $correoLimpio: $codigo (vence en 10 minutos)")
     }
 
@@ -195,7 +146,6 @@ class UsuarioRepositoryFalso : UsuarioRepository {
         val correoLimpio = normalizarCorreo(correo)
         val guardado = codigos[correoLimpio]
 
-        // El código es inválido si nunca se pidió, si no coincide o si ya pasó su hora de vencimiento
         val vencido = guardado != null && System.currentTimeMillis() > guardado.venceEn
         if (guardado == null || guardado.codigo != codigo.trim() || vencido) {
             throw UsuarioException.CodigoInvalido()
@@ -204,7 +154,6 @@ class UsuarioRepositoryFalso : UsuarioRepository {
         val cuenta = cuentas.find { it.usuario.correo == correoLimpio }
             ?: throw UsuarioException.NoEncontrado()
         guardarCuenta(cuenta.copy(password = nuevaPassword))
-        // El código se usa UNA sola vez
         codigos.remove(correoLimpio)
     }
 
@@ -222,7 +171,6 @@ class UsuarioRepositoryFalso : UsuarioRepository {
     ): Usuario {
         esperarRed()
         val cuenta = buscarCuenta(id)
-        // copy() deja igual el RUT, el correo, el rol y el Plan Pro
         val actualizado = cuenta.usuario.copy(
             nombre = nombre.trim(),
             telefono = telefono,
@@ -235,7 +183,6 @@ class UsuarioRepositoryFalso : UsuarioRepository {
 
     override suspend fun listarUsuarios(idSolicitante: Long, rol: Rol?): List<Usuario> {
         esperarRed()
-        // Solo VENTAS o ADMINISTRADOR (los roles que pueden gestionar el Plan Pro)
         revisarPermiso(idSolicitante) { rolSolicitante -> rolSolicitante.puedeGestionarPlanPro }
         val todos = cuentas.map { cuenta -> cuenta.usuario }
         return if (rol == null) todos else todos.filter { usuario -> usuario.rol == rol }
@@ -252,7 +199,6 @@ class UsuarioRepositoryFalso : UsuarioRepository {
 
     override suspend fun cambiarRol(idSolicitante: Long, idUsuario: Long, rol: Rol): Usuario {
         esperarRed()
-        // Solo ADMINISTRADOR
         revisarPermiso(idSolicitante) { rolSolicitante -> rolSolicitante.puedeGestionarUsuarios }
         val cuenta = buscarCuenta(idUsuario)
         val actualizado = cuenta.usuario.copy(rol = rol)

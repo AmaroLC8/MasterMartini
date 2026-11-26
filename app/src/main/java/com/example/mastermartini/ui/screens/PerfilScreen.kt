@@ -73,33 +73,21 @@ import com.example.mastermartini.ui.theme.VerdeOscuro
 import com.example.mastermartini.viewmodel.PerfilViewModel
 import androidx.compose.material.icons.filled.Thermostat
 
-// PANTALLA DE PERFIL
-// Muestra los datos del emprendedor: foto, datos del negocio, encuesta y favoritos.
-// Solo DIBUJA lo que le entrega el PerfilViewModel (MVVM) y avisa a MainActivity
-// cuando se toca un botón (MainActivity decide a dónde navegar).
+// Pantalla de perfil del usuario con datos del taller, intereses, clima y panel de rol
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PerfilScreen(
-    // ViewModel con los datos guardados (lo crea MainActivity)
     viewModel: PerfilViewModel,
-    // Botón "Editar datos": MainActivity abre "registro" con el formulario precargado
     onEditarDatos: () -> Unit,
-    // Botón "Responder encuesta": MainActivity abre "encuesta"
     onIrAEncuesta: () -> Unit,
-    // Confirmación de "Cerrar sesión": MainActivity vuelve al login y borra la pila
     onCerrarSesion: () -> Unit,
-    // Botón del "Panel de trabajo": recibe la ruta (ej. "panel/clientes") y MainActivity navega
     onAbrirPanel: (String) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
-    // ¿Se está mostrando el diálogo "¿Quieres cerrar sesión?"?
-    // Es estado SOLO visual (abrir/cerrar un diálogo), por eso puede vivir en la pantalla.
     var mostrarDialogoCerrarSesion by remember { mutableStateOf(false) }
 
-    // LaunchedEffect(Unit) se ejecuta cada vez que esta pantalla ENTRA a la composición.
-    // Al ir a "Editar datos" la pantalla Perfil sale, y al volver entra de nuevo:
-    // así se vuelve a leer lo guardado y se ven los datos cambiados.
+    // Recarga el perfil al volver de edición o encuesta
     LaunchedEffect(Unit) {
         viewModel.cargarPerfil()
     }
@@ -107,7 +95,6 @@ fun PerfilScreen(
     Scaffold(
         containerColor = BlancoHueso,
         topBar = {
-            // Barra verde con el título (sin flecha: se llega desde la barra inferior)
             TopAppBar(
                 title = { Text(text = "Mi perfil", fontWeight = FontWeight.Bold) },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -117,7 +104,6 @@ fun PerfilScreen(
             )
         }
     ) { innerPadding ->
-        // verticalScroll: en celulares chicos el contenido no cabe, así se puede bajar
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(16.dp),
@@ -127,8 +113,6 @@ fun PerfilScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp)
         ) {
-            // 1. ENCABEZADO: foto, nombre y rubro
-            // Se copia a una variable local para poder revisar si es null y usarla sin "!!"
             val foto = uiState.foto
             Box(
                 contentAlignment = Alignment.Center,
@@ -142,12 +126,10 @@ fun PerfilScreen(
                     Image(
                         bitmap = foto.asImageBitmap(),
                         contentDescription = "Foto del local",
-                        // Crop: llena todo el círculo sin deformar la foto (igual que en Registro)
                         contentScale = ContentScale.Crop,
                         modifier = Modifier.fillMaxSize()
                     )
                 } else {
-                    // Sin foto: ícono de persona. Decorativo, por eso contentDescription = null
                     Icon(
                         imageVector = Icons.Filled.Person,
                         contentDescription = null,
@@ -169,15 +151,11 @@ fun PerfilScreen(
                     fontWeight = FontWeight.SemiBold,
                     color = VerdeOscuro
                 )
-                // Rol de la cuenta (ej. "Cliente", "Ventas"). Viene de la sesión guardada
                 Text(
                     text = "Rol: ${uiState.rol}",
                     fontSize = 16.sp,
                     color = TextoOscuro
                 )
-                // Etiqueta "Plan Pro activo" solo si tiene la suscripción.
-                // Dorado con texto oscuro (mismo estilo que "★ PLAN PRO" en Cursos): dice con TEXTO
-                // que está activo, no depende solo del color.
                 if (uiState.planPro) {
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
@@ -192,9 +170,6 @@ fun PerfilScreen(
                 }
             }
 
-            // PANEL DE TRABAJO (solo si el rol tiene opciones: Ventas y Administrador).
-            // La pantalla NO pregunta qué rol es: solo recorre la lista que le dio el rol
-            // (polimorfismo). Si mañana Instructor tiene opciones, aparecen aquí sin tocar este código.
             if (uiState.opcionesPanel.isNotEmpty()) {
                 TarjetaPerfil(titulo = "Panel de trabajo") {
                     uiState.opcionesPanel.forEach { opcion ->
@@ -206,7 +181,7 @@ fun PerfilScreen(
                     }
                 }
             }
-            // CONDICIONES DEL TALLER HOY (API Externa Open-Meteo — IE 3.1.3)
+
             if (uiState.condicionesTaller.isNotEmpty()) {
                 TarjetaPerfil(titulo = "Condiciones del taller hoy") {
                     Row(
@@ -230,7 +205,6 @@ fun PerfilScreen(
                 }
             }
 
-            // 2. TARJETA "DATOS DEL NEGOCIO"
             TarjetaPerfil(titulo = "Datos del negocio") {
                 FilaDato(icono = Icons.Filled.Badge, etiqueta = "RUT", valor = uiState.rut)
                 FilaDato(icono = Icons.Filled.Email, etiqueta = "Correo", valor = uiState.correo)
@@ -238,11 +212,8 @@ fun PerfilScreen(
                 FilaDato(icono = Icons.Filled.Groups, etiqueta = "Personas en el negocio", valor = uiState.personasNegocio)
             }
 
-            // 3. TARJETA "MIS INTERESES" (datos de la encuesta)
             TarjetaPerfil(titulo = "Mis intereses") {
                 if (uiState.respondioEncuesta) {
-                    // Los intereses como "pastillas" verdes. FlowRow las pasa a la línea
-                    // de abajo si no caben. Son solo para leer, por eso no se pueden tocar.
                     FlowRow(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -262,7 +233,6 @@ fun PerfilScreen(
                     FilaDato(icono = Icons.Filled.School, etiqueta = "Nivel", valor = uiState.nivel)
                     FilaDato(icono = Icons.Filled.LocationOn, etiqueta = "Ubicación", valor = uiState.ubicacion)
                 } else {
-                    // Todavía no responde la encuesta: se explica y se ofrece el botón
                     Text(
                         text = "Aún no respondes la encuesta",
                         fontSize = 16.sp,
@@ -283,12 +253,10 @@ fun PerfilScreen(
                 }
             }
 
-            // 4. CANTIDAD DE FAVORITOS (viene de Room y se actualiza sola)
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                // Decorativo: el texto de al lado ya dice lo que significa
                 Icon(
                     imageVector = Icons.Filled.Favorite,
                     contentDescription = null,
@@ -296,7 +264,6 @@ fun PerfilScreen(
                     modifier = Modifier.size(28.dp)
                 )
                 Spacer(modifier = Modifier.width(12.dp))
-                // "1 receta favorita" en singular, "3 recetas favoritas" en plural
                 Text(
                     text = if (uiState.totalFavoritos == 1) {
                         "1 receta favorita"
@@ -309,8 +276,6 @@ fun PerfilScreen(
                 )
             }
 
-            // 5. BOTONES
-            // Botón principal (verde y relleno): la acción más común
             Button(
                 onClick = onEditarDatos,
                 colors = ButtonDefaults.buttonColors(containerColor = VerdeItaliano),
@@ -324,8 +289,6 @@ fun PerfilScreen(
                 Text(text = "Editar datos", fontSize = 18.sp, fontWeight = FontWeight.Bold)
             }
 
-            // Botón secundario (solo borde rojo): se distingue del principal para no confundirlos.
-            // No cierra la sesión directo: primero abre el diálogo de confirmación.
             OutlinedButton(
                 onClick = { mostrarDialogoCerrarSesion = true },
                 border = BorderStroke(2.dp, RojoItaliano),
@@ -342,21 +305,16 @@ fun PerfilScreen(
         }
     }
 
-    // DIÁLOGO DE CONFIRMACIÓN: evita cerrar la sesión por un toque accidental.
-    // onDismissRequest: se llama al tocar fuera del diálogo o con Atrás (= cancelar).
     if (mostrarDialogoCerrarSesion) {
         AlertDialog(
             onDismissRequest = { mostrarDialogoCerrarSesion = false },
             title = { Text(text = "Cerrar sesión", fontWeight = FontWeight.Bold) },
             text = {
                 Text(
-                    // Al cerrar sesión se borran los datos de la cuenta del celular
-                    // (AlmacenamientoLocal.cerrarSesion), por eso se avisa qué se necesita para volver
                     text = "¿Quieres cerrar sesión? Para volver a entrar necesitarás tu RUT o correo y tu contraseña.",
                     fontSize = 17.sp
                 )
             },
-            // Botón que SÍ cierra la sesión (en rojo, porque es la acción "peligrosa")
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -368,7 +326,6 @@ fun PerfilScreen(
                     Text(text = "Cerrar sesión", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = RojoItaliano)
                 }
             },
-            // Botón que se arrepiente: solo cierra el diálogo
             dismissButton = {
                 TextButton(
                     onClick = { mostrarDialogoCerrarSesion = false },
@@ -381,9 +338,6 @@ fun PerfilScreen(
     }
 }
 
-// TARJETA BLANCA CON TÍTULO, que usan "Datos del negocio" y "Mis intereses".
-// contenido: @Composable () -> Unit recibe lo que va dentro (como hace Card o Column),
-// así las dos tarjetas comparten el mismo borde, colores y título sin repetir código.
 @Composable
 private fun TarjetaPerfil(
     titulo: String,
@@ -410,8 +364,6 @@ private fun TarjetaPerfil(
     }
 }
 
-// UN BOTÓN GRANDE DEL PANEL DE TRABAJO: título + descripción + flecha (mínimo 56 dp).
-// Card con onClick: TODA la tarjeta se puede tocar, y TalkBack la anuncia como botón.
 @Composable
 private fun BotonPanel(
     titulo: String,
@@ -435,7 +387,6 @@ private fun BotonPanel(
                 Text(text = titulo, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = VerdeOscuro)
                 Text(text = descripcion, fontSize = 16.sp, color = TextoOscuro)
             }
-            // Decorativo: indica que abre otra pantalla; el texto ya dice qué es
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                 contentDescription = null,
@@ -445,9 +396,6 @@ private fun BotonPanel(
     }
 }
 
-// UNA FILA DE DATO: ícono + etiqueta pequeña arriba + valor grande abajo.
-// Ej: [📛] RUT
-//          12345678-5
 @Composable
 private fun FilaDato(
     icono: ImageVector,
@@ -460,7 +408,6 @@ private fun FilaDato(
             .fillMaxWidth()
             .heightIn(min = 48.dp)
     ) {
-        // Decorativo: la etiqueta de al lado ya dice qué dato es
         Icon(
             imageVector = icono,
             contentDescription = null,
@@ -474,7 +421,6 @@ private fun FilaDato(
                 fontSize = 14.sp,
                 color = TextoOscuro.copy(alpha = 0.7f)
             )
-            // Si el dato está vacío (ej. no se obtuvo la ubicación), se dice en vez de dejar un hueco
             Text(
                 text = if (valor.isBlank()) "Sin registrar" else valor,
                 fontSize = 17.sp,

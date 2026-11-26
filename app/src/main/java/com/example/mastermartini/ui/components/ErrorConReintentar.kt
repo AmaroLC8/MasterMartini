@@ -25,13 +25,10 @@ import com.example.mastermartini.ui.theme.RojoItaliano
 import com.example.mastermartini.ui.theme.TextoOscuro
 import com.example.mastermartini.ui.theme.VerdeItaliano
 
-// LO QUE SE DIBUJA EN EL CASO EstadoUi.Error (componente reutilizable)
-// Lo usan GestionClientesScreen y GestionUsuariosScreen: ícono ⚠, el mensaje del error
-// (ej. "No tienes permiso para hacer esta acción.") y un botón grande "Reintentar".
+// Vista de error reutilizable con mensaje descriptivo y botón de reintento
 @Composable
 fun ErrorConReintentar(
     mensaje: String,
-    // Vuelve a pedir la lista (el ViewModel llama otra vez al repositorio)
     onReintentar: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -42,7 +39,6 @@ fun ErrorConReintentar(
             .fillMaxWidth()
             .padding(24.dp)
     ) {
-        // Decorativo: el mensaje de abajo ya explica qué pasó
         Icon(
             imageVector = Icons.Filled.Warning,
             contentDescription = null,

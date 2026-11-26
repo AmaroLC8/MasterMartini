@@ -5,16 +5,12 @@ import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
+// Cliente Retrofit singleton que centraliza las instancias API de los microservicios
 object RetrofitClient {
 
-    // 10.0.2.2 apunta al localhost de tu PC desde el emulador de Android Studio.
-    // Si usas BlueStacks con adb reverse, cámbialo a "http://localhost:9092/"
+    // 10.0.2.2 apunta al localhost del equipo anfitrión desde el emulador Android
     private const val BASE_URL_CURSOS = "http://10.0.2.2:9092/"
-
-    // Microservicio de USUARIOS (Spring Boot, puerto 9091). 10.0.2.2 = el PC visto desde el emulador.
     private const val BASE_URL_USUARIOS = "http://10.0.2.2:9091/"
-
-    // Microservicio de INTERACCIONES (inscripciones y progreso de los cursos, puerto 9093)
     private const val BASE_URL_INTERACCIONES = "http://10.0.2.2:9093/"
 
     private val logging = HttpLoggingInterceptor().apply {
@@ -34,8 +30,6 @@ object RetrofitClient {
             .create(CursosApiService::class.java)
     }
 
-    // Endpoints de usuarios (login, registro, perfil, roles...). Lo usa UsuarioRepositoryRemoto.
-    // "by lazy" = se crea la primera vez que se usa, y después se reutiliza siempre el mismo.
     val usuariosApi: UsuarioApi by lazy {
         Retrofit.Builder()
             .baseUrl(BASE_URL_USUARIOS)
@@ -45,8 +39,6 @@ object RetrofitClient {
             .create(UsuarioApi::class.java)
     }
 
-    // Endpoints de inscripciones (inscribirse, Mis cursos, progreso, cancelar).
-    // Lo usa InscripcionRepository. Mismo httpClient que los demás.
     val interaccionesApi: InteraccionesApi by lazy {
         Retrofit.Builder()
             .baseUrl(BASE_URL_INTERACCIONES)

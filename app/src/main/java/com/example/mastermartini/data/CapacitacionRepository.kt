@@ -7,24 +7,12 @@ import com.example.mastermartini.model.Leccion
 import com.example.mastermartini.model.Modulo
 import retrofit2.HttpException
 
-// REPOSITORIO DE CURSOS ONLINE (Capacitaciones)
-// DATOS DE EJEMPLO, no son cursos reales de la empresa.
-// Los instructores tienen nombres INVENTADOS (no son personas reales).
-// Igual que CursoRepository, hoy los datos están escritos aquí con listOf();
-// más adelante podrían venir de internet sin cambiar las pantallas.
-// MODELO FREEMIUM: los 3 cursos básicos son gratis (esGratis = true) y los 3 intermedios
-// o avanzados se desbloquean con el Plan Pro (esGratis = false).
-// IMPORTANTE: insumoPrincipal debe ser IGUAL al nombre de un producto de ProductoRepository
-// (con mayúsculas y tildes), porque el Detalle lo busca por su nombre exacto.
-// La duración total de cada curso es la suma de los minutos de sus lecciones.
+// Repositorio de capacitaciones online conectado al microservicio de cursos con respaldo local
 class CapacitacionRepository {
 
-    // Mensaje cuando no se puede hablar con el servidor (apagado, sin internet...).
-    // Se escribe una vez porque lo usan crear, actualizar y eliminar.
     private val mensajeSinConexion = "No se pudo conectar con el servidor de cursos (9092)"
 
-    // Trae los cursos online desde el microservicio (puerto 9092).
-    // Si el servidor está apagado, devuelve la lista local de respaldo.
+    // Obtiene el catálogo remoto desde Retrofit o recurre al respaldo local si falla
     suspend fun obtenerCapacitacionesRemotas(): List<Capacitacion> {
         return try {
             val remotos = RetrofitClient.cursosApi.obtenerCapacitaciones()
@@ -34,9 +22,7 @@ class CapacitacionRepository {
         }
     }
 
-    // Envía un curso nuevo al microservicio con el header X-Usuario-Id
-    // Si el servidor responde con error, devuelve ServidorException con el código HTTP
-    // y el "mensaje" del ErrorDto, para que el ViewModel elija qué texto mostrar.
+    // Crea un nuevo curso en el microservicio enviando X-Usuario-Id
     suspend fun crearCapacitacion(
         usuarioId: Int,
         nuevaCapacitacion: Capacitacion
@@ -53,10 +39,7 @@ class CapacitacionRepository {
         }
     }
 
-    // EDITA un curso en el microservicio (PUT api/cursos/{id}) con el header X-Usuario-Id.
-    // Mismo manejo de errores que crearCapacitacion:
-    //   el servidor respondió con error (403, 404, 503...) -> ServidorException(código, mensaje)
-    //   no se pudo conectar                               -> Exception con mensajeSinConexion
+    // Actualiza un curso existente en el microservicio enviando X-Usuario-Id
     suspend fun actualizarCapacitacion(
         usuarioId: Int,
         id: Int,
@@ -74,9 +57,7 @@ class CapacitacionRepository {
         }
     }
 
-    // ELIMINA un curso en el microservicio (DELETE api/cursos/{id}) con el header X-Usuario-Id.
-    // El servidor responde 204 sin cuerpo: si salió bien no hay nada que devolver, por eso
-    // Result<Unit> (Unit = "nada", como void en Java). Mismo manejo de errores que crear.
+    // Elimina un curso en el microservicio enviando X-Usuario-Id
     suspend fun eliminarCapacitacion(usuarioId: Int, id: Int): Result<Unit> {
         return try {
             val response = RetrofitClient.cursosApi.eliminarCapacitacion(id, usuarioId)
@@ -90,13 +71,8 @@ class CapacitacionRepository {
         }
     }
 
-    // El "mensaje" del error del servidor lo lee leerMensajeError(response), que está en
-    // data/remote/ErroresHttp.kt porque también la usa InscripcionRepository.
-
-    // Devuelve los 6 cursos: primero los gratis y luego los del Plan Pro
     fun obtenerCapacitaciones(): List<Capacitacion> {
         return listOf(
-            // ===== CURSOS BÁSICOS (GRATIS) =====
             Capacitacion(
                 id = 1,
                 titulo = "Chocolatería desde cero: templado y bombones",
@@ -105,7 +81,6 @@ class CapacitacionRepository {
                 nivel = "Básico",
                 esGratis = true,
                 instructor = "Chef Elena Quiroga",
-                // 30 + 45 + 50 = 125 min
                 duracionTotal = "2 h 5 min",
                 insumoPrincipal = "Chocolate Ariba",
                 loQueLograras = listOf(
@@ -191,7 +166,6 @@ class CapacitacionRepository {
                 nivel = "Básico",
                 esGratis = true,
                 instructor = "Maestro panadero Hugo Retamal",
-                // 30 + 50 + 20 = 100 min
                 duracionTotal = "1 h 40 min",
                 insumoPrincipal = "Master Export Horneo",
                 loQueLograras = listOf(
@@ -266,7 +240,6 @@ class CapacitacionRepository {
                 nivel = "Básico",
                 esGratis = true,
                 instructor = "Chef Paula Ibarra",
-                // 30 + 30 + 45 = 105 min
                 duracionTotal = "1 h 45 min",
                 insumoPrincipal = "Bravo Crem",
                 loQueLograras = listOf(
@@ -340,7 +313,6 @@ class CapacitacionRepository {
                 )
             ),
 
-            // ===== CURSOS DEL PLAN PRO (INTERMEDIOS Y AVANZADOS) =====
             Capacitacion(
                 id = 4,
                 titulo = "Hojaldre y croissants de vitrina",
@@ -349,7 +321,6 @@ class CapacitacionRepository {
                 nivel = "Intermedio",
                 esGratis = false,
                 instructor = "Chef Tomás Riquelme",
-                // 52 + 38 + 50 = 140 min
                 duracionTotal = "2 h 20 min",
                 insumoPrincipal = "Gran Master Hoja",
                 loQueLograras = listOf(
@@ -431,7 +402,6 @@ class CapacitacionRepository {
                 nivel = "Intermedio",
                 esGratis = false,
                 instructor = "Chef Carmen Sepúlveda",
-                // 25 + 45 + 40 = 110 min
                 duracionTotal = "1 h 50 min",
                 insumoPrincipal = "Ariba Zero Latto",
                 loQueLograras = listOf(
@@ -513,7 +483,6 @@ class CapacitacionRepository {
                 nivel = "Avanzado",
                 esGratis = false,
                 instructor = "Chef Andrés Molina",
-                // 27 + 53 + 45 + 35 = 160 min
                 duracionTotal = "2 h 40 min",
                 insumoPrincipal = "Decor Up",
                 loQueLograras = listOf(
@@ -600,24 +569,15 @@ class CapacitacionRepository {
         )
     }
 
-    // Las mismas 5 secciones de las recetas (ver CursoRepository.obtenerCategorias()).
-    // Se usan para los botones de filtro de la pantalla de Cursos.
     fun obtenerCategorias(): List<String> {
         return listOf("Chocolatería", "Pastelería", "Panadería", "Heladería", "Decoración")
     }
 
-    // Busca UN curso por su id (lo usa la pantalla de detalle del curso).
-    // find devuelve el primero que cumple la condición, o null si ninguno la cumple:
-    // por eso devuelve Capacitacion? y la pantalla dice "Curso no encontrado".
     fun obtenerCapacitacionPorId(id: Int): Capacitacion? {
         return obtenerCapacitaciones().find { capacitacion -> capacitacion.id == id }
     }
 
-    // Busca UN curso en el microservicio con GET api/cursos/{id} (no trae toda la lista).
-    // Lo usan el detalle del curso y el formulario en modo edición.
-    //   404 (el curso no existe en el servidor) -> null: la pantalla dice "Curso no encontrado".
-    //       No se busca en la lista local, para no mostrar un curso que ya fue eliminado.
-    //   Cualquier otro error (servidor apagado, sin internet) -> se busca en la lista local de respaldo.
+    // Consulta una capacitación remota por ID usando respaldo local salvo HTTP 404
     suspend fun obtenerCapacitacionPorIdRemoto(id: Int): Capacitacion? {
         return try {
             RetrofitClient.cursosApi.obtenerCapacitacion(id)

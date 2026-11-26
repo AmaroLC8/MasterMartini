@@ -30,6 +30,7 @@ import androidx.core.content.ContextCompat
 import com.example.mastermartini.ui.theme.*
 import com.example.mastermartini.viewmodel.EncuestaViewModel
 
+// Encuesta de intereses y nivel técnico con captura de ubicación por GPS
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EncuestaScreen(
@@ -102,7 +103,6 @@ fun EncuestaScreen(
 
             HorizontalDivider(color = GrisBorde)
 
-            // 1. Áreas de Interés
             Card(
                 colors = CardDefaults.cardColors(containerColor = BlancoPuro),
                 shape = RoundedCornerShape(12.dp),
@@ -167,7 +167,6 @@ fun EncuestaScreen(
                 }
             }
 
-            // 2. Nivel de Experiencia
             Card(
                 colors = CardDefaults.cardColors(containerColor = BlancoPuro),
                 shape = RoundedCornerShape(12.dp),
@@ -232,7 +231,6 @@ fun EncuestaScreen(
                 }
             }
 
-            // 3. GPS Nativo
             Card(
                 colors = CardDefaults.cardColors(containerColor = BlancoPuro),
                 shape = RoundedCornerShape(12.dp),
@@ -298,12 +296,9 @@ fun EncuestaScreen(
                         )
                     }
 
-                    // UBICACIÓN OBTENIDA: el nombre del lugar grande, con el ícono,
-                    // y debajo las coordenadas en letra chica y gris (solo si las hay)
                     if (state.ubicacionGps.isNotEmpty()) {
                         Spacer(modifier = Modifier.height(12.dp))
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            // Decorativo: el texto de al lado ya dice la ubicación
                             Icon(
                                 imageVector = Icons.Default.LocationOn,
                                 contentDescription = null,
@@ -312,7 +307,6 @@ fun EncuestaScreen(
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Column {
-                                // Nombre del lugar (o las coordenadas, si no se obtuvo el nombre)
                                 Text(
                                     text = state.ubicacionGps,
                                     fontSize = 18.sp,
@@ -330,8 +324,6 @@ fun EncuestaScreen(
                         }
                     }
 
-                    // AVISO DEL GPS (sin permiso o sin señal). Igual que el aviso de la cámara
-                    // en el registro: aparece con animación y desaparece al volver a intentar.
                     AnimatedVisibility(visible = state.avisoGps != null) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
@@ -355,7 +347,6 @@ fun EncuestaScreen(
                 }
             }
 
-            // Mensaje de éxito
             state.mensajeExito?.let { mensaje ->
                 Card(
                     colors = CardDefaults.cardColors(
@@ -383,7 +374,6 @@ fun EncuestaScreen(
                 }
             }
 
-            // Botón Guardar
             Button(
                 onClick = {
                     encuestaViewModel.guardarRespuesta()

@@ -33,23 +33,13 @@ import com.example.mastermartini.ui.theme.TextoOscuro
 import com.example.mastermartini.ui.theme.VerdeItaliano
 import com.example.mastermartini.ui.theme.VerdeOscuro
 
-// TARJETA DE UNA RECETA (componente reutilizable)
-// Dibuja un curso con el mismo estilo de las tarjetas de Favoritos, pero sin corazón.
-// Está en ui/components porque no pertenece a una sola pantalla: hoy la usa Recetas,
-// y mañana la podría usar Buscar sin copiar el código.
+// Tarjeta reutilizable para mostrar una receta en listados y búsquedas
 @Composable
 fun TarjetaReceta(
-    // Curso que se va a mostrar
     curso: Curso,
-    // Se llama con el id del curso al tocar la tarjeta o el botón "Ver receta"
     onVerDetalle: (Int) -> Unit,
-    // Modificador que manda la pantalla. Recetas lo usa para pasarle Modifier.animateItem(),
-    // que solo se puede escribir dentro de una LazyColumn (por eso no se pone aquí adentro).
-    // "= Modifier" es el valor por defecto: si no se manda, la tarjeta funciona igual.
     modifier: Modifier = Modifier
 ) {
-    // Card con onClick: TODA la tarjeta abre la receta, no solo el botón.
-    // Área grande y fácil de tocar para usuarios mayores.
     Card(
         onClick = { onVerDetalle(curso.id) },
         colors = CardDefaults.cardColors(containerColor = BlancoPuro),
@@ -58,13 +48,10 @@ fun TarjetaReceta(
         modifier = modifier.fillMaxWidth()
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            // Fila de etiquetas: la categoría y, si corresponde, "Apto vegano".
-            // spacedBy deja 8 dp entre las dos.
             Row(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Etiqueta con la categoría (mismo estilo que en Favoritos y en el Detalle)
                 Text(
                     text = curso.categoria,
                     fontSize = 14.sp,
@@ -74,7 +61,6 @@ fun TarjetaReceta(
                         .background(VerdeItaliano, RoundedCornerShape(50))
                         .padding(horizontal = 12.dp, vertical = 4.dp)
                 )
-                // Solo se dibuja en las recetas veganas
                 if (curso.esVegano) {
                     EtiquetaVegana()
                 }
@@ -87,7 +73,6 @@ fun TarjetaReceta(
                 color = TextoOscuro
             )
             Spacer(modifier = Modifier.height(4.dp))
-            // Insumo en verde oscuro (y no en el verde claro): se lee mejor sobre fondo blanco
             Text(
                 text = "Insumo: ${curso.insumo}",
                 fontSize = 15.sp,
@@ -106,8 +91,6 @@ fun TarjetaReceta(
                 color = RojoItaliano
             )
 
-            // Botón visible "Ver receta": hace lo mismo que tocar la tarjeta,
-            // pero deja claro que se puede abrir (48 dp de alto mínimo)
             TextButton(
                 onClick = { onVerDetalle(curso.id) },
                 modifier = Modifier
@@ -121,7 +104,6 @@ fun TarjetaReceta(
                     color = VerdeOscuro
                 )
                 Spacer(modifier = Modifier.width(4.dp))
-                // contentDescription = null: el texto "Ver receta" ya dice qué hace el botón
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowForward,
                     contentDescription = null,

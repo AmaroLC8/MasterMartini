@@ -3,33 +3,14 @@ package com.example.mastermartini.data
 
 import com.example.mastermartini.model.Curso
 
-// REPOSITORIO DE CURSOS
-// Es la única parte de la app que sabe DE DÓNDE salen los cursos.
-// Hoy los datos son ficticios y están escritos aquí con listOf().
-// En el futuro podrían venir de Room (base de datos del celular) o de una API en internet:
-// el cambio grande sería en esta clase, y la pantalla seguiría igual, porque solo
-// dibuja la lista que le entrega el ViewModel sin saber de dónde vienen los datos.
-//
-// PRODUCTOS: los insumos e ingredientes con marca usan SOLO nombres de productos reales
-// de Master Martini Chile (Gran Master Hoja, Master Export Horneo, Bravo Crem, Decor Up,
-// Orasì, Chocolate Ariba, Ariba Zero Latto, Cobertura Caravella, Crema Pastelera, Azúcar Glass...).
-// El resto son ingredientes genéricos sin marca (harina, azúcar, huevos...).
-// Los chefs son personas ficticias.
+// Repositorio del catálogo local de recetas y fichas técnicas
 class CursoRepository {
-
-    // Devuelve el catálogo completo (lista inmutable: nadie puede agregar ni borrar cursos desde afuera)
-
-    // Llama al microservicio de cursos (puerto 9092) mediante Retrofit.
-    // Si el servidor está apagado o falla la red, devuelve la lista local de respaldo.
-
 
     fun obtenerCursos(): List<Curso> {
         return listOf(
             Curso(
                 id = 1,
                 titulo = "Curva de Templado en Chocolatería",
-                // Chocolate Ariba es chocolate puro (con manteca de cacao): por eso SE TEMPLA.
-                // Una cobertura sucedánea como Caravella no se templa, así que no serviría aquí.
                 insumo = "Chocolate Ariba",
                 chef = "Chef Roberto Valenzuela",
                 duracion = "15 min",
@@ -55,7 +36,6 @@ class CursoRepository {
             Curso(
                 id = 2,
                 titulo = "Estabilización y Batido de Cremas",
-                // Bravo Crem viene azucarada y lista para batir: no hay que agregarle azúcar
                 insumo = "Bravo Crem",
                 chef = "Chef Elena Rossi",
                 duracion = "20 min",
@@ -80,7 +60,6 @@ class CursoRepository {
             Curso(
                 id = 3,
                 titulo = "Laminado de Masa de Hoja Artesanal",
-                // Gran Master Hoja es la margarina para masa de hoja, croissants y palmeras
                 insumo = "Gran Master Hoja",
                 chef = "Maestro Marco Zanetti",
                 duracion = "35 min",
@@ -107,7 +86,6 @@ class CursoRepository {
             Curso(
                 id = 4,
                 titulo = "Técnica del Glaseado Espejo Brillante",
-                // Cobertura Caravella es un sucedáneo para bañar y cubrir: NO necesita templado
                 insumo = "Cobertura Caravella",
                 chef = "Chef Sofía Lombardo",
                 duracion = "25 min",
@@ -137,7 +115,6 @@ class CursoRepository {
             Curso(
                 id = 5,
                 titulo = "Sorbete Vegano de Chocolate Amargo",
-                // Ariba Zero Latto: chocolate amargo 60% vegano, sin leche, soya ni gluten
                 insumo = "Ariba Zero Latto",
                 chef = "Maestro Matteo Bianco",
                 duracion = "40 min",
@@ -190,7 +167,6 @@ class CursoRepository {
             Curso(
                 id = 7,
                 titulo = "Brioche Tradicional Italiano",
-                // Master Export Horneo es la margarina para horneo
                 insumo = "Master Export Horneo",
                 chef = "Maestro Giovanni Rossi",
                 duracion = "45 min",
@@ -219,7 +195,6 @@ class CursoRepository {
             Curso(
                 id = 8,
                 titulo = "Mousse Vegana de Fruta de la Pasión",
-                // Orasì: crema vegetal sabor vainilla para pastelería vegana
                 insumo = "Orasì",
                 chef = "Chef Valentina Morales",
                 duracion = "20 min",
@@ -247,7 +222,6 @@ class CursoRepository {
             Curso(
                 id = 9,
                 titulo = "Tartaletas de Fruta con Crema Pastelera",
-                // Crema Pastelera instantánea: se prepara en frío, sin cocinar
                 insumo = "Crema Pastelera",
                 chef = "Chef Carlos Gutiérrez",
                 duracion = "30 min",
@@ -299,18 +273,10 @@ class CursoRepository {
         )
     }
 
-    // Devuelve las 5 secciones de recetas. Coinciden con las opciones de la encuesta
-    // y con el campo "categoria" de cada curso. La pantalla de Recetas las usará
-    // para mostrar los botones de filtro. Se escriben aquí (y no en la pantalla)
-    // porque son datos de la app: si mañana se agrega una sección, se cambia solo este lugar.
     fun obtenerCategorias(): List<String> {
         return listOf("Chocolatería", "Pastelería", "Panadería", "Heladería", "Decoración")
     }
 
-    // Busca UN curso por su id (lo usa la pantalla de Detalle).
-    // find recorre la lista y devuelve el primer curso que cumple la condición,
-    // o null si ninguno la cumple (por ejemplo, un id que no existe).
-    // Por eso devuelve Curso? (con signo de interrogación: puede ser null).
     fun obtenerCursoPorId(id: Int): Curso? {
         return obtenerCursos().find { curso -> curso.id == id }
     }

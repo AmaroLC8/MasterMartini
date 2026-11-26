@@ -45,17 +45,12 @@ import com.example.mastermartini.ui.theme.VerdeItaliano
 import com.example.mastermartini.ui.theme.VerdeOscuro
 import com.example.mastermartini.viewmodel.ProductosViewModel
 
-// PANTALLA "NUESTROS PRODUCTOS"
-// Lista los productos Master Martini agrupados por línea. Tocar uno abre su detalle.
-// Solo DIBUJA lo que le entrega el ProductosViewModel (MVVM).
+// Catálogo de productos Master Martini agrupados por línea
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProductosScreen(
-    // ViewModel con los productos agrupados (lo crea MainActivity)
     viewModel: ProductosViewModel,
-    // Flecha de volver: MainActivity hace popBackStack() (vuelve a Home)
     onVolver: () -> Unit,
-    // Recibe el id del producto tocado; MainActivity navega a "producto/{id}"
     onVerProducto: (Int) -> Unit
 ) {
     val productosPorLinea by viewModel.productosPorLinea.collectAsState()
@@ -63,7 +58,6 @@ fun ProductosScreen(
     Scaffold(
         containerColor = BlancoHueso,
         topBar = {
-            // Barra verde con flecha (se llega desde Home, no desde la barra inferior)
             TopAppBar(
                 title = { Text(text = "Nuestros productos", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
@@ -89,15 +83,11 @@ fun ProductosScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
-            // 1. Botón del catálogo PDF, arriba de todo
             item {
                 BotonCatalogoPdf()
             }
 
-            // 2. Por cada línea: un título y sus productos debajo.
-            //    forEach entrega cada par (línea, lista de productos) del Map.
             productosPorLinea.forEach { (linea, productos) ->
-                // key = "linea_..." : texto, para no chocar con los ids (números) de los productos
                 item(key = "linea_$linea") {
                     Text(
                         text = linea,
@@ -118,8 +108,7 @@ fun ProductosScreen(
     }
 }
 
-// TARJETA DE UN PRODUCTO: nombre, descripción corta y etiqueta vegana si corresponde.
-// Toda la tarjeta se puede tocar. Es private porque solo la usa esta pantalla.
+// Tarjeta resumida de un producto dentro del listado
 @Composable
 private fun TarjetaProducto(
     producto: Producto,
@@ -136,7 +125,6 @@ private fun TarjetaProducto(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.padding(16.dp)
         ) {
-            // weight(1f): los textos usan el ancho que deja la flecha
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = producto.nombre,
@@ -145,8 +133,6 @@ private fun TarjetaProducto(
                     color = TextoOscuro
                 )
                 Spacer(modifier = Modifier.height(4.dp))
-                // maxLines = 2 + Ellipsis: si la descripción es larga, se corta con "..."
-                // (la completa se ve en el detalle)
                 Text(
                     text = producto.descripcion,
                     fontSize = 15.sp,
@@ -159,7 +145,6 @@ private fun TarjetaProducto(
                     EtiquetaVegana()
                 }
             }
-            // Flecha: indica que la tarjeta se abre. Decorativa (contentDescription = null)
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                 contentDescription = null,

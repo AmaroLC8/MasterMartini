@@ -52,27 +52,19 @@ import com.example.mastermartini.ui.theme.VerdeItaliano
 import com.example.mastermartini.ui.theme.VerdeOscuro
 import com.example.mastermartini.viewmodel.FavoritosViewModel
 
-// PANTALLA DE FAVORITOS
-// Muestra los cursos que el usuario marcó con el corazón (guardados en Room).
-// Solo DIBUJA la lista que le entrega el FavoritosViewModel (MVVM): no filtra ni guarda nada.
+// Pantalla que muestra las recetas guardadas como favoritas en Room
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FavoritosScreen(
-    // ViewModel con los cursos favoritos (lo crea MainActivity)
     viewModel: FavoritosViewModel,
-    // Recibe el id del curso tocado; MainActivity navega a "detalle/{id}", igual que desde Home
     onVerDetalle: (Int) -> Unit,
-    // Botón "Ver recetas" cuando la lista está vacía; MainActivity navega a la sección Recetas
     onIrARecetas: () -> Unit
 ) {
-    // Escuchamos los favoritos del ViewModel. Al quitar uno, Room avisa el cambio,
-    // el ViewModel vuelve a filtrar y esta lista se actualiza sola.
     val cursosFavoritos by viewModel.cursosFavoritos.collectAsState()
 
     Scaffold(
         containerColor = BlancoHueso,
         topBar = {
-            // Barra verde con el título y cuántos favoritos hay (sin flecha: se llega desde la barra inferior)
             TopAppBar(
                 title = {
                     Text(
@@ -88,7 +80,6 @@ fun FavoritosScreen(
         }
     ) { innerPadding ->
         if (cursosFavoritos.isEmpty()) {
-            // ESTADO VACÍO: en vez de una pantalla en blanco, se explica qué pasa y qué hacer
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center,
@@ -97,8 +88,6 @@ fun FavoritosScreen(
                     .padding(innerPadding)
                     .padding(24.dp)
             ) {
-                // Corazón vacío grande. contentDescription = null: es solo decorativo,
-                // el texto de abajo ya explica la situación a TalkBack
                 Icon(
                     imageVector = Icons.Outlined.FavoriteBorder,
                     contentDescription = null,
@@ -121,7 +110,6 @@ fun FavoritosScreen(
                     textAlign = TextAlign.Center
                 )
                 Spacer(modifier = Modifier.height(24.dp))
-                // Botón grande (56 dp) con ícono y texto, para ir a buscar recetas
                 Button(
                     onClick = onIrARecetas,
                     colors = ButtonDefaults.buttonColors(containerColor = VerdeItaliano),
@@ -136,8 +124,6 @@ fun FavoritosScreen(
                 }
             }
         } else {
-            // LISTA DE FAVORITOS
-            // contentPadding: margen alrededor de la lista que se desplaza junto con ella
             LazyColumn(
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp),
@@ -145,18 +131,12 @@ fun FavoritosScreen(
                     .fillMaxSize()
                     .padding(innerPadding)
             ) {
-                // key = id: Compose sabe qué tarjeta es cada curso. Es OBLIGATORIO para que
-                // animateItem() sepa cuál tarjeta se fue y anime solo esa.
                 items(cursosFavoritos, key = { curso -> curso.id }) { curso ->
-                    // Card con onClick: toda la tarjeta abre la receta (igual que en Home).
-                    // El corazón tiene su propio onClick, por eso tocarlo NO abre el detalle.
                     Card(
                         onClick = { onVerDetalle(curso.id) },
                         colors = CardDefaults.cardColors(containerColor = BlancoPuro),
                         border = BorderStroke(1.dp, DoradoCalidad.copy(alpha = 0.6f)),
                         shape = RoundedCornerShape(10.dp),
-                        // animateItem(): al quitar un favorito la tarjeta se desvanece
-                        // y las de abajo suben suavemente a ocupar su lugar (en vez de saltar)
                         modifier = Modifier
                             .fillMaxWidth()
                             .animateItem()
@@ -166,9 +146,7 @@ fun FavoritosScreen(
                                 verticalAlignment = Alignment.Top,
                                 modifier = Modifier.fillMaxWidth()
                             ) {
-                                // weight(1f): la columna de textos usa el ancho que deja el corazón
                                 Column(modifier = Modifier.weight(1f)) {
-                                    // Etiqueta con la categoría (mismo estilo que en el Detalle)
                                     Text(
                                         text = curso.categoria,
                                         fontSize = 14.sp,
@@ -187,9 +165,6 @@ fun FavoritosScreen(
                                     )
                                 }
 
-                                // Corazón rojo para quitar de favoritos.
-                                // 56.dp: área táctil grande, pensada para usuarios mayores.
-                                // contentDescription dice el curso y la acción, para que TalkBack lea qué hace.
                                 IconButton(
                                     onClick = { viewModel.quitarFavorito(curso.id) },
                                     modifier = Modifier.size(56.dp)
@@ -215,8 +190,6 @@ fun FavoritosScreen(
                                 color = RojoItaliano
                             )
 
-                            // Botón visible "Ver receta": hace lo mismo que tocar la tarjeta,
-                            // pero deja claro que se puede abrir (48 dp de alto mínimo)
                             TextButton(
                                 onClick = { onVerDetalle(curso.id) },
                                 modifier = Modifier

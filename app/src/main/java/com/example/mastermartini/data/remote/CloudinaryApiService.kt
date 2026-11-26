@@ -8,16 +8,9 @@ import retrofit2.http.POST
 import retrofit2.http.Part
 import retrofit2.http.Path
 
-/**
- * Servicio Retrofit que define el endpoint de Cloudinary para subir videos directamente
- * mediante una petición HTTP Multipart.
- */
+// Servicio Retrofit para subir videos mediante multipart a Cloudinary
 interface CloudinaryApiService {
 
-    /**
-     * Envía un archivo de video y su preset de subida sin firmar a la cuenta indicada en [cloudName].
-     * Devuelve un [CloudinaryResponse] con la URL segura del video alojado en la nube.
-     */
     @Multipart
     @POST("v1_1/{cloudName}/video/upload")
     suspend fun subirVideo(
