@@ -73,4 +73,18 @@ dependencies {
     // Reproductor de video moderno (soporta videos locales y enlaces HTTPS de Cloudinary)
     implementation("androidx.media3:media3-exoplayer:1.4.1")
     implementation("androidx.media3:media3-ui:1.4.1")
+    // Kotest (Requerido por Guía 15)
+    testImplementation("io.kotest:kotest-runner-junit5:5.8.0")
+    testImplementation("io.kotest:kotest-assertions-core:5.8.0")
+
+    // JUnit 5 y Coroutines Test
+    testImplementation("org.junit.jupiter:junit-jupiter:5.10.0")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.1")
+
+    // MockK para simular repositorios y APIs
+    testImplementation("io.mockk:mockk:1.13.10")
+}
+// Obligatorio al final de build.gradle.kts para ejecutar Kotest/JUnit 5
+tasks.withType<Test>().configureEach {
+    useJUnitPlatform()
 }
