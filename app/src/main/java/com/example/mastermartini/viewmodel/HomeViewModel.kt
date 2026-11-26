@@ -56,9 +56,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     // Copia los cursos del repositorio al StateFlow. Al cambiar _cursos.value,
     // Compose vuelve a dibujar la lista automáticamente.
     private fun cargarCursos() {
-        viewModelScope.launch {
-            _cursos.value = cursoRepository.obtenerCursosRemotos()
-        }
+        _cursos.value = cursoRepository.obtenerCursos()
     }
 
     // Se llama al tocar el corazón de un curso: si ya es favorito lo quita, si no lo agrega.
