@@ -1,10 +1,13 @@
 package com.example.mastermartini.viewmodel
 
 import android.app.Application
+import android.content.Context
+import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.mastermartini.data.AlmacenamientoLocal
 import com.example.mastermartini.data.CapacitacionRepository
+import com.example.mastermartini.data.CloudinaryRepository
 import com.example.mastermartini.data.ServidorException
 import com.example.mastermartini.model.Capacitacion
 import com.example.mastermartini.model.Leccion
@@ -30,8 +33,12 @@ data class CrearCursoUiState(
     val duracionTotal: String = "45 min",
     // Debe llamarse igual que un producto de ProductoRepository (el Detalle lo busca por nombre)
     val insumoPrincipal: String = "Chocolate Ariba",
-    // Enlace .mp4 del video subido a Cloudinary (opcional)
-    val videoCloudinaryUrl: String = "",
+    // Enlace HTTPS del video subido a Cloudinary (opcional)
+    val videoUrl: String = "",
+    // true mientras el video seleccionado se está subiendo a Cloudinary
+    val subiendoVideo: Boolean = false,
+    // Mensaje de error amigable si falla la subida del video (null = sin error)
+    val errorVideo: String? = null,
     // El primer módulo y su primera lección (el backend exige al menos uno de cada uno)
     val tituloModulo: String = "Módulo 1: Introducción y técnica",
     val tituloLeccion: String = "Clase 1: Preparación paso a paso",
@@ -64,6 +71,8 @@ class CrearCursoViewModel(application: Application) : AndroidViewModel(applicati
     private val almacenamiento = AlmacenamientoLocal(application)
     // Habla con el microservicio de cursos (Retrofit)
     private val repository = CapacitacionRepository()
+    // Sube los videos directamente desde el teléfono hacia Cloudinary
+    private val cloudinaryRepository = CloudinaryRepository()
 
     // MODO EDICIÓN: el curso tal como vino del servidor. Se guarda para, al guardar, enviar
     // los MISMOS módulos, loQueLograras e incluye (el formulario no los muestra).
@@ -90,9 +99,44 @@ class CrearCursoViewModel(application: Application) : AndroidViewModel(applicati
     fun onEsGratisChange(v: Boolean) = _uiState.update { it.copy(esGratis = v) }
     fun onDuracionChange(v: String) = _uiState.update { it.copy(duracionTotal = v) }
     fun onInsumoChange(v: String) = _uiState.update { it.copy(insumoPrincipal = v) }
-    fun onVideoUrlChange(v: String) = _uiState.update { it.copy(videoCloudinaryUrl = v, mensajeError = null) }
     fun onTituloModuloChange(v: String) = _uiState.update { it.copy(tituloModulo = v) }
     fun onTituloLeccionChange(v: String) = _uiState.update { it.copy(tituloLeccion = v) }
+
+    // Sube un video elegido desde el teléfono a Cloudinary usando CloudinaryRepository.
+    // Activa el indicador de carga, guarda la secureUrl si resulta exitoso o muestra un
+    // mensaje amigable en español en errorVideo si la subida falla.
+    fun subirVideoCurso(context: Context, uri: Uri) {
+        viewModelScope.launch {
+            _uiState.update {
+                it.copy(
+                    subiendoVideo = true,
+                    errorVideo = null,
+                    mensajeError = null
+                )
+            }
+            val resultado = cloudinaryRepository.subirVideoDesdeUri(context, uri)
+            resultado.fold(
+                onSuccess = { urlSegura ->
+                    _uiState.update {
+                        it.copy(
+                            subiendoVideo = false,
+                            videoUrl = urlSegura,
+                            errorVideo = null
+                        )
+                    }
+                },
+                onFailure = { error ->
+                    _uiState.update {
+                        it.copy(
+                            subiendoVideo = false,
+                            errorVideo = error.message
+                                ?: "No se pudo subir el video. Revisa tu conexión e inténtalo nuevamente."
+                        )
+                    }
+                }
+            )
+        }
+    }
 
     // MODO EDICIÓN: pide el curso al servidor (GET api/cursos/{id}) y rellena el formulario.
     // La llama CrearCursoScreen cuando se abre con la ruta "panel/editar-curso/{id}".
@@ -123,7 +167,8 @@ class CrearCursoViewModel(application: Application) : AndroidViewModel(applicati
                     esGratis = curso.esGratis,
                     duracionTotal = curso.duracionTotal,
                     insumoPrincipal = curso.insumoPrincipal,
-                    videoCloudinaryUrl = curso.videoResumenUrl ?: ""
+                    videoUrl = curso.videoResumenUrl ?: "",
+                    errorVideo = null
                 )
             }
         }
@@ -140,8 +185,14 @@ class CrearCursoViewModel(application: Application) : AndroidViewModel(applicati
             return
         }
 
+        // 1.5. Evita guardar el curso si todavía hay un video subiéndose a Cloudinary
+        if (actual.subiendoVideo) {
+            _uiState.update { it.copy(mensajeError = "Espera a que termine de subirse el video antes de guardar") }
+            return
+        }
+
         // 2. Enlace del video: es opcional (vacío = null), pero si se escribe debe ser una dirección web
-        val urlLimpia = actual.videoCloudinaryUrl.trim().ifBlank { null }
+        val urlLimpia = actual.videoUrl.trim().ifBlank { null }
         if (urlLimpia != null && !urlLimpia.startsWith("http")) {
             _uiState.update { it.copy(mensajeError = "El enlace de Cloudinary debe empezar con http:// o https://") }
             return

@@ -1,5 +1,8 @@
 package com.example.mastermartini.ui.screens
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -14,8 +17,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -42,6 +47,17 @@ fun CrearCursoScreen(
 ) {
     // Escuchamos el estado: cada letra que se escribe genera un estado nuevo y la pantalla se redibuja
     val uiState by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
+
+    // Selector nativo del sistema para elegir un archivo de video desde el teléfono.
+    // Al recibir la Uri seleccionada, delega la subida a Cloudinary en el ViewModel.
+    val selectorVideoLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri ->
+        if (uri != null) {
+            viewModel.subirVideoCurso(context, uri)
+        }
+    }
 
     // MODO EDICIÓN: al abrir la pantalla con un id, se le pide al ViewModel que cargue ese curso
     // y rellene el formulario (si ya lo cargó, no hace nada, ver cargarParaEditar).
@@ -128,17 +144,104 @@ fun CrearCursoScreen(
                 modifier = Modifier.fillMaxWidth()
             )
 
-            // Campo destacado para pegar el enlace .mp4 de Cloudinary
-            OutlinedTextField(
-                value = uiState.videoCloudinaryUrl,
-                onValueChange = viewModel::onVideoUrlChange,
-                label = { Text("URL video Cloudinary (.mp4)") },
-                placeholder = { Text("https://res.cloudinary.com/.../video.mp4") },
-                leadingIcon = {
-                    Icon(Icons.Filled.VideoLibrary, contentDescription = null, tint = VerdeItaliano)
-                },
+            // SECCIÓN ACCESIBLE "VIDEO DEL CURSO": permite elegir un video desde el teléfono,
+            // subirlo directamente a Cloudinary y previsualizarlo cuando esté listo.
+            Card(
+                colors = CardDefaults.cardColors(containerColor = BlancoPuro),
+                border = BorderStroke(1.dp, GrisBorde),
+                shape = RoundedCornerShape(12.dp),
                 modifier = Modifier.fillMaxWidth()
-            )
+            ) {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp)
+                ) {
+                    Text(
+                        text = "Video del curso",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = TextoOscuro
+                    )
+
+                    // Botón accesible de ancho completo y altura mínima de 56.dp.
+                    // Se deshabilita mientras el video se está subiendo a Cloudinary.
+                    Button(
+                        onClick = { selectorVideoLauncher.launch("video/*") },
+                        enabled = !uiState.subiendoVideo,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = VerdeOscuro,
+                            contentColor = BlancoPuro
+                        ),
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 56.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.VideoLibrary,
+                            contentDescription = null,
+                            tint = BlancoPuro
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            text = if (uiState.videoUrl.isNotBlank()) {
+                                "Cambiar video"
+                            } else {
+                                "Subir video desde el teléfono"
+                            },
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+
+                    // Indicador de progreso visible durante la subida del video a Cloudinary
+                    if (uiState.subiendoVideo) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            CircularProgressIndicator(
+                                color = VerdeItaliano,
+                                strokeWidth = 3.dp,
+                                modifier = Modifier.size(24.dp)
+                            )
+                            Text(
+                                text = "Subiendo video a la nube, espera un momento...",
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = TextoOscuro
+                            )
+                        }
+                    }
+
+                    // Mensaje de error en rojo si falló la subida del video
+                    if (uiState.errorVideo != null) {
+                        Text(
+                            text = uiState.errorVideo!!,
+                            color = RojoItaliano,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+
+                    // Confirmación visual en verde y vista previa cuando el video ya está en la nube
+                    if (uiState.videoUrl.isNotBlank()) {
+                        Text(
+                            text = "✓ Video cargado en la nube",
+                            color = VerdeItaliano,
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        // key(videoUrl) reinicia el reproductor si el usuario cambia el video
+                        key(uiState.videoUrl) {
+                            ReproductorVideoLocal(videoUrl = uiState.videoUrl)
+                        }
+                    }
+                }
+            }
 
             // CATEGORÍA: botones de opción (ChipOpcion, el mismo de la encuesta).
             // La lista viene del ViewModel; horizontalScroll porque las 5 no caben a lo ancho.
@@ -221,7 +324,7 @@ fun CrearCursoScreen(
             // y en ese tiempo muestra una ruedita en vez del texto.
             Button(
                 onClick = viewModel::publicarCurso,
-                enabled = !uiState.cargando,
+                enabled = !uiState.cargando && !uiState.subiendoVideo,
                 colors = ButtonDefaults.buttonColors(containerColor = VerdeItaliano),
                 shape = RoundedCornerShape(10.dp),
                 modifier = Modifier
