@@ -23,14 +23,23 @@ import com.example.mastermartini.ui.components.ChipOpcion
 import com.example.mastermartini.ui.theme.*
 import com.example.mastermartini.viewmodel.CrearCursoViewModel
 
+// PANTALLA "CREAR CURSO ONLINE" (la abre un Instructor o Administrador)
+// Formulario para publicar un curso nuevo en el microservicio de cursos, con el enlace
+// del video subido a Cloudinary. Solo DIBUJA lo que le entrega CrearCursoViewModel (MVVM):
+// las validaciones, el envío y los mensajes de error se deciden en el ViewModel.
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CrearCursoScreen(
+    // ViewModel con lo escrito en el formulario (lo crea MainActivity)
     viewModel: CrearCursoViewModel,
+    // Flecha de volver y también al guardar con éxito: MainActivity vuelve atrás (popBackStack)
     onVolver: () -> Unit
 ) {
+    // Escuchamos el estado: cada letra que se escribe genera un estado nuevo y la pantalla se redibuja
     val uiState by viewModel.uiState.collectAsState()
 
+    // Se ejecuta cada vez que cambia guardadoExitoso. Cuando el servidor guardó el curso
+    // (pasa a true), se vuelve atrás sola; al volver a Cursos, la lista se recarga y aparece el curso nuevo.
     LaunchedEffect(uiState.guardadoExitoso) {
         if (uiState.guardadoExitoso) {
             onVolver()
@@ -40,6 +49,7 @@ fun CrearCursoScreen(
     Scaffold(
         containerColor = BlancoHueso,
         topBar = {
+            // Barra verde con la flecha para volver (mismo estilo que las demás pantallas)
             TopAppBar(
                 title = { Text("Crear curso online", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
@@ -58,6 +68,7 @@ fun CrearCursoScreen(
             )
         }
     ) { innerPadding ->
+        // verticalScroll: el formulario es largo y en celulares chicos no cabe completo
         Column(
             verticalArrangement = Arrangement.spacedBy(12.dp),
             modifier = Modifier
@@ -66,6 +77,8 @@ fun CrearCursoScreen(
                 .padding(16.dp)
                 .verticalScroll(rememberScrollState())
         ) {
+            // DATOS DEL CURSO. Cada campo muestra lo que tiene el estado (value) y, al escribir,
+            // le avisa al ViewModel (onValueChange). viewModel::onTituloChange = "pásale el texto a esa función".
             OutlinedTextField(
                 value = uiState.titulo,
                 onValueChange = viewModel::onTituloChange,
@@ -107,6 +120,8 @@ fun CrearCursoScreen(
                 modifier = Modifier.fillMaxWidth()
             )
 
+            // CATEGORÍA: botones de opción (ChipOpcion, el mismo de la encuesta).
+            // La lista viene del ViewModel; horizontalScroll porque las 5 no caben a lo ancho.
             Text("Categoría", fontWeight = FontWeight.Bold, color = TextoOscuro)
             Row(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -121,6 +136,7 @@ fun CrearCursoScreen(
                 }
             }
 
+            // NIVEL: Básico, Intermedio o Avanzado (solo uno queda seleccionado)
             Text("Nivel", fontWeight = FontWeight.Bold, color = TextoOscuro)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 viewModel.niveles.forEach { niv ->
@@ -132,6 +148,8 @@ fun CrearCursoScreen(
                 }
             }
 
+            // ACCESO: el interruptor elige si el curso es gratis o del Plan Pro.
+            // El texto de al lado dice cuál está elegido (no depende solo de la posición del Switch)
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Switch(
                     checked = uiState.esGratis,
@@ -145,6 +163,7 @@ fun CrearCursoScreen(
                 )
             }
 
+            // PRIMER MÓDULO Y PRIMERA LECCIÓN (el backend exige al menos uno de cada uno)
             OutlinedTextField(
                 value = uiState.tituloModulo,
                 onValueChange = viewModel::onTituloModuloChange,
@@ -159,6 +178,7 @@ fun CrearCursoScreen(
                 modifier = Modifier.fillMaxWidth()
             )
 
+            // Mensaje de error en rojo (lo decide el ViewModel: campos vacíos, sin sesión, 403, 503...)
             if (uiState.mensajeError != null) {
                 Text(
                     text = uiState.mensajeError!!,
@@ -167,6 +187,8 @@ fun CrearCursoScreen(
                 )
             }
 
+            // BOTÓN PUBLICAR. Se desactiva mientras se envía (cargando) para no crear el curso dos veces,
+            // y en ese tiempo muestra una ruedita en vez del texto.
             Button(
                 onClick = viewModel::publicarCurso,
                 enabled = !uiState.cargando,

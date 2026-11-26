@@ -1,7 +1,9 @@
 package com.example.mastermartini.data
 
 import com.example.mastermartini.data.remote.RetrofitClient
+import com.google.gson.Gson
 import com.example.mastermartini.model.Capacitacion
+import com.example.mastermartini.model.ErrorDto
 import com.example.mastermartini.model.Leccion
 import com.example.mastermartini.model.Modulo
 
@@ -29,6 +31,8 @@ class CapacitacionRepository {
     }
 
     // Envía un curso nuevo al microservicio con el header X-Usuario-Id
+    // Si el servidor responde con error, devuelve CursoServidorException con el código HTTP
+    // y el "mensaje" del ErrorDto, para que el ViewModel elija qué texto mostrar.
     suspend fun crearCapacitacion(
         usuarioId: Int,
         nuevaCapacitacion: Capacitacion
@@ -38,7 +42,14 @@ class CapacitacionRepository {
             if (response.isSuccessful && response.body() != null) {
                 Result.success(response.body()!!)
             } else {
-                Result.failure(Exception("Error ${response.code()}: verifica permisos o campos"))
+                // errorBody() trae el JSON de error ({"mensaje","estado"}). Se lee con Gson
+                // dentro de su propio try: si no es un JSON válido, queda en null y no se cae.
+                val mensajeServidor = try {
+                    Gson().fromJson(response.errorBody()?.string(), ErrorDto::class.java)?.mensaje
+                } catch (e: Exception) {
+                    null
+                }
+                Result.failure(CursoServidorException(response.code(), mensajeServidor))
             }
         } catch (e: Exception) {
             Result.failure(Exception("No se pudo conectar con el servidor de cursos (9092)"))
