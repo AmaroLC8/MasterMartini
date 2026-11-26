@@ -11,6 +11,9 @@ object RetrofitClient {
     // Si usas BlueStacks con adb reverse, cámbialo a "http://localhost:9092/"
     private const val BASE_URL_CURSOS = "http://10.0.2.2:9092/"
 
+    // Microservicio de USUARIOS (Spring Boot, puerto 9091). 10.0.2.2 = el PC visto desde el emulador.
+    private const val BASE_URL_USUARIOS = "http://10.0.2.2:9091/"
+
     private val logging = HttpLoggingInterceptor().apply {
         level = HttpLoggingInterceptor.Level.BODY
     }
@@ -26,6 +29,17 @@ object RetrofitClient {
             .addConverterFactory(GsonConverterFactory.create())
             .build()
             .create(CursosApiService::class.java)
+    }
+
+    // Endpoints de usuarios (login, registro, perfil, roles...). Lo usa UsuarioRepositoryRemoto.
+    // "by lazy" = se crea la primera vez que se usa, y después se reutiliza siempre el mismo.
+    val usuariosApi: UsuarioApi by lazy {
+        Retrofit.Builder()
+            .baseUrl(BASE_URL_USUARIOS)
+            .client(httpClient)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(UsuarioApi::class.java)
     }
 
     val climaApi: ClimaApiService by lazy {

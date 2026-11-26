@@ -18,6 +18,8 @@ package com.example.mastermartini.data
 // Cómo calzan con las respuestas del backend (código HTTP):
 //   401 -> CredencialesInvalidas    409 -> DatoDuplicado    403 -> AccesoDenegado
 //   404 -> NoEncontrado             400 -> CodigoInvalido   sin internet -> SinConexion
+//   otros (400 de validación, 500, 503) -> ErrorServidor
+// La conversión la hace UsuarioRepositoryRemoto.convertirError().
 sealed class UsuarioException(mensaje: String) : Exception(mensaje) {
 
     // El RUT/correo o la contraseña no coinciden. Es el MISMO mensaje si falla el usuario
@@ -42,7 +44,16 @@ sealed class UsuarioException(mensaje: String) : Exception(mensaje) {
         UsuarioException("El código no es correcto o ya venció. Pide uno nuevo.")
 
     // No se pudo conectar con el servidor. El repositorio falso nunca la lanza;
-    // la usará el repositorio con Retrofit cuando no haya internet.
+    // la lanza UsuarioRepositoryRemoto cuando no hay internet o el servidor está apagado.
     class SinConexion :
         UsuarioException("No pudimos conectarnos. Revisa tu internet e inténtalo otra vez.")
+
+    // El servidor respondió con un error que no es ninguno de los de arriba
+    // (ej. un dato inválido, o el servidor falló por dentro: 500, 503).
+    // Muestra el mensaje que mandó el servidor; si no mandó ninguno (null o vacío), uno genérico.
+    // ifBlank: si el texto está vacío, usa el otro.
+    class ErrorServidor(mensaje: String?) :
+        UsuarioException(
+            mensaje?.ifBlank { null } ?: "Tuvimos un problema con el servidor. Inténtalo más tarde."
+        )
 }

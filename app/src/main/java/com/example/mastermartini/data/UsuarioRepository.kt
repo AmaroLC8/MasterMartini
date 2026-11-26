@@ -6,8 +6,8 @@ import com.example.mastermartini.model.Usuario
 // REPOSITORIO DE USUARIOS (INTERFAZ)
 //
 // Una "interface" es un CONTRATO: dice QUÉ funciones existen, pero no CÓMO se hacen.
-// Hoy lo cumple UsuarioRepositoryFalso (una lista en memoria) y mañana lo cumplirá
-// un repositorio con Retrofit que habla con el backend. Los ViewModels solo conocen
+// Lo cumplen DOS clases: UsuarioRepositoryRemoto (Retrofit, habla con el backend) y
+// UsuarioRepositoryFalso (una lista en memoria). Los ViewModels solo conocen
 // esta interfaz, así que al cambiar uno por otro NO se toca ninguna pantalla ni ViewModel:
 // se cambia una sola línea en ProveedorRepositorios.
 // Además, en las pruebas se le puede pasar al ViewModel un repositorio de mentira (MockK).

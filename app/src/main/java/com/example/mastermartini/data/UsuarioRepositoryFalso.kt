@@ -6,7 +6,8 @@ import com.example.mastermartini.model.Usuario
 import kotlinx.coroutines.delay
 
 // REPOSITORIO DE USUARIOS FALSO
-// TEMPORAL: se reemplaza por el repositorio con Retrofit cuando el backend esté listo.
+// Se usa cuando ProveedorRepositorios.USAR_BACKEND = false (plan B si el backend falla)
+// y sirve para probar sin servidor. El repositorio real es UsuarioRepositoryRemoto.
 // Lo registrado se pierde al cerrar la app (vive en una lista en memoria, no en una base de datos).
 //
 // Cumple el contrato UsuarioRepository (": UsuarioRepository") y aplica las MISMAS reglas
