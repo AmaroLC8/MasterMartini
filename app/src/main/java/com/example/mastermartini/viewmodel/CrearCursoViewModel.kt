@@ -5,7 +5,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.mastermartini.data.AlmacenamientoLocal
 import com.example.mastermartini.data.CapacitacionRepository
-import com.example.mastermartini.data.CursoServidorException
+import com.example.mastermartini.data.ServidorException
 import com.example.mastermartini.model.Capacitacion
 import com.example.mastermartini.model.Leccion
 import com.example.mastermartini.model.Modulo
@@ -254,14 +254,14 @@ class CrearCursoViewModel(application: Application) : AndroidViewModel(applicati
     }
 
     // Elige el texto del error que ve el usuario.
-    // Si el servidor respondió con un código de error (CursoServidorException), se revisa el código:
+    // Si el servidor respondió con un código de error (ServidorException), se revisa el código:
     //   403 -> al crear: no es instructor ni administrador.
     //          al editar: no es el instructor DUEÑO del curso ni administrador.
     //   503 -> el servidor de cursos no pudo consultar al microservicio de usuarios
     //   otro -> el "mensaje" que mandó el servidor en su ErrorDto (o el texto por defecto si no vino)
     // Si no es un error del servidor (ej. sin conexión), se usa el mensaje que trae el error.
     private fun textoDelError(error: Throwable): String {
-        if (error is CursoServidorException) {
+        if (error is ServidorException) {
             return when (error.codigo) {
                 403 -> if (_uiState.value.esEdicion) {
                     "Solo el instructor del curso o un administrador pueden editarlo"

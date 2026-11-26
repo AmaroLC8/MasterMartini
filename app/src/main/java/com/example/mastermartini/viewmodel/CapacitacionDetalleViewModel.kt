@@ -5,9 +5,11 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.mastermartini.data.AlmacenamientoLocal
 import com.example.mastermartini.data.CapacitacionRepository
-import com.example.mastermartini.data.CursoServidorException
+import com.example.mastermartini.data.InscripcionRepository
+import com.example.mastermartini.data.ServidorException
 import com.example.mastermartini.data.ProductoRepository
 import com.example.mastermartini.model.Capacitacion
+import com.example.mastermartini.model.Inscripcion
 import com.example.mastermartini.model.Producto
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -34,20 +36,54 @@ data class CapacitacionDetalleUiState(
     // true mientras se espera la respuesta del servidor al eliminar (el botón se desactiva)
     val eliminando: Boolean = false,
     // Texto del error para mostrar en rojo (ej. sin permiso). null = no hay error
-    val mensajeError: String? = null
-)
+    val mensajeError: String? = null,
+
+    // INSCRIPCIÓN del usuario de la sesión en ESTE curso. null = no está inscrito.
+    // Viene del microservicio de interacciones (puerto 9093).
+    val inscripcion: Inscripcion? = null,
+    // true mientras se espera al servidor al inscribirse o cancelar (el botón se desactiva)
+    val procesando: Boolean = false,
+    // true = se está mostrando el diálogo "¿Cancelar tu inscripción?"
+    val mostrarConfirmacionCancelar: Boolean = false,
+    // Error de la inscripción o del progreso (ej. falta el Plan Pro). Va APARTE de mensajeError
+    // (que es del botón Eliminar) para que cada aviso se vea junto a su botón.
+    val mensajeErrorInscripcion: String? = null
+) {
+    // PROPIEDADES CALCULADAS (se calculan solas cada vez que se piden, con get()).
+
+    // ¿Está inscrito? Con esto la pantalla elige entre el botón "Empezar" y la tarjeta "Tu avance".
+    val estaInscrito: Boolean
+        get() = inscripcion != null
+
+    // PROGRESO: total de lecciones del curso (Capacitacion.totalLecciones suma las de cada módulo)
+    val totalLecciones: Int
+        get() = capacitacion?.totalLecciones ?: 0
+
+    // Cuántas lecciones marcó como vistas. coerceAtMost: nunca más que el total
+    // (por si al curso le quitaron lecciones después de que las marcó).
+    val leccionesCompletadas: Int
+        get() = (inscripcion?.leccionesCompletadas?.size ?: 0).coerceAtMost(totalLecciones)
+
+    // Porcentaje de 0 a 100 (Inscripcion.porcentaje ya evita dividir por cero)
+    val porcentaje: Int
+        get() = inscripcion?.porcentaje(totalLecciones) ?: 0
+}
 
 // VIEWMODEL DEL DETALLE DE UN CURSO ONLINE
 // Busca el curso por su id (en el microservicio de cursos, con respaldo local), su producto
 // principal, y recuerda qué módulos están abiertos.
 // El estado abierto/cerrado vive AQUÍ y no en la pantalla (MVVM): la pantalla solo dibuja.
-// También decide si se ven los botones Editar/Eliminar y elimina el curso.
+// También decide si se ven los botones Editar/Eliminar y elimina el curso, y maneja la
+// INSCRIPCIÓN del usuario: inscribirse, marcar lecciones vistas (progreso) y cancelar.
 // Es AndroidViewModel porque necesita el Context (application) para leer la SESIÓN
 // (id y rol) en SharedPreferences con AlmacenamientoLocal. viewModel() en MainActivity
 // le pasa la Application solo, igual que a PerfilViewModel.
 class CapacitacionDetalleViewModel(application: Application) : AndroidViewModel(application) {
 
     private val capacitacionRepository = CapacitacionRepository()
+
+    // Inscripciones y progreso (microservicio de interacciones)
+    private val inscripcionRepository = InscripcionRepository()
 
     // Sesión guardada: quién está conectado (id) y qué puede hacer (rol)
     private val almacenamiento = AlmacenamientoLocal(application)
@@ -90,7 +126,9 @@ class CapacitacionDetalleViewModel(application: Application) : AndroidViewModel(
                 // así el usuario ve de inmediato cómo son las lecciones.
                 modulosAbiertos = setOf(0),
                 puedeEditar = calcularPuedeEditar(capacitacionEncontrada),
-                puedeEliminar = calcularPuedeEliminar(capacitacionEncontrada)
+                puedeEliminar = calcularPuedeEliminar(capacitacionEncontrada),
+                // ¿El usuario ya está inscrito en este curso? (null si no)
+                inscripcion = buscarMiInscripcion(id)
             )
         }
     }
@@ -113,7 +151,8 @@ class CapacitacionDetalleViewModel(application: Application) : AndroidViewModel(
                     capacitacion = capacitacionActualizada,
                     producto = productoEncontrado,
                     puedeEditar = calcularPuedeEditar(capacitacionActualizada),
-                    puedeEliminar = calcularPuedeEliminar(capacitacionActualizada)
+                    puedeEliminar = calcularPuedeEliminar(capacitacionActualizada),
+                    inscripcion = buscarMiInscripcion(id)
                 )
             }
         }
@@ -187,7 +226,7 @@ class CapacitacionDetalleViewModel(application: Application) : AndroidViewModel(
     //   otro -> el "mensaje" que mandó el servidor (ej. 404 "Curso no encontrado")
     // Si no es un error del servidor (sin conexión), se usa el mensaje que trae el error.
     private fun textoDelError(error: Throwable): String {
-        if (error is CursoServidorException) {
+        if (error is ServidorException) {
             return when (error.codigo) {
                 403 -> "Solo el administrador puede eliminar cursos"
                 503 -> "El servicio de usuarios no está disponible"
@@ -195,6 +234,141 @@ class CapacitacionDetalleViewModel(application: Application) : AndroidViewModel(
             }
         }
         return error.message ?: "No se pudo eliminar el curso"
+    }
+
+    // ---------- INSCRIPCIÓN Y PROGRESO (microservicio de interacciones) ----------
+
+    // Busca si el usuario de la sesión ya está inscrito en este curso.
+    // Pide TODAS sus inscripciones y se queda con la de este curso (find por cursoId).
+    // Devuelve null si no hay sesión, si no está inscrito o si el servidor no respondió
+    // (getOrNull() da el dato si salió bien, o null si falló).
+    // Es suspend porque espera al servidor; se llama dentro de las corrutinas de cargar/recargar.
+    private suspend fun buscarMiInscripcion(cursoId: Int): Inscripcion? {
+        val usuarioId = almacenamiento.obtenerIdUsuario() ?: return null
+        val inscripciones = inscripcionRepository.misInscripciones(usuarioId).getOrNull() ?: return null
+        return inscripciones.find { inscripcion -> inscripcion.cursoId == cursoId }
+    }
+
+    // Botón "Empezar curso gratis" / "Desbloquear con Plan Pro".
+    // La app NO revisa el Plan Pro: lo revisa el SERVIDOR (responde 403 si falta).
+    fun inscribirse() {
+        val capacitacion = _uiState.value.capacitacion ?: return
+        // Si ya se está enviando, no se manda otra vez (evita inscribirse dos veces por doble toque)
+        if (_uiState.value.procesando) return
+        val usuarioId = almacenamiento.obtenerIdUsuario()
+        if (usuarioId == null) {
+            _uiState.update { it.copy(mensajeErrorInscripcion = "Debes iniciar sesión para inscribirte") }
+            return
+        }
+
+        _uiState.update { it.copy(procesando = true, mensajeErrorInscripcion = null) }
+        viewModelScope.launch {
+            val resultado = inscripcionRepository.inscribirse(usuarioId, capacitacion.id)
+            resultado.fold(
+                onSuccess = { inscripcionNueva ->
+                    // Se guarda la inscripción: la pantalla cambia sola a la tarjeta "Tu avance"
+                    _uiState.update { it.copy(procesando = false, inscripcion = inscripcionNueva) }
+                },
+                onFailure = { error ->
+                    if (error is ServidorException && error.codigo == 409) {
+                        // 409 = YA estaba inscrito (ej. se inscribió desde otro celular).
+                        // No es un error para el usuario: se vuelve a cargar su inscripción.
+                        // (fold es "inline", por eso aquí dentro se puede llamar a una función suspend)
+                        val existente = buscarMiInscripcion(capacitacion.id)
+                        _uiState.update { it.copy(procesando = false, inscripcion = existente) }
+                    } else {
+                        val texto = textoErrorInscripcion(
+                            error,
+                            mensaje403 = "Necesitas el Plan Pro para este curso. Pídele a nuestro equipo de ventas que lo active"
+                        )
+                        _uiState.update { it.copy(procesando = false, mensajeErrorInscripcion = texto) }
+                    }
+                }
+            )
+        }
+    }
+
+    // Se llama al tocar una lección (solo si está inscrito): si estaba vista la desmarca, y al revés.
+    // NO se cambia la pantalla antes de que responda el servidor: se usa la inscripción que
+    // devuelve el servidor. Así, si falla, la lección queda como estaba y se muestra el error.
+    fun alternarLeccion(modulo: Int, leccion: Int) {
+        val inscripcion = _uiState.value.inscripcion ?: return
+        val usuarioId = almacenamiento.obtenerIdUsuario() ?: return
+        // Si estaba vista, se manda completada = false (desmarcar); si no, true (marcar)
+        val completada = !inscripcion.estaCompletada(modulo, leccion)
+
+        viewModelScope.launch {
+            val resultado = inscripcionRepository.marcarLeccion(
+                usuarioId = usuarioId,
+                inscripcionId = inscripcion.id,
+                modulo = modulo,
+                leccion = leccion,
+                completada = completada
+            )
+            resultado.fold(
+                onSuccess = { inscripcionActualizada ->
+                    _uiState.update {
+                        it.copy(inscripcion = inscripcionActualizada, mensajeErrorInscripcion = null)
+                    }
+                },
+                onFailure = { error ->
+                    _uiState.update { it.copy(mensajeErrorInscripcion = textoErrorInscripcion(error)) }
+                }
+            )
+        }
+    }
+
+    // DIÁLOGO "¿Cancelar tu inscripción?": el botón no cancela directo, primero pregunta.
+    fun abrirConfirmacionCancelar() {
+        _uiState.update { it.copy(mostrarConfirmacionCancelar = true, mensajeErrorInscripcion = null) }
+    }
+
+    fun cerrarConfirmacionCancelar() {
+        _uiState.update { it.copy(mostrarConfirmacionCancelar = false) }
+    }
+
+    // Se llama al confirmar en el diálogo. Borra la inscripción (y su progreso) en el servidor.
+    // Si sale bien, inscripcion = null: la pantalla vuelve a mostrar el botón para inscribirse.
+    fun cancelarInscripcion() {
+        val inscripcion = _uiState.value.inscripcion ?: return
+        val usuarioId = almacenamiento.obtenerIdUsuario() ?: return
+
+        _uiState.update {
+            it.copy(mostrarConfirmacionCancelar = false, procesando = true, mensajeErrorInscripcion = null)
+        }
+        viewModelScope.launch {
+            val resultado = inscripcionRepository.cancelar(usuarioId, inscripcion.id)
+            resultado.fold(
+                onSuccess = {
+                    _uiState.update { it.copy(procesando = false, inscripcion = null) }
+                },
+                onFailure = { error ->
+                    _uiState.update {
+                        it.copy(procesando = false, mensajeErrorInscripcion = textoErrorInscripcion(error))
+                    }
+                }
+            )
+        }
+    }
+
+    // Elige el texto del error de inscripción/progreso que ve el usuario.
+    //   mensaje403: texto propio para el 403 (al inscribirse = falta el Plan Pro).
+    //               Si es null (marcar o cancelar), se usa el mensaje del servidor.
+    //   503 y otros códigos -> el "mensaje" que mandó el servidor (ej. "El servicio de cursos no está disponible")
+    //   sin conexión        -> "No se pudo conectar con el servidor de inscripciones (9093)"
+    private fun textoErrorInscripcion(error: Throwable, mensaje403: String? = null): String {
+        if (error is ServidorException) {
+            if (error.codigo == 403 && mensaje403 != null) {
+                return mensaje403
+            }
+            return error.mensajeServidor ?: error.message ?: "No se pudo completar la acción"
+        }
+        return error.message ?: "No se pudo completar la acción"
+    }
+
+    // ¿Esta lección está marcada como vista? (false si no está inscrito)
+    fun estaVista(indiceModulo: Int, indiceLeccion: Int): Boolean {
+        return _uiState.value.inscripcion?.estaCompletada(indiceModulo, indiceLeccion) == true
     }
 
     // Se llama al tocar el encabezado de un módulo: si estaba abierto lo cierra, y al revés.
@@ -213,6 +387,8 @@ class CapacitacionDetalleViewModel(application: Application) : AndroidViewModel(
 
     // REGLAS DE LAS LECCIONES (freemium). Están aquí y no en la pantalla para que,
     // si cambian (ej. "las 2 primeras lecciones son muestra"), se toque un solo lugar.
+    // Si el usuario está INSCRITO, ninguna lección tiene candado ni dice "Muestra gratis":
+    // el servidor ya revisó el Plan Pro al inscribirlo. Si NO está inscrito, todo sigue igual.
 
     // ¿Es la 1ª lección del Módulo 1? (posiciones 0 y 0, porque las listas parten en 0)
     private fun esPrimeraLeccion(indiceModulo: Int, indiceLeccion: Int): Boolean {
@@ -224,14 +400,15 @@ class CapacitacionDetalleViewModel(application: Application) : AndroidViewModel(
     // (En un curso gratis no tiene sentido: todas las lecciones ya son gratis.)
     fun esMuestraGratis(indiceModulo: Int, indiceLeccion: Int): Boolean {
         val capacitacion = _uiState.value.capacitacion ?: return false
+        if (_uiState.value.estaInscrito) return false
         return !capacitacion.esGratis && esPrimeraLeccion(indiceModulo, indiceLeccion)
     }
 
     // ¿Esta lección lleva candado? Solo en los cursos del Plan Pro, y nunca la muestra gratis.
     // En los cursos gratis ninguna lección tiene candado.
-    // FASE 2: aquí también se revisará si el usuario tiene el Plan Pro activo.
     fun estaBloqueada(indiceModulo: Int, indiceLeccion: Int): Boolean {
         val capacitacion = _uiState.value.capacitacion ?: return false
+        if (_uiState.value.estaInscrito) return false
         return !capacitacion.esGratis && !esPrimeraLeccion(indiceModulo, indiceLeccion)
     }
 }

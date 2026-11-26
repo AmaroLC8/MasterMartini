@@ -27,6 +27,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -47,11 +48,13 @@ import com.example.mastermartini.ui.components.EtiquetaVegana
 import com.example.mastermartini.ui.theme.BlancoHueso
 import com.example.mastermartini.ui.theme.BlancoPuro
 import com.example.mastermartini.ui.theme.DoradoCalidad
+import com.example.mastermartini.ui.theme.GrisBorde
 import com.example.mastermartini.ui.theme.RojoItaliano
 import com.example.mastermartini.ui.theme.TextoOscuro
 import com.example.mastermartini.ui.theme.VerdeItaliano
 import com.example.mastermartini.ui.theme.VerdeOscuro
 import com.example.mastermartini.viewmodel.CapacitacionesViewModel
+import com.example.mastermartini.viewmodel.MiCurso
 import androidx.compose.runtime.LaunchedEffect
 
 // PANTALLA "CURSOS ONLINE" (pestaña Cursos de la barra inferior)
@@ -73,6 +76,7 @@ fun CapacitacionesScreen(
     // LaunchedEffect(Unit) se ejecuta cada vez que esta pantalla ENTRA a la composición.
     // Al ir a "Crear curso" (o a un detalle) la pantalla sale, y al volver entra de nuevo:
     // así se le piden otra vez los cursos al servidor y aparece el curso recién creado.
+    // También se recarga "Mis cursos", para ver el avance que se marcó en el detalle.
     LaunchedEffect(Unit) {
         viewModel.recargarCapacitaciones()
     }
@@ -108,15 +112,41 @@ fun CapacitacionesScreen(
                 )
             }
 
-            // FASE 2: aquí irá la sección "Mis cursos" (los cursos en los que el usuario
-            // se inscribió, con su progreso). Por ahora no hay inscripción.
+            // 2. MIS CURSOS: los cursos en los que el usuario se inscribió, con su avance.
+            // La lista ya viene armada del ViewModel (título y porcentaje calculados allá).
+            item {
+                Text(
+                    text = "Mis cursos",
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = VerdeOscuro
+                )
+            }
+            if (uiState.misCursos.isEmpty()) {
+                item {
+                    Text(
+                        text = "Aún no te inscribes en ningún curso",
+                        fontSize = 16.sp,
+                        color = TextoOscuro
+                    )
+                }
+            } else {
+                // key: "mi-" + id, para que no se repita con las keys del catálogo de abajo
+                // (un mismo curso puede estar en las dos listas y las keys deben ser únicas)
+                items(uiState.misCursos, key = { miCurso -> "mi-${miCurso.cursoId}" }) { miCurso ->
+                    TarjetaMiCurso(
+                        miCurso = miCurso,
+                        onAbrir = { onVerCapacitacion(miCurso.cursoId) }
+                    )
+                }
+            }
 
-            // 2. Tarjeta destacada del Plan Pro
+            // 3. Tarjeta destacada del Plan Pro
             item {
                 TarjetaPlanPro(precio = uiState.precioPlanPro)
             }
 
-            // 3. Filtros: "Todos", "Gratis", "Plan Pro" y las categorías.
+            // 4. Filtros: "Todos", "Gratis", "Plan Pro" y las categorías.
             // horizontalScroll: si no caben, se deslizan hacia el lado en vez de cortarse.
             item {
                 Row(
@@ -136,7 +166,7 @@ fun CapacitacionesScreen(
                 }
             }
 
-            // 4. Lista de cursos
+            // 5. Lista de cursos
             if (uiState.capacitaciones.isEmpty()) {
                 // Si un filtro no tiene cursos, se avisa en vez de dejar la pantalla en blanco
                 item {
@@ -156,6 +186,52 @@ fun CapacitacionesScreen(
                     )
                 }
             }
+        }
+    }
+}
+
+// UNA TARJETA DE "MIS CURSOS": título, barra de progreso y "Z% completado".
+// Card con onClick: TODA la tarjeta se puede tocar (y TalkBack la anuncia como botón);
+// abre el detalle del curso, donde se marcan las lecciones. Mínimo 56 dp de alto.
+@Composable
+private fun TarjetaMiCurso(
+    miCurso: MiCurso,
+    onAbrir: () -> Unit
+) {
+    Card(
+        onClick = onAbrir,
+        colors = CardDefaults.cardColors(containerColor = BlancoPuro),
+        border = BorderStroke(1.dp, VerdeItaliano),
+        shape = RoundedCornerShape(12.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 56.dp)
+    ) {
+        Column(
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.padding(16.dp)
+        ) {
+            Text(
+                text = miCurso.titulo,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+                color = TextoOscuro
+            )
+            // LinearProgressIndicator usa un número de 0f a 1f: 40 % -> 0.4f
+            LinearProgressIndicator(
+                progress = { miCurso.porcentaje / 100f },
+                color = VerdeItaliano,
+                trackColor = GrisBorde,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(8.dp)
+            )
+            Text(
+                text = "${miCurso.porcentaje}% completado",
+                fontSize = 16.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = VerdeOscuro
+            )
         }
     }
 }

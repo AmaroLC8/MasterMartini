@@ -14,6 +14,9 @@ object RetrofitClient {
     // Microservicio de USUARIOS (Spring Boot, puerto 9091). 10.0.2.2 = el PC visto desde el emulador.
     private const val BASE_URL_USUARIOS = "http://10.0.2.2:9091/"
 
+    // Microservicio de INTERACCIONES (inscripciones y progreso de los cursos, puerto 9093)
+    private const val BASE_URL_INTERACCIONES = "http://10.0.2.2:9093/"
+
     private val logging = HttpLoggingInterceptor().apply {
         level = HttpLoggingInterceptor.Level.BODY
     }
@@ -40,6 +43,17 @@ object RetrofitClient {
             .addConverterFactory(GsonConverterFactory.create())
             .build()
             .create(UsuarioApi::class.java)
+    }
+
+    // Endpoints de inscripciones (inscribirse, Mis cursos, progreso, cancelar).
+    // Lo usa InscripcionRepository. Mismo httpClient que los demás.
+    val interaccionesApi: InteraccionesApi by lazy {
+        Retrofit.Builder()
+            .baseUrl(BASE_URL_INTERACCIONES)
+            .client(httpClient)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(InteraccionesApi::class.java)
     }
 
     val climaApi: ClimaApiService by lazy {

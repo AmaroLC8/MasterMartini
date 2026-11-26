@@ -1,13 +1,11 @@
 package com.example.mastermartini.data
 
 import com.example.mastermartini.data.remote.RetrofitClient
-import com.google.gson.Gson
+import com.example.mastermartini.data.remote.leerMensajeError
 import com.example.mastermartini.model.Capacitacion
-import com.example.mastermartini.model.ErrorDto
 import com.example.mastermartini.model.Leccion
 import com.example.mastermartini.model.Modulo
 import retrofit2.HttpException
-import retrofit2.Response
 
 // REPOSITORIO DE CURSOS ONLINE (Capacitaciones)
 // DATOS DE EJEMPLO, no son cursos reales de la empresa.
@@ -37,7 +35,7 @@ class CapacitacionRepository {
     }
 
     // Envía un curso nuevo al microservicio con el header X-Usuario-Id
-    // Si el servidor responde con error, devuelve CursoServidorException con el código HTTP
+    // Si el servidor responde con error, devuelve ServidorException con el código HTTP
     // y el "mensaje" del ErrorDto, para que el ViewModel elija qué texto mostrar.
     suspend fun crearCapacitacion(
         usuarioId: Int,
@@ -48,7 +46,7 @@ class CapacitacionRepository {
             if (response.isSuccessful && response.body() != null) {
                 Result.success(response.body()!!)
             } else {
-                Result.failure(CursoServidorException(response.code(), leerMensajeError(response)))
+                Result.failure(ServidorException(response.code(), leerMensajeError(response)))
             }
         } catch (e: Exception) {
             Result.failure(Exception(mensajeSinConexion))
@@ -57,7 +55,7 @@ class CapacitacionRepository {
 
     // EDITA un curso en el microservicio (PUT api/cursos/{id}) con el header X-Usuario-Id.
     // Mismo manejo de errores que crearCapacitacion:
-    //   el servidor respondió con error (403, 404, 503...) -> CursoServidorException(código, mensaje)
+    //   el servidor respondió con error (403, 404, 503...) -> ServidorException(código, mensaje)
     //   no se pudo conectar                               -> Exception con mensajeSinConexion
     suspend fun actualizarCapacitacion(
         usuarioId: Int,
@@ -69,7 +67,7 @@ class CapacitacionRepository {
             if (response.isSuccessful && response.body() != null) {
                 Result.success(response.body()!!)
             } else {
-                Result.failure(CursoServidorException(response.code(), leerMensajeError(response)))
+                Result.failure(ServidorException(response.code(), leerMensajeError(response)))
             }
         } catch (e: Exception) {
             Result.failure(Exception(mensajeSinConexion))
@@ -85,24 +83,15 @@ class CapacitacionRepository {
             if (response.isSuccessful) {
                 Result.success(Unit)
             } else {
-                Result.failure(CursoServidorException(response.code(), leerMensajeError(response)))
+                Result.failure(ServidorException(response.code(), leerMensajeError(response)))
             }
         } catch (e: Exception) {
             Result.failure(Exception(mensajeSinConexion))
         }
     }
 
-    // Lee el "mensaje" del JSON de error que manda el servidor ({"mensaje","estado"}).
-    // La usan crear, actualizar y eliminar, por eso está en una sola función.
-    // Response<*>: el "*" significa "un Response de cualquier tipo" (Capacitacion o Unit).
-    // Tiene su propio try/catch: si el cuerpo no es un JSON válido, devuelve null y no se cae.
-    private fun leerMensajeError(response: Response<*>): String? {
-        return try {
-            Gson().fromJson(response.errorBody()?.string(), ErrorDto::class.java)?.mensaje
-        } catch (e: Exception) {
-            null
-        }
-    }
+    // El "mensaje" del error del servidor lo lee leerMensajeError(response), que está en
+    // data/remote/ErroresHttp.kt porque también la usa InscripcionRepository.
 
     // Devuelve los 6 cursos: primero los gratis y luego los del Plan Pro
     fun obtenerCapacitaciones(): List<Capacitacion> {

@@ -1,6 +1,7 @@
 package com.example.mastermartini.ui.screens
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -20,6 +21,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -39,10 +41,12 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -56,6 +60,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -329,6 +334,14 @@ fun CapacitacionDetalleScreen(
                             },
                             estaBloqueada = { indiceLeccion ->
                                 viewModel.estaBloqueada(indiceModulo, indiceLeccion)
+                            },
+                            // PROGRESO: solo si está inscrito las lecciones se pueden tocar
+                            inscrito = uiState.estaInscrito,
+                            estaVista = { indiceLeccion ->
+                                viewModel.estaVista(indiceModulo, indiceLeccion)
+                            },
+                            onAlternarLeccion = { indiceLeccion ->
+                                viewModel.alternarLeccion(indiceModulo, indiceLeccion)
                             }
                         )
                     }
@@ -376,38 +389,99 @@ fun CapacitacionDetalleScreen(
                     )
                 }
 
-                // h. Botón grande al final (56 dp de alto)
-                Button(
-                    // FASE 2: aquí se inscribirá al usuario (o se abrirá el Plan Pro).
-                    // Por ahora no hace nada.
-                    onClick = { },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = VerdeItaliano,
-                        contentColor = BlancoPuro
-                    ),
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(min = 56.dp)
-                ) {
-                    Text(
-                        text = if (capacitacion.esGratis) "Empezar curso gratis" else "Desbloquear con Plan Pro",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold
+                // h. INSCRIPCIÓN: si ya está inscrito se muestra su avance; si no, el botón para inscribirse.
+                if (uiState.estaInscrito) {
+                    TarjetaAvance(
+                        completadas = uiState.leccionesCompletadas,
+                        total = uiState.totalLecciones,
+                        porcentaje = uiState.porcentaje,
+                        mensajeError = uiState.mensajeErrorInscripcion,
+                        procesando = uiState.procesando,
+                        onCancelar = { viewModel.abrirConfirmacionCancelar() }
                     )
-                }
-                // Solo en los cursos del Plan Pro: la suscripción todavía no se paga en la app
-                if (!capacitacion.esGratis) {
-                    Text(
-                        text = "La suscripción se coordina con nuestro equipo de ventas",
-                        fontSize = 16.sp,
-                        color = TextoOscuro,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                } else {
+                    // Botón grande al final (56 dp de alto). Inscribe al usuario en el servidor,
+                    // que revisa el Plan Pro en los cursos que no son gratis.
+                    // Se desactiva mientras espera la respuesta, para no inscribirse dos veces.
+                    Button(
+                        onClick = { viewModel.inscribirse() },
+                        enabled = !uiState.procesando,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = VerdeItaliano,
+                            contentColor = BlancoPuro
+                        ),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 56.dp)
+                    ) {
+                        if (uiState.procesando) {
+                            // Ruedita mientras espera al servidor (igual que en Crear curso)
+                            CircularProgressIndicator(color = BlancoPuro, modifier = Modifier.size(24.dp))
+                        } else {
+                            Text(
+                                text = if (capacitacion.esGratis) "Empezar curso gratis" else "Desbloquear con Plan Pro",
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                    // Error al inscribirse (ej. falta el Plan Pro). Lo decide el ViewModel.
+                    val errorInscripcion = uiState.mensajeErrorInscripcion
+                    if (errorInscripcion != null) {
+                        Text(
+                            text = errorInscripcion,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = RojoItaliano
+                        )
+                    }
+                    // Solo en los cursos del Plan Pro: la suscripción todavía no se paga en la app
+                    if (!capacitacion.esGratis) {
+                        Text(
+                            text = "La suscripción se coordina con nuestro equipo de ventas",
+                            fontSize = 16.sp,
+                            color = TextoOscuro,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
                 }
             }
         }
+    }
+
+    // DIÁLOGO "¿Cancelar tu inscripción?": evita perder el avance por un toque accidental.
+    // Lo abre el TextButton de la tarjeta "Tu avance"; si está abierto o no lo guarda el ViewModel.
+    if (uiState.mostrarConfirmacionCancelar) {
+        AlertDialog(
+            onDismissRequest = { viewModel.cerrarConfirmacionCancelar() },
+            title = { Text(text = "Cancelar inscripción", fontWeight = FontWeight.Bold) },
+            text = {
+                Text(
+                    text = "¿Quieres cancelar tu inscripción? Se borrará el avance que llevas en este curso.",
+                    fontSize = 17.sp
+                )
+            },
+            // Botón que SÍ cancela (en rojo, porque se pierde el avance)
+            confirmButton = {
+                TextButton(
+                    onClick = { viewModel.cancelarInscripcion() },
+                    modifier = Modifier.heightIn(min = 48.dp)
+                ) {
+                    Text(text = "Cancelar inscripción", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = RojoItaliano)
+                }
+            },
+            // Botón que se arrepiente: solo cierra el diálogo
+            dismissButton = {
+                TextButton(
+                    onClick = { viewModel.cerrarConfirmacionCancelar() },
+                    modifier = Modifier.heightIn(min = 48.dp)
+                ) {
+                    Text(text = "Seguir inscrito", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = VerdeOscuro)
+                }
+            }
+        )
     }
 
     // DIÁLOGO DE CONFIRMACIÓN: evita borrar el curso por un toque accidental.
@@ -442,6 +516,87 @@ fun CapacitacionDetalleScreen(
                 }
             }
         )
+    }
+}
+
+// TARJETA "TU AVANCE" (solo si está inscrito): "X de Y lecciones · Z%", la barra de progreso
+// y el botón para cancelar la inscripción. No calcula nada: los números llegan listos del
+// ViewModel (propiedades calculadas del estado).
+@Composable
+private fun TarjetaAvance(
+    completadas: Int,
+    total: Int,
+    porcentaje: Int,
+    mensajeError: String?,
+    procesando: Boolean,
+    onCancelar: () -> Unit
+) {
+    // La barra avanza suave al marcar una lección (igual que el "paso a paso" de las recetas).
+    // LinearProgressIndicator usa un número de 0f a 1f: 37 % -> 0.37f
+    val progresoAnimado by animateFloatAsState(
+        targetValue = porcentaje / 100f,
+        label = "progresoCurso"
+    )
+
+    Card(
+        colors = CardDefaults.cardColors(containerColor = BlancoPuro),
+        border = BorderStroke(2.dp, VerdeItaliano),
+        shape = RoundedCornerShape(12.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+            modifier = Modifier.padding(16.dp)
+        ) {
+            Text(
+                text = "Tu avance",
+                fontSize = 19.sp,
+                fontWeight = FontWeight.Bold,
+                color = VerdeOscuro
+            )
+            Text(
+                text = "$completadas de $total lecciones · $porcentaje%",
+                fontSize = 17.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = TextoOscuro
+            )
+            LinearProgressIndicator(
+                progress = { progresoAnimado },
+                color = VerdeItaliano,
+                trackColor = GrisBorde,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(8.dp)
+            )
+            Text(
+                text = "Toca una lección para marcarla como vista",
+                fontSize = 16.sp,
+                color = TextoOscuro
+            )
+            // Error al marcar una lección o al cancelar (lo decide el ViewModel)
+            if (mensajeError != null) {
+                Text(
+                    text = mensajeError,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = RojoItaliano
+                )
+            }
+            // Acción secundaria y "peligrosa": TextButton rojo (no compite con el contenido).
+            // No cancela directo: abre el diálogo de confirmación. Mínimo 48 dp.
+            TextButton(
+                onClick = onCancelar,
+                enabled = !procesando,
+                modifier = Modifier.heightIn(min = 48.dp)
+            ) {
+                Text(
+                    text = "Cancelar inscripción",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = RojoItaliano
+                )
+            }
+        }
     }
 }
 
@@ -489,7 +644,12 @@ private fun BloqueModulo(
     onAlternar: () -> Unit,
     // Funciones que reciben la posición de la lección y responden true/false (reglas del ViewModel)
     esMuestraGratis: (Int) -> Boolean,
-    estaBloqueada: (Int) -> Boolean
+    estaBloqueada: (Int) -> Boolean,
+    // PROGRESO: si está inscrito, las lecciones se pueden tocar para marcarlas como vistas
+    inscrito: Boolean,
+    estaVista: (Int) -> Boolean,
+    // Recibe la posición de la lección tocada; el ViewModel la marca o desmarca en el servidor
+    onAlternarLeccion: (Int) -> Unit
 ) {
     // La flecha gira suave de 0° (cerrado, apunta abajo) a 180° (abierto, apunta arriba)
     val rotacionFlecha by animateFloatAsState(
@@ -565,7 +725,14 @@ private fun BloqueModulo(
                         numero = indiceLeccion + 1,
                         leccion = leccion,
                         esMuestraGratis = esMuestraGratis(indiceLeccion),
-                        bloqueada = estaBloqueada(indiceLeccion)
+                        bloqueada = estaBloqueada(indiceLeccion),
+                        vista = estaVista(indiceLeccion),
+                        // null = no se puede tocar (no está inscrito)
+                        onAlternar = if (inscrito) {
+                            { onAlternarLeccion(indiceLeccion) }
+                        } else {
+                            null
+                        }
                     )
                 }
             }
@@ -574,44 +741,81 @@ private fun BloqueModulo(
 }
 
 // UNA LECCIÓN: número en un círculo, título, duración y, a la derecha,
-// la etiqueta "Muestra gratis" o el candado (solo en cursos del Plan Pro).
-// FASE 2: las lecciones se podrán tocar para ver su video. Por ahora solo se muestran.
+// la etiqueta "Muestra gratis" o el candado (solo en cursos del Plan Pro, si no está inscrito).
+// Si está INSCRITO (onAlternar no es null), toda la fila se toca para marcarla como vista:
+// el número pasa a un ✓ verde, igual que los pasos de las recetas (FilaPaso en DetalleScreen).
 @Composable
 private fun FilaLeccion(
     numero: Int,
     leccion: Leccion,
     esMuestraGratis: Boolean,
-    bloqueada: Boolean
+    bloqueada: Boolean,
+    // true = la lección está marcada como vista
+    vista: Boolean,
+    // Qué hacer al tocarla. null = no se puede tocar (no está inscrito)
+    onAlternar: (() -> Unit)?
 ) {
+    // animateColorAsState: al marcarla el color cambia de a poco (no de golpe).
+    // No vista: círculo blanco con número verde. Vista: círculo verde relleno con ✓ blanco.
+    val colorFondo by animateColorAsState(
+        targetValue = if (vista) VerdeItaliano else BlancoPuro,
+        label = "fondoLeccion"
+    )
+    val colorContenido by animateColorAsState(
+        targetValue = if (vista) BlancoPuro else VerdeItaliano,
+        label = "contenidoLeccion"
+    )
+
+    // Lo que lee TalkBack en la fila: la lección y si ya está vista o no
+    val descripcion = "Lección $numero: ${leccion.titulo}, ${leccion.duracion}. " +
+            if (vista) "Vista" else "No vista"
+
+    // Si se puede tocar: toggleable con Role.Checkbox (TalkBack la anuncia como casilla
+    // marcada/no marcada) en TODA la fila, de mínimo 48 dp de alto.
+    // Modifier.then(...) agrega esos modificadores solo cuando onAlternar no es null.
+    val modificadorToque = if (onAlternar != null) {
+        Modifier
+            .toggleable(
+                value = vista,
+                role = Role.Checkbox,
+                onValueChange = { onAlternar() }
+            )
+            .semantics { contentDescription = descripcion }
+    } else {
+        Modifier
+    }
+
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .fillMaxWidth()
             .heightIn(min = 48.dp)
+            .then(modificadorToque)
             .padding(vertical = 6.dp)
     ) {
-        // Círculo con el número (mismo estilo que los pasos de la receta en DetalleScreen)
+        // Círculo con el número o el ✓ (mismo estilo que los pasos de la receta en DetalleScreen)
         Box(
             contentAlignment = Alignment.Center,
             modifier = Modifier
                 .size(36.dp)
-                .background(BlancoPuro, CircleShape)
+                .background(colorFondo, CircleShape)
                 .border(2.dp, VerdeItaliano, CircleShape)
         ) {
             Text(
-                text = "$numero",
+                text = if (vista) "✓" else "$numero",
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
-                color = VerdeItaliano
+                color = colorContenido
             )
         }
         Spacer(modifier = Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
+            // Vista: título en gris oscuro (0xFF666666), igual que los pasos completados de las recetas
             Text(
                 text = leccion.titulo,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.SemiBold,
-                color = TextoOscuro
+                color = if (vista) Color(0xFF666666) else TextoOscuro
             )
             Text(
                 text = leccion.duracion,
