@@ -28,7 +28,7 @@ class CloudinaryRepository {
 
     companion object {
         private const val BASE_URL_CLOUDINARY = "https://api.cloudinary.com/"
-        private const val CLOUD_NAME = "t5y3rddt"
+        private const val CLOUD_NAME = "ohimrm8m"
         private const val UPLOAD_PRESET = "mastermartini_videos"
     }
 
