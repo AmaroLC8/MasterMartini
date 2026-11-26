@@ -52,6 +52,7 @@ import com.example.mastermartini.ui.theme.TextoOscuro
 import com.example.mastermartini.ui.theme.VerdeItaliano
 import com.example.mastermartini.ui.theme.VerdeOscuro
 import com.example.mastermartini.viewmodel.CapacitacionesViewModel
+import androidx.compose.runtime.LaunchedEffect
 
 // PANTALLA "CURSOS ONLINE" (pestaña Cursos de la barra inferior)
 // Muestra el catálogo de cursos online con filtros, igual que RecetasScreen.
@@ -68,6 +69,9 @@ fun CapacitacionesScreen(
     // Escuchamos el estado: al tocar un filtro, el ViewModel arma un estado nuevo
     // y esta pantalla se vuelve a dibujar sola
     val uiState by viewModel.uiState.collectAsState()
+    LaunchedEffect(Unit) {
+        viewModel.recargarCapacitaciones()
+    }
 
     Scaffold(
         containerColor = BlancoHueso,

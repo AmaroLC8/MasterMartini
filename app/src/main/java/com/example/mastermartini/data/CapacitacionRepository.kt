@@ -564,6 +564,13 @@ class CapacitacionRepository {
     fun obtenerCapacitacionPorId(id: Int): Capacitacion? {
         return obtenerCapacitaciones().find { capacitacion -> capacitacion.id == id }
     }
+    suspend fun obtenerCapacitacionPorIdRemoto(id: Int): Capacitacion? {
+        return try {
+            obtenerCapacitacionesRemotas().find { it.id == id }
+        } catch (e: Exception) {
+            obtenerCapacitacionPorId(id)
+        }
+    }
 
 
 }
