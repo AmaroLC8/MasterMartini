@@ -57,7 +57,7 @@ fun ReproductorVideoLocal(
                     .padding(16.dp)
             ) {
                 Text(
-                    text = "🎥 Video técnico próximamente disponible en la nube",
+                    text = "🎥 Video en la nube próximamente disponible",
                     fontSize = 15.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = TextoOscuro,
@@ -68,9 +68,7 @@ fun ReproductorVideoLocal(
         return
     }
 
-    val uriVideo = remember(videoUrl) {
-        Uri.parse(videoUrl)
-    }
+    val uriVideo = remember(videoUrl) { Uri.parse(videoUrl) }
 
     val exoPlayer = remember(uriVideo) {
         ExoPlayer.Builder(context).build().apply {
@@ -82,9 +80,7 @@ fun ReproductorVideoLocal(
     }
 
     DisposableEffect(exoPlayer) {
-        onDispose {
-            exoPlayer.release()
-        }
+        onDispose { exoPlayer.release() }
     }
 
     AndroidView(

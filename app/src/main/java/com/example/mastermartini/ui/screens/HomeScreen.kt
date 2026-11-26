@@ -180,7 +180,19 @@ fun HomeScreen(
                 }
             }
 
-
+            // 2. MasterClass: video destacado
+            item {
+                Text(
+                    text = "Home",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp,
+                    color = textoOscuro
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+                ReproductorVideoLocal(
+                    videoUrl = "https://res.cloudinary.com/t5y3rddt/video/upload/v1795651333/6605708-hd_1920_1080_25fps.mp4"
+                )
+            }
 
             // 3. Tarjeta de Bienvenida con Datos del Perfil
             item {
