@@ -51,6 +51,18 @@ sealed class Rol(val codigo: String, val nombreVisible: String) {
     // ¿Puede responder las preguntas de los alumnos en los cursos?
     abstract val puedeResponderPreguntas: Boolean
 
+    // CURSOS ONLINE: ¿qué botones ve en el detalle de un curso?
+    // OJO: esto SOLO decide qué botones se muestran. El servidor de cursos IGUAL revisa los
+    // permisos en cada petición (y responde 403 si no corresponde), así nadie se salta la regla.
+
+    // ¿Puede editar ESTE curso? Recibe el id del dueño del curso y el id de quien está conectado.
+    // Es una FUNCIÓN (y no una propiedad) porque la respuesta depende del curso:
+    // un Instructor puede editar sus cursos, pero no los de otro instructor.
+    abstract fun puedeEditarCurso(instructorIdDelCurso: Long?, miId: Long?): Boolean
+
+    // ¿Puede eliminar cursos? (backend: solo ADMINISTRADOR)
+    abstract val puedeEliminarCursos: Boolean
+
     // Botones de su "Panel de trabajo" en el Perfil (título, descripción y ruta).
     // Vacía = no tiene panel. PerfilScreen solo recorre esta lista: NO pregunta qué rol es.
     abstract fun opcionesPanel(): List<OpcionPanel>
@@ -63,6 +75,9 @@ sealed class Rol(val codigo: String, val nombreVisible: String) {
         override val puedeGestionarPlanPro = false
         override val puedeGestionarUsuarios = false
         override val puedeResponderPreguntas = false
+        // No edita ni elimina cursos (los parámetros no se usan: siempre responde false)
+        override fun puedeEditarCurso(instructorIdDelCurso: Long?, miId: Long?) = false
+        override val puedeEliminarCursos = false
         // Sin panel de trabajo
         override fun opcionesPanel(): List<OpcionPanel> = emptyList()
     }
@@ -72,6 +87,14 @@ sealed class Rol(val codigo: String, val nombreVisible: String) {
         override val puedeGestionarPlanPro = false
         override val puedeGestionarUsuarios = false
         override val puedeResponderPreguntas = true
+        // Edita SOLO sus propios cursos: el dueño del curso debe ser él.
+        // Si alguno de los dos es null (curso local sin dueño, o sin sesión), NO puede:
+        // así dos null no cuentan como "iguales".
+        override fun puedeEditarCurso(instructorIdDelCurso: Long?, miId: Long?): Boolean {
+            return instructorIdDelCurso != null && miId != null && instructorIdDelCurso == miId
+        }
+        // No elimina cursos (solo el Administrador)
+        override val puedeEliminarCursos = false
         // Ninguna por ahora. Se agregan cuando se conecten los cursos
         // (ej. "Mis cursos" y "Preguntas de alumnos").
         override fun opcionesPanel(): List<OpcionPanel> = listOf(OPCION_CREAR_CURSO)
@@ -82,6 +105,9 @@ sealed class Rol(val codigo: String, val nombreVisible: String) {
         override val puedeGestionarPlanPro = true
         override val puedeGestionarUsuarios = false
         override val puedeResponderPreguntas = false
+        // Ventas gestiona suscripciones, no cursos: no edita ni elimina
+        override fun puedeEditarCurso(instructorIdDelCurso: Long?, miId: Long?) = false
+        override val puedeEliminarCursos = false
         override fun opcionesPanel(): List<OpcionPanel> = listOf(OPCION_CLIENTES)
     }
 
@@ -90,6 +116,9 @@ sealed class Rol(val codigo: String, val nombreVisible: String) {
         override val puedeGestionarPlanPro = true
         override val puedeGestionarUsuarios = true
         override val puedeResponderPreguntas = true
+        // Edita CUALQUIER curso (sea de quien sea) y puede eliminarlos
+        override fun puedeEditarCurso(instructorIdDelCurso: Long?, miId: Long?) = true
+        override val puedeEliminarCursos = true
         // Lo mismo que Ventas, más la gestión de usuarios
         override fun opcionesPanel(): List<OpcionPanel> = listOf(OPCION_CLIENTES, OPCION_USUARIOS,OPCION_CREAR_CURSO)
     }

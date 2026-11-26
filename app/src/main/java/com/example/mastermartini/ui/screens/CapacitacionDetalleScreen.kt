@@ -27,11 +27,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.MenuBook
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.SignalCellularAlt
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -43,6 +46,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -69,6 +73,7 @@ import com.example.mastermartini.ui.theme.BlancoHueso
 import com.example.mastermartini.ui.theme.BlancoPuro
 import com.example.mastermartini.ui.theme.DoradoCalidad
 import com.example.mastermartini.ui.theme.GrisBorde
+import com.example.mastermartini.ui.theme.RojoItaliano
 import com.example.mastermartini.ui.theme.TextoOscuro
 import com.example.mastermartini.ui.theme.VerdeItaliano
 import com.example.mastermartini.ui.theme.VerdeOscuro
@@ -88,12 +93,25 @@ fun CapacitacionDetalleScreen(
     // Vuelve a la lista de cursos (popBackStack en MainActivity)
     onVolver: () -> Unit,
     // Recibe el id del producto principal; MainActivity navega a "producto/{id}"
-    onVerProducto: (Int) -> Unit
+    onVerProducto: (Int) -> Unit,
+    // Botón "Editar curso": recibe el id; MainActivity navega a "panel/editar-curso/{id}"
+    onEditar: (Int) -> Unit,
+    // Se llama cuando el servidor eliminó el curso: MainActivity vuelve a la lista de cursos
+    // (popBackStack), que se recarga sola al entrar y ya no lo muestra.
+    onEliminado: () -> Unit
 ) {
-    // Se ejecuta UNA vez al abrir la pantalla (y de nuevo solo si cambia el id),
-    // igual que en DetalleScreen. El ViewModel busca el curso en el servidor.
+    // LaunchedEffect se ejecuta cada vez que la pantalla ENTRA a la composición.
+    // Al ir a "Editar curso" esta pantalla sale, y al volver entra de nuevo (el ViewModel sobrevive):
+    //   - Si el curso todavía no está cargado (primera vez): cargarCapacitacion.
+    //   - Si ya estaba cargado (ej. al volver de Editar): recargarCapacitacion, que lo vuelve
+    //     a pedir al servidor para mostrar los datos nuevos, sin cerrar los módulos abiertos.
+    // Se lee viewModel.uiState.value (el valor de este momento), solo para elegir cuál llamar.
     LaunchedEffect(capacitacionId) {
-        viewModel.cargarCapacitacion(capacitacionId)
+        if (viewModel.uiState.value.capacitacion?.id == capacitacionId) {
+            viewModel.recargarCapacitacion(capacitacionId)
+        } else {
+            viewModel.cargarCapacitacion(capacitacionId)
+        }
     }
 
     // Escuchamos el estado: al llegar el curso o al abrir/cerrar un módulo, la pantalla se redibuja sola
@@ -192,6 +210,59 @@ fun CapacitacionDetalleScreen(
                     fontWeight = FontWeight.Bold,
                     color = VerdeOscuro
                 )
+
+                // BOTONES DE GESTIÓN DEL CURSO. Solo aparecen si el ViewModel lo permite
+                // (lo decide el Rol de la sesión con polimorfismo; la pantalla no pregunta qué rol es).
+                // Ícono + texto, y al menos 48 dp de alto.
+                if (uiState.puedeEditar) {
+                    OutlinedButton(
+                        onClick = { onEditar(capacitacion.id) },
+                        border = BorderStroke(2.dp, VerdeItaliano),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = VerdeOscuro),
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 48.dp)
+                    ) {
+                        Icon(imageVector = Icons.Filled.Edit, contentDescription = null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(text = "Editar curso", fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+                if (uiState.puedeEliminar) {
+                    // Rojo (color de error) porque es una acción peligrosa, igual que "Cerrar sesión".
+                    // No borra directo: abre el diálogo de confirmación.
+                    // Se desactiva mientras se está eliminando, para no tocarlo dos veces.
+                    OutlinedButton(
+                        onClick = { viewModel.abrirConfirmacionEliminar() },
+                        enabled = !uiState.eliminando,
+                        border = BorderStroke(2.dp, RojoItaliano),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = RojoItaliano),
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 48.dp)
+                    ) {
+                        Icon(imageVector = Icons.Filled.Delete, contentDescription = null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = if (uiState.eliminando) "Eliminando..." else "Eliminar curso",
+                            fontSize = 17.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+                // Mensaje de error en rojo (ej. sin permiso para eliminar). Lo decide el ViewModel.
+                // Se copia a una variable local para usarla sin "!!".
+                val mensajeError = uiState.mensajeError
+                if (mensajeError != null) {
+                    Text(
+                        text = mensajeError,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = RojoItaliano
+                    )
+                }
 
                 // b. Video resumen. Se ve SIEMPRE, aunque el curso sea del Plan Pro:
                 //    sirve para que la persona conozca el curso antes de suscribirse.
@@ -337,6 +408,40 @@ fun CapacitacionDetalleScreen(
                 }
             }
         }
+    }
+
+    // DIÁLOGO DE CONFIRMACIÓN: evita borrar el curso por un toque accidental.
+    // Lo abre el botón "Eliminar curso"; si está abierto o no lo guarda el ViewModel.
+    // onDismissRequest: se llama al tocar fuera del diálogo o con Atrás (= cancelar).
+    if (uiState.mostrarConfirmacionEliminar) {
+        AlertDialog(
+            onDismissRequest = { viewModel.cerrarConfirmacionEliminar() },
+            title = { Text(text = "Eliminar curso", fontWeight = FontWeight.Bold) },
+            text = {
+                Text(
+                    text = "¿Eliminar este curso? Esta acción no se puede deshacer",
+                    fontSize = 17.sp
+                )
+            },
+            // Botón que SÍ elimina (en rojo). Si sale bien, onEliminado vuelve a la lista.
+            confirmButton = {
+                TextButton(
+                    onClick = { viewModel.eliminarCurso(onEliminado = onEliminado) },
+                    modifier = Modifier.heightIn(min = 48.dp)
+                ) {
+                    Text(text = "Eliminar", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = RojoItaliano)
+                }
+            },
+            // Botón que se arrepiente: solo cierra el diálogo
+            dismissButton = {
+                TextButton(
+                    onClick = { viewModel.cerrarConfirmacionEliminar() },
+                    modifier = Modifier.heightIn(min = 48.dp)
+                ) {
+                    Text(text = "Cancelar", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = VerdeOscuro)
+                }
+            }
+        )
     }
 }
 

@@ -23,9 +23,11 @@ import com.example.mastermartini.ui.components.ChipOpcion
 import com.example.mastermartini.ui.theme.*
 import com.example.mastermartini.viewmodel.CrearCursoViewModel
 
-// PANTALLA "CREAR CURSO ONLINE" (la abre un Instructor o Administrador)
+// PANTALLA "CREAR CURSO ONLINE" / "EDITAR CURSO ONLINE" (la abre un Instructor o Administrador)
 // Formulario para publicar un curso nuevo en el microservicio de cursos, con el enlace
-// del video subido a Cloudinary. Solo DIBUJA lo que le entrega CrearCursoViewModel (MVVM):
+// del video subido a Cloudinary. La MISMA pantalla sirve para editar un curso que ya existe:
+// si llega un capacitacionId, se abre en modo edición con los datos del curso.
+// Solo DIBUJA lo que le entrega CrearCursoViewModel (MVVM):
 // las validaciones, el envío y los mensajes de error se deciden en el ViewModel.
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -33,13 +35,25 @@ fun CrearCursoScreen(
     // ViewModel con lo escrito en el formulario (lo crea MainActivity)
     viewModel: CrearCursoViewModel,
     // Flecha de volver y también al guardar con éxito: MainActivity vuelve atrás (popBackStack)
-    onVolver: () -> Unit
+    onVolver: () -> Unit,
+    // Id del curso a EDITAR (viene de la ruta "panel/editar-curso/{id}").
+    // null (valor por defecto) = se está creando un curso nuevo ("panel/crear-curso").
+    capacitacionId: Int? = null
 ) {
     // Escuchamos el estado: cada letra que se escribe genera un estado nuevo y la pantalla se redibuja
     val uiState by viewModel.uiState.collectAsState()
 
+    // MODO EDICIÓN: al abrir la pantalla con un id, se le pide al ViewModel que cargue ese curso
+    // y rellene el formulario (si ya lo cargó, no hace nada, ver cargarParaEditar).
+    LaunchedEffect(capacitacionId) {
+        if (capacitacionId != null) {
+            viewModel.cargarParaEditar(capacitacionId)
+        }
+    }
+
     // Se ejecuta cada vez que cambia guardadoExitoso. Cuando el servidor guardó el curso
-    // (pasa a true), se vuelve atrás sola; al volver a Cursos, la lista se recarga y aparece el curso nuevo.
+    // (pasa a true), se vuelve atrás sola. Al crear vuelve al Perfil/Cursos (la lista se recarga
+    // y aparece el curso nuevo); al editar vuelve al detalle, que se recarga con los datos nuevos.
     LaunchedEffect(uiState.guardadoExitoso) {
         if (uiState.guardadoExitoso) {
             onVolver()
@@ -51,7 +65,13 @@ fun CrearCursoScreen(
         topBar = {
             // Barra verde con la flecha para volver (mismo estilo que las demás pantallas)
             TopAppBar(
-                title = { Text("Crear curso online", fontWeight = FontWeight.Bold) },
+                // El título cambia según el modo (lo dice el estado del ViewModel)
+                title = {
+                    Text(
+                        text = if (uiState.esEdicion) "Editar curso online" else "Crear curso online",
+                        fontWeight = FontWeight.Bold
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = onVolver) {
                         Icon(
@@ -163,20 +183,30 @@ fun CrearCursoScreen(
                 )
             }
 
-            // PRIMER MÓDULO Y PRIMERA LECCIÓN (el backend exige al menos uno de cada uno)
-            OutlinedTextField(
-                value = uiState.tituloModulo,
-                onValueChange = viewModel::onTituloModuloChange,
-                label = { Text("Nombre del Módulo 1") },
-                modifier = Modifier.fillMaxWidth()
-            )
+            // PRIMER MÓDULO Y PRIMERA LECCIÓN (el backend exige al menos uno de cada uno).
+            // Solo al CREAR. Al EDITAR se ocultan: los módulos y lecciones del curso se envían
+            // tal como estaban (el ViewModel los copia del curso original), y se avisa con un texto.
+            if (uiState.esEdicion) {
+                Text(
+                    text = "Los módulos y lecciones del curso se mantienen sin cambios",
+                    fontSize = 16.sp,
+                    color = TextoOscuro
+                )
+            } else {
+                OutlinedTextField(
+                    value = uiState.tituloModulo,
+                    onValueChange = viewModel::onTituloModuloChange,
+                    label = { Text("Nombre del Módulo 1") },
+                    modifier = Modifier.fillMaxWidth()
+                )
 
-            OutlinedTextField(
-                value = uiState.tituloLeccion,
-                onValueChange = viewModel::onTituloLeccionChange,
-                label = { Text("Nombre de la Lección 1") },
-                modifier = Modifier.fillMaxWidth()
-            )
+                OutlinedTextField(
+                    value = uiState.tituloLeccion,
+                    onValueChange = viewModel::onTituloLeccionChange,
+                    label = { Text("Nombre de la Lección 1") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
 
             // Mensaje de error en rojo (lo decide el ViewModel: campos vacíos, sin sesión, 403, 503...)
             if (uiState.mensajeError != null) {
@@ -203,7 +233,11 @@ fun CrearCursoScreen(
                 } else {
                     Icon(Icons.Filled.CloudUpload, contentDescription = null, tint = BlancoPuro)
                     Spacer(Modifier.width(8.dp))
-                    Text("Publicar curso", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                    Text(
+                        text = if (uiState.esEdicion) "Guardar cambios" else "Publicar curso",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
             }
         }

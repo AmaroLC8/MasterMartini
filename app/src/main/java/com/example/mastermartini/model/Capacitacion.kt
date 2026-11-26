@@ -21,6 +21,12 @@ data class Capacitacion(
     val esGratis: Boolean,
     // Nombre del instructor (inventado, ver CapacitacionRepository)
     val instructor: String,
+    // Id del USUARIO dueño del curso (el instructor que lo creó), tal como lo manda el
+    // microservicio de cursos en el JSON ("instructorId"). Sirve para saber si quien está
+    // conectado puede EDITAR este curso (ver Rol.puedeEditarCurso).
+    // Los cursos locales de respaldo no tienen dueño: quedan en null (nadie salvo el
+    // Administrador ve el botón "Editar curso").
+    val instructorId: Long? = null,
     // Duración de todo el curso como texto, ej. "2 h 30 min"
     val duracionTotal: String,
     // Nombre EXACTO de un producto de ProductoRepository. Así el Detalle lo encuentra

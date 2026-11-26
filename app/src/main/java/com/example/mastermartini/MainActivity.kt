@@ -349,7 +349,11 @@ class MainActivity : ComponentActivity() {
                                 viewModel = capacitacionDetalleViewModel,
                                 onVolver = { navController.popBackStack() },
                                 // El producto principal abre su detalle: ej. "producto/9"
-                                onVerProducto = { id -> navController.navigate("producto/$id") }
+                                onVerProducto = { id -> navController.navigate("producto/$id") },
+                                // "Editar curso" abre el formulario en modo edición: ej. "panel/editar-curso/4"
+                                onEditar = { id -> navController.navigate("panel/editar-curso/$id") },
+                                // Curso eliminado: se saca el detalle de la pila y se vuelve a la lista
+                                onEliminado = { navController.popBackStack() }
                             )
                         }
 
@@ -420,6 +424,24 @@ class MainActivity : ComponentActivity() {
                             com.example.mastermartini.ui.screens.CrearCursoScreen(
                                 viewModel = crearCursoViewModel,
                                 onVolver = { navController.popBackStack() }
+                            )
+                        }
+
+                        // EDITAR UN CURSO ONLINE: la MISMA pantalla y el MISMO ViewModel que "Crear curso",
+                        // pero con el id del curso en la ruta (IntType = llega como número).
+                        // Al pasar capacitacionId, CrearCursoScreen se abre en modo edición.
+                        // Pila [... capacitacion/4, panel/editar-curso/4]: al guardar, popBackStack vuelve al detalle.
+                        composable(
+                            route = "panel/editar-curso/{capacitacionId}",
+                            arguments = listOf(navArgument("capacitacionId") { type = NavType.IntType })
+                        ) { backStackEntry ->
+                            val capacitacionId = backStackEntry.arguments?.getInt("capacitacionId") ?: 0
+                            // viewModel() crea uno NUEVO para esta ruta (no comparte datos con "Crear curso")
+                            val editarCursoViewModel: com.example.mastermartini.viewmodel.CrearCursoViewModel = viewModel()
+                            com.example.mastermartini.ui.screens.CrearCursoScreen(
+                                viewModel = editarCursoViewModel,
+                                onVolver = { navController.popBackStack() },
+                                capacitacionId = capacitacionId
                             )
                         }
                     }
