@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.Image
 import androidx.compose.ui.res.painterResource
 import com.example.mastermartini.R
+import com.example.mastermartini.data.DatosEmpresa
 import com.example.mastermartini.viewmodel.HomeViewModel
 
 import androidx.compose.foundation.BorderStroke
@@ -183,14 +184,15 @@ fun HomeScreen(
             // 2. MasterClass: video destacado
             item {
                 Text(
-                    text = "Home",
+                    text = "🎥 MasterClass destacada",
                     fontWeight = FontWeight.Bold,
                     fontSize = 16.sp,
                     color = textoOscuro
                 )
                 Spacer(modifier = Modifier.height(6.dp))
+                // El enlace del video está en DatosEmpresa (no escrito en la pantalla)
                 ReproductorVideoLocal(
-                    videoUrl = "https://res.cloudinary.com/t5y3rddt/video/upload/v1795651333/6605708-hd_1920_1080_25fps.mp4"
+                    videoUrl = DatosEmpresa.URL_VIDEO_MASTERCLASS
                 )
             }
 

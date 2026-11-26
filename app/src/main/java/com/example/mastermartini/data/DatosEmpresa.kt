@@ -32,4 +32,10 @@ object DatosEmpresa {
     // Va en pesos chilenos al mes y como Int (número entero): el peso chileno no usa decimales.
     // Lo usa CapacitacionesViewModel, que lo convierte en el texto "$9.990".
     const val PRECIO_PLAN_PRO = 9990
+
+    // VIDEO DE LA MASTERCLASS DESTACADA que se ve en el Home (lo usa HomeScreen).
+    // Está subido a Cloudinary (servicio en la nube para guardar videos) y se reproduce por internet,
+    // así el video no ocupa espacio dentro de la app. Para cambiar el video, se cambia solo este enlace.
+    const val URL_VIDEO_MASTERCLASS =
+        "https://res.cloudinary.com/t5y3rddt/video/upload/v1795651333/6605708-hd_1920_1080_25fps.mp4"
 }
