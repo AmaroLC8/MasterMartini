@@ -145,6 +145,36 @@ El emulador no tiene GPS real, así que la ubicación se le entrega a mano:
 
 ---
 
+## Pruebas unitarias
+
+Las pruebas están en `app/src/test` y usan **Kotest** (StringSpec), **MockK** y **kotlinx-coroutines-test**. La cobertura se mide con **Kover**. No necesitan emulador ni backend, porque Retrofit, Room y SharedPreferences se simulan con MockK.
+
+**Ejecutar las pruebas y generar el reporte de cobertura** (en Windows, desde la raíz del proyecto):
+
+```
+.\gradlew.bat testDebugUnitTest koverHtmlReportDebug
+```
+
+**Ver el reporte:** abrir `app/build/reports/kover/htmlDebug/index.html` en el navegador.
+
+**Revisar el mínimo de 80 % de líneas:** `.\gradlew.bat koverVerifyDebug` (por ahora solo muestra un aviso si la cobertura queda bajo el 80 %).
+
+Kover mide solo la lógica (`viewmodel`, `data` y `model`). Esto queda fuera del cálculo:
+
+| Exclusión | Motivo |
+|---|---|
+| `ui.*` (pantallas, componentes y `theme`) | Son composables visuales y se prueban con pruebas de interfaz, no unitarias. |
+| `MainActivity` | Solo arranca Compose y la navegación, no tiene lógica de negocio. |
+| `*_Impl` | Código que Room genera automáticamente, no lo escribimos nosotros. |
+| `data.remote.*Api` y `*ApiService` | Son interfaces de Retrofit: solo declaran los endpoints y no tienen código. |
+| `RetrofitClient` | Solo configura Retrofit y OkHttp. En las pruebas se reemplaza con `mockkObject`. |
+| `MasterMartiniDatabase` | Solo crea la base de datos Room, y para eso necesita un dispositivo Android. |
+| `FotoRepository` | Solo envuelve la cámara y la galería de Android. |
+| `UbicacionRepository` | Solo envuelve el GPS de Google Play Services. |
+| `CloudinaryRepository` | Solo lee el archivo del dispositivo y lo sube con Retrofit. |
+
+---
+
 ## Nota
 
 Todos los datos de la aplicación (cursos, chefs, insumos y perfiles) son **ficticios** y el proyecto tiene **fines exclusivamente académicos** para la asignatura DSY1105 de Duoc UC.
