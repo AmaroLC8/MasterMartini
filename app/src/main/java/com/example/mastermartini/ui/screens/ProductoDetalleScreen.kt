@@ -25,6 +25,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -32,6 +33,7 @@ import androidx.compose.ui.unit.sp
 import com.example.mastermartini.ui.components.BotonCatalogoPdf
 import com.example.mastermartini.ui.components.ContactoVentas
 import com.example.mastermartini.ui.components.EtiquetaVegana
+import com.example.mastermartini.ui.components.ImagenCabeceraCatalogo
 import com.example.mastermartini.ui.components.TarjetaReceta
 import com.example.mastermartini.ui.theme.BlancoHueso
 import com.example.mastermartini.ui.theme.BlancoPuro
@@ -108,6 +110,17 @@ fun ProductoDetalleScreen(
                     .verticalScroll(rememberScrollState())
                     .padding(16.dp)
             ) {
+                // Imagen del envase con ajuste Fit y fondo blanco limpio
+                ImagenCabeceraCatalogo(
+                    imagenUrl = producto.imagenUrl,
+                    descripcion = producto.nombre,
+                    categoriaOTema = producto.linea,
+                    alto = 190.dp,
+                    contentScale = ContentScale.Fit,
+                    fondoContenedor = BlancoPuro,
+                    forma = RoundedCornerShape(14.dp)
+                )
+
                 Text(
                     text = producto.nombre,
                     fontSize = 26.sp,

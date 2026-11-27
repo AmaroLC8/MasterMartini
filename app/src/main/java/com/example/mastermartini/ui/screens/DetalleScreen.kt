@@ -31,6 +31,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
@@ -40,6 +41,7 @@ import androidx.compose.ui.unit.sp
 import com.example.mastermartini.ui.components.ContactoVentas
 import com.example.mastermartini.ui.components.DatoConIcono
 import com.example.mastermartini.ui.components.EtiquetaVegana
+import com.example.mastermartini.ui.components.ImagenCabeceraCatalogo
 import com.example.mastermartini.ui.theme.*
 import com.example.mastermartini.viewmodel.DetalleViewModel
 
@@ -117,6 +119,16 @@ fun DetalleScreen(
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
+                // Imagen principal de la receta antes de la ficha descriptiva
+                ImagenCabeceraCatalogo(
+                    imagenUrl = cursoActual.imagenUrl,
+                    descripcion = cursoActual.titulo,
+                    categoriaOTema = cursoActual.categoria,
+                    alto = 190.dp,
+                    contentScale = ContentScale.Crop,
+                    forma = RoundedCornerShape(14.dp)
+                )
+
                 Card(
                     colors = CardDefaults.cardColors(containerColor = BlancoPuro),
                     elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),

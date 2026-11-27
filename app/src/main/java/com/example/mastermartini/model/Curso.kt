@@ -14,5 +14,6 @@ data class Curso(
     val rendimiento: String,
     val dificultad: String,
     val esVegano: Boolean = false,
-    val videoUrl: String? = null
+    val videoUrl: String? = null,
+    val imagenUrl: String? = null
 )

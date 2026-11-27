@@ -18,6 +18,7 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
@@ -29,6 +30,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -36,8 +38,10 @@ import androidx.compose.ui.unit.sp
 import com.example.mastermartini.model.Producto
 import com.example.mastermartini.ui.components.BotonCatalogoPdf
 import com.example.mastermartini.ui.components.EtiquetaVegana
+import com.example.mastermartini.ui.components.ImagenCabeceraCatalogo
 import com.example.mastermartini.ui.theme.BlancoHueso
 import com.example.mastermartini.ui.theme.BlancoPuro
+import com.example.mastermartini.ui.theme.GrisBorde
 import com.example.mastermartini.ui.theme.TextoOscuro
 import com.example.mastermartini.ui.theme.VerdeItaliano
 import com.example.mastermartini.ui.theme.VerdeOscuro
@@ -119,35 +123,49 @@ private fun TarjetaProducto(
         shape = RoundedCornerShape(14.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(16.dp)
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = producto.nombre,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = TextoOscuro
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = producto.descripcion,
-                    fontSize = 15.sp,
-                    color = TextoOscuro,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
-                if (producto.esVegano) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    EtiquetaVegana()
-                }
-            }
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = null,
-                tint = VerdeOscuro
+        Column {
+            // Cabecera visual con ajuste Fit sobre fondo blanco para no recortar el envase
+            ImagenCabeceraCatalogo(
+                imagenUrl = producto.imagenUrl,
+                descripcion = producto.nombre,
+                categoriaOTema = producto.linea,
+                alto = 135.dp,
+                contentScale = ContentScale.Fit,
+                fondoContenedor = BlancoPuro,
+                insigniaTexto = producto.linea
             )
+            HorizontalDivider(color = GrisBorde.copy(alpha = 0.4f))
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(16.dp)
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = producto.nombre,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = TextoOscuro
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = producto.descripcion,
+                        fontSize = 15.sp,
+                        color = TextoOscuro,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    if (producto.esVegano) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        EtiquetaVegana()
+                    }
+                }
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    contentDescription = null,
+                    tint = VerdeOscuro
+                )
+            }
         }
     }
 }

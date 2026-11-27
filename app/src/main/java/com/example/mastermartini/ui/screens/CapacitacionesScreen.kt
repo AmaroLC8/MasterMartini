@@ -1,7 +1,6 @@
 package com.example.mastermartini.ui.screens
 
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -39,6 +38,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -46,6 +46,7 @@ import com.example.mastermartini.model.Capacitacion
 import com.example.mastermartini.ui.components.ChipOpcion
 import com.example.mastermartini.ui.components.EtiquetaAcceso
 import com.example.mastermartini.ui.components.EtiquetaVegana
+import com.example.mastermartini.ui.components.ImagenCabeceraCatalogo
 import com.example.mastermartini.ui.theme.BlancoHueso
 import com.example.mastermartini.ui.theme.BlancoPuro
 import com.example.mastermartini.ui.theme.DoradoCalidad
@@ -263,84 +264,87 @@ private fun TarjetaCapacitacion(
         shape = RoundedCornerShape(14.dp),
         modifier = modifier.fillMaxWidth()
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                EtiquetaAcceso(esGratis = capacitacion.esGratis)
-                Text(
-                    text = capacitacion.categoria,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = BlancoPuro,
-                    modifier = Modifier
-                        .background(VerdeItaliano, RoundedCornerShape(50))
-                        .padding(horizontal = 12.dp, vertical = 4.dp)
-                )
-                if (capacitacion.esVegano) {
-                    EtiquetaVegana()
-                }
-            }
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = capacitacion.titulo,
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold,
-                color = TextoOscuro
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = "Nivel: ${capacitacion.nivel}",
-                fontSize = 16.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = VerdeOscuro
-            )
-            Text(
-                text = "${capacitacion.modulos.size} módulos · ${capacitacion.totalLecciones} lecciones",
-                fontSize = 16.sp,
-                color = TextoOscuro
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    imageVector = Icons.Outlined.Schedule,
-                    contentDescription = null,
-                    tint = DoradoCalidad,
-                    modifier = Modifier.size(18.dp)
-                )
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(
-                    text = "Duración: ${capacitacion.duracionTotal}",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = RojoItaliano
-                )
-            }
-            Text(
-                text = "Instructor: ${capacitacion.instructor}",
-                fontSize = 16.sp,
-                color = TextoOscuro
+        Column {
+            // Cabecera visual del curso con categoría en esquina superior derecha
+            ImagenCabeceraCatalogo(
+                imagenUrl = capacitacion.imagenUrl,
+                descripcion = capacitacion.titulo,
+                categoriaOTema = capacitacion.categoria,
+                alto = 135.dp,
+                contentScale = ContentScale.Crop,
+                insigniaTexto = capacitacion.categoria
             )
 
-            TextButton(
-                onClick = { onVerCapacitacion(capacitacion.id) },
-                modifier = Modifier
-                    .align(Alignment.End)
-                    .heightIn(min = 48.dp)
-            ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    EtiquetaAcceso(esGratis = capacitacion.esGratis)
+                    if (capacitacion.esVegano) {
+                        EtiquetaVegana()
+                    }
+                }
+                Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "Ver curso",
-                    fontSize = 16.sp,
+                    text = capacitacion.titulo,
+                    fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
+                    color = TextoOscuro
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "Nivel: ${capacitacion.nivel}",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.SemiBold,
                     color = VerdeOscuro
                 )
-                Spacer(modifier = Modifier.width(4.dp))
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                    contentDescription = null,
-                    tint = VerdeOscuro
+                Text(
+                    text = "${capacitacion.modulos.size} módulos · ${capacitacion.totalLecciones} lecciones",
+                    fontSize = 16.sp,
+                    color = TextoOscuro
                 )
+                Spacer(modifier = Modifier.height(4.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Outlined.Schedule,
+                        contentDescription = null,
+                        tint = DoradoCalidad,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "Duración: ${capacitacion.duracionTotal}",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = RojoItaliano
+                    )
+                }
+                Text(
+                    text = "Instructor: ${capacitacion.instructor}",
+                    fontSize = 16.sp,
+                    color = TextoOscuro
+                )
+
+                TextButton(
+                    onClick = { onVerCapacitacion(capacitacion.id) },
+                    modifier = Modifier
+                        .align(Alignment.End)
+                        .heightIn(min = 48.dp)
+                ) {
+                    Text(
+                        text = "Ver curso",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = VerdeOscuro
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                        contentDescription = null,
+                        tint = VerdeOscuro
+                    )
+                }
             }
         }
     }

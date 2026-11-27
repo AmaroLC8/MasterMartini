@@ -15,14 +15,16 @@ class ProductoRepository {
                 nombre = "Gran Master Hoja",
                 linea = "Margarinas",
                 descripcion = "Margarina italiana de alto rendimiento para masas de hoja y danesas: croissants, palmeras y vol au vent.",
-                usos = listOf("Croissants y masas danesas", "Palmeras", "Vol au vent")
+                usos = listOf("Croissants y masas danesas", "Palmeras", "Vol au vent"),
+                imagenUrl = DatosEmpresa.URL_IMG_PROD_CREMAS_OTROS
             ),
             Producto(
                 id = 2,
                 nombre = "Master Export Horneo",
                 linea = "Margarinas",
                 descripcion = "Margarina para horneo de masas dulces y saladas.",
-                usos = listOf("Brioche y panes dulces", "Queques y masas dulces", "Masas saladas horneadas")
+                usos = listOf("Brioche y panes dulces", "Queques y masas dulces", "Masas saladas horneadas"),
+                imagenUrl = DatosEmpresa.URL_IMG_PROD_CREMAS_OTROS
             ),
 
             Producto(
@@ -34,7 +36,8 @@ class ProductoRepository {
                     "Reemplazar la grasa habitual en panes y masas",
                     "Productos sin grasas trans",
                     "Alargar la vida útil de lo que se vende"
-                )
+                ),
+                imagenUrl = DatosEmpresa.URL_IMG_PROD_CREMAS_OTROS
             ),
 
             Producto(
@@ -42,28 +45,32 @@ class ProductoRepository {
                 nombre = "Bravo Crem",
                 linea = "Cremas vegetales",
                 descripcion = "Crema vegetal azucarada, lista para batir.",
-                usos = listOf("Crema batida para decorar tortas", "Rellenos batidos")
+                usos = listOf("Crema batida para decorar tortas", "Rellenos batidos"),
+                imagenUrl = DatosEmpresa.URL_IMG_PROD_CREMAS_OTROS
             ),
             Producto(
                 id = 5,
                 nombre = "Decor Up",
                 linea = "Cremas vegetales",
                 descripcion = "Crema vegetal azucarada para rellenos y pastelería tradicional.",
-                usos = listOf("Rellenos de tortas", "Ganache y pastelería tradicional")
+                usos = listOf("Rellenos de tortas", "Ganache y pastelería tradicional"),
+                imagenUrl = DatosEmpresa.URL_IMG_PROD_CREMAS_OTROS
             ),
             Producto(
                 id = 6,
                 nombre = "Monnalisa",
                 linea = "Cremas vegetales",
                 descripcion = "Crema vegetal para decoraciones de alta precisión y coberturas.",
-                usos = listOf("Decoraciones con manga de alta precisión", "Coberturas de tortas")
+                usos = listOf("Decoraciones con manga de alta precisión", "Coberturas de tortas"),
+                imagenUrl = DatosEmpresa.URL_IMG_PROD_CREMAS_OTROS
             ),
             Producto(
                 id = 7,
                 nombre = "Decor Art",
                 linea = "Cremas vegetales",
                 descripcion = "Crema vegetal azucarada para rellenos y decoraciones tradicionales.",
-                usos = listOf("Rellenos de tortas", "Decoraciones tradicionales")
+                usos = listOf("Rellenos de tortas", "Decoraciones tradicionales"),
+                imagenUrl = DatosEmpresa.URL_IMG_PROD_CREMAS_OTROS
             ),
             Producto(
                 id = 8,
@@ -71,7 +78,8 @@ class ProductoRepository {
                 linea = "Cremas vegetales",
                 descripcion = "Crema vegetal sabor vainilla para pastelería vegana.",
                 usos = listOf("Mousses veganas", "Ganache vegana", "Rellenos sin leche"),
-                esVegano = true
+                esVegano = true,
+                imagenUrl = DatosEmpresa.URL_IMG_PROD_CREMAS_OTROS
             ),
 
             Producto(
@@ -79,7 +87,8 @@ class ProductoRepository {
                 nombre = "Chocolate Ariba",
                 linea = "Chocolates y coberturas",
                 descripcion = "Chocolate puro con cacao de Costa de Marfil, en discos, cacao en polvo y gotas.",
-                usos = listOf("Bombones templados", "Ganache y rellenos", "Repostería con gotas o cacao en polvo")
+                usos = listOf("Bombones templados", "Ganache y rellenos", "Repostería con gotas o cacao en polvo"),
+                imagenUrl = DatosEmpresa.URL_IMG_PROD_CARAVELLA_1
             ),
             Producto(
                 id = 10,
@@ -87,21 +96,24 @@ class ProductoRepository {
                 linea = "Chocolates y coberturas",
                 descripcion = "Chocolate amargo 60% vegano, sin leche, soya ni gluten.",
                 usos = listOf("Postres veganos", "Sorbetes sin leche", "Trufas y ganache vegana"),
-                esVegano = true
+                esVegano = true,
+                imagenUrl = DatosEmpresa.URL_IMG_PROD_CARAVELLA_2
             ),
             Producto(
                 id = 11,
                 nombre = "Cobertura Caravella",
                 linea = "Chocolates y coberturas",
                 descripcion = "Sucedáneo de chocolate para bañar, cubrir y rellenar; no necesita templado.",
-                usos = listOf("Bañar galletas y frutas", "Cubrir tortas y glaseados", "Rellenar")
+                usos = listOf("Bañar galletas y frutas", "Cubrir tortas y glaseados", "Rellenar"),
+                imagenUrl = DatosEmpresa.URL_IMG_PROD_CARAVELLA_1
             ),
             Producto(
                 id = 12,
                 nombre = "Coberturas de color Caravella",
                 linea = "Chocolates y coberturas",
                 descripcion = "Coberturas de color con colorantes y saborizantes naturales, para decorar, rellenar y cubrir.",
-                usos = listOf("Decorar tortas y galletas", "Bañar con colores", "Rellenar")
+                usos = listOf("Decorar tortas y galletas", "Bañar con colores", "Rellenar"),
+                imagenUrl = DatosEmpresa.URL_IMG_PROD_CARAVELLA_2
             ),
 
             Producto(
@@ -109,35 +121,40 @@ class ProductoRepository {
                 nombre = "Crema Pastelera",
                 linea = "Pastelería instantánea",
                 descripcion = "Mezcla en polvo lista para usar.",
-                usos = listOf("Rellenar tartaletas", "Rellenar berlines y pasteles")
+                usos = listOf("Rellenar tartaletas", "Rellenar berlines y pasteles"),
+                imagenUrl = DatosEmpresa.URL_IMG_PROD_CREMAS_OTROS
             ),
             Producto(
                 id = 14,
                 nombre = "Crema Chantilly",
                 linea = "Pastelería instantánea",
                 descripcion = "Mezcla en polvo lista para usar.",
-                usos = listOf("Decorar postres", "Rellenar tortas")
+                usos = listOf("Decorar postres", "Rellenar tortas"),
+                imagenUrl = DatosEmpresa.URL_IMG_PROD_CREMAS_OTROS
             ),
             Producto(
                 id = 15,
                 nombre = "Merengue",
                 linea = "Pastelería instantánea",
                 descripcion = "Mezcla en polvo lista para usar.",
-                usos = listOf("Decorar tortas", "Suspiros horneados")
+                usos = listOf("Decorar tortas", "Suspiros horneados"),
+                imagenUrl = DatosEmpresa.URL_IMG_PROD_CREMAS_OTROS
             ),
             Producto(
                 id = 16,
                 nombre = "Polvo de Hornear",
                 linea = "Pastelería instantánea",
                 descripcion = "Mezcla en polvo lista para usar.",
-                usos = listOf("Queques y bizcochos", "Galletas")
+                usos = listOf("Queques y bizcochos", "Galletas"),
+                imagenUrl = DatosEmpresa.URL_IMG_PROD_CREMAS_OTROS
             ),
             Producto(
                 id = 17,
                 nombre = "Azúcar Glass",
                 linea = "Pastelería instantánea",
                 descripcion = "Mezcla en polvo lista para usar.",
-                usos = listOf("Espolvorear panes y postres", "Glaseados")
+                usos = listOf("Espolvorear panes y postres", "Glaseados"),
+                imagenUrl = DatosEmpresa.URL_IMG_PROD_CREMAS_OTROS
             ),
 
             Producto(
@@ -145,7 +162,8 @@ class ProductoRepository {
                 nombre = "Vita Frit",
                 linea = "Fritura",
                 descripcion = "Aceite para freír.",
-                usos = listOf("Sopaipillas y churros", "Empanadas fritas")
+                usos = listOf("Sopaipillas y churros", "Empanadas fritas"),
+                imagenUrl = DatosEmpresa.URL_IMG_PROD_CREMAS_OTROS
             )
         )
     }

@@ -31,12 +31,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.mastermartini.R
 import com.example.mastermartini.data.DatosEmpresa
+import com.example.mastermartini.ui.components.ImagenCabeceraCatalogo
 import com.example.mastermartini.ui.theme.BlancoHueso
 import com.example.mastermartini.ui.theme.BlancoPuro
 import com.example.mastermartini.ui.theme.DoradoCalidad
@@ -302,107 +304,119 @@ fun HomeScreen(
                     shape = RoundedCornerShape(14.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
+                    Column {
+                        // Cabecera visual de la receta con categoría sobre la imagen
+                        ImagenCabeceraCatalogo(
+                            imagenUrl = curso.imagenUrl,
+                            descripcion = curso.titulo,
+                            categoriaOTema = curso.categoria,
+                            alto = 135.dp,
+                            contentScale = ContentScale.Crop,
+                            insigniaTexto = curso.categoria
+                        )
+
+                        Column(modifier = Modifier.padding(16.dp)) {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.weight(1f)
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                modifier = Modifier.fillMaxWidth()
                             ) {
-                                Icon(
-                                    imageVector = Icons.Default.Star,
-                                    contentDescription = null,
-                                    tint = DoradoCalidad,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Star,
+                                        contentDescription = null,
+                                        tint = DoradoCalidad,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = curso.titulo,
+                                        fontSize = 16.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = TextoOscuro
+                                    )
+                                }
+
+                                IconButton(
+                                    onClick = { viewModel.alternarFavorito(curso.id) },
+                                    modifier = Modifier.size(56.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = if (esFavorito) Icons.Default.Favorite else Icons.Outlined.FavoriteBorder,
+                                        contentDescription = if (esFavorito) {
+                                            "Quitar ${curso.titulo} de favoritos"
+                                        } else {
+                                            "Agregar ${curso.titulo} a favoritos"
+                                        },
+                                        tint = if (esFavorito) RojoItaliano else Color.Gray,
+                                        modifier = Modifier.scale(escalaCorazon)
+                                    )
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "Insumo Master Martini: ${curso.insumo}",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = VerdeOscuro
+                            )
+                            Text(
+                                text = "Instructor: ${curso.chef}",
+                                fontSize = 14.sp,
+                                color = TextoOscuro
+                            )
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Row(
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.Schedule,
+                                        contentDescription = null,
+                                        tint = DoradoCalidad,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text = "Duración: ${curso.duracion}",
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = RojoItaliano
+                                    )
+                                }
                                 Text(
-                                    text = curso.titulo,
+                                    text = "Certificación B2B",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = DoradoCalidad
+                                )
+                            }
+
+                            TextButton(
+                                onClick = { onVerDetalle(curso.id) },
+                                modifier = Modifier
+                                    .align(Alignment.End)
+                                    .heightIn(min = 48.dp)
+                            ) {
+                                Text(
+                                    text = "Ver receta",
                                     fontSize = 16.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = TextoOscuro
-                                )
-                            }
-
-                            IconButton(
-                                onClick = { viewModel.alternarFavorito(curso.id) },
-                                modifier = Modifier.size(56.dp)
-                            ) {
-                                Icon(
-                                    imageVector = if (esFavorito) Icons.Default.Favorite else Icons.Outlined.FavoriteBorder,
-                                    contentDescription = if (esFavorito) {
-                                        "Quitar ${curso.titulo} de favoritos"
-                                    } else {
-                                        "Agregar ${curso.titulo} a favoritos"
-                                    },
-                                    tint = if (esFavorito) RojoItaliano else Color.Gray,
-                                    modifier = Modifier.scale(escalaCorazon)
-                                )
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = "Insumo Master Martini: ${curso.insumo}",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = VerdeOscuro
-                        )
-                        Text(
-                            text = "Instructor: ${curso.chef}",
-                            fontSize = 14.sp,
-                            color = TextoOscuro
-                        )
-                        Spacer(modifier = Modifier.height(6.dp))
-                        Row(
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    imageVector = Icons.Outlined.Schedule,
-                                    contentDescription = null,
-                                    tint = DoradoCalidad,
-                                    modifier = Modifier.size(16.dp)
+                                    color = VerdeItaliano
                                 )
                                 Spacer(modifier = Modifier.width(4.dp))
-                                Text(
-                                    text = "Duración: ${curso.duracion}",
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = RojoItaliano
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                                    contentDescription = null,
+                                    tint = VerdeItaliano
                                 )
                             }
-                            Text(
-                                text = "Certificación B2B",
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Medium,
-                                color = DoradoCalidad
-                            )
-                        }
-
-                        TextButton(
-                            onClick = { onVerDetalle(curso.id) },
-                            modifier = Modifier
-                                .align(Alignment.End)
-                                .heightIn(min = 48.dp)
-                        ) {
-                            Text(
-                                text = "Ver receta",
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = VerdeItaliano
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                                contentDescription = null,
-                                tint = VerdeItaliano
-                            )
                         }
                     }
                 }
