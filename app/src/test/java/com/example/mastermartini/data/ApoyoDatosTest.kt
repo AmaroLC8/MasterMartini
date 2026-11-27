@@ -48,6 +48,11 @@ class ApoyoDatosTest : StringSpec({
         leerMensajeError(respuesta) shouldBe "Ya existe"
     }
 
+    "leerMensajeError prefiere el primer error de campos de un 400 de validación" {
+        val json = """{"mensaje":"Datos inválidos","estado":400,"campos":{"modulos[0].lecciones[0].titulo":"El título de la lección es obligatorio"}}"""
+        leerMensajeError(respuestaError<Unit>(400, json)) shouldBe "El título de la lección es obligatorio"
+    }
+
     "leerMensajeError devuelve null si no hay cuerpo o no es JSON" {
         leerMensajeError(Response.success(Unit)).shouldBeNull()
         leerMensajeError(respuestaError<Unit>(500, "texto plano")).shouldBeNull()
