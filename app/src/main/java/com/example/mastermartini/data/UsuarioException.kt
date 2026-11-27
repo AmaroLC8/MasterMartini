@@ -19,7 +19,7 @@ sealed class UsuarioException(mensaje: String) : Exception(mensaje) {
         UsuarioException("El código no es correcto o ya venció. Pide uno nuevo.")
 
     class SinConexion :
-        UsuarioException("No pudimos conectarnos. Revisa tu internet e inténtalo otra vez.")
+        UsuarioException(MENSAJE_SIN_CONEXION)
 
     class ErrorServidor(mensaje: String?) :
         UsuarioException(

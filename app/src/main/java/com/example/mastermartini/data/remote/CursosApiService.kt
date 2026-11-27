@@ -14,12 +14,12 @@ import retrofit2.http.Path
 interface CursosApiService {
 
     @GET("api/cursos")
-    suspend fun obtenerCapacitaciones(): List<Capacitacion>
+    suspend fun obtenerCapacitaciones(): Response<List<Capacitacion>>
 
     @GET("api/cursos/{id}")
     suspend fun obtenerCapacitacion(
         @Path("id") id: Int
-    ): Capacitacion
+    ): Response<Capacitacion>
 
     @POST("api/cursos")
     suspend fun crearCapacitacion(

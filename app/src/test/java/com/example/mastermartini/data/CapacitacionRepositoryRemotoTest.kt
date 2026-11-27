@@ -2,9 +2,10 @@ package com.example.mastermartini.data
 
 import com.example.mastermartini.data.remote.CursosApiService
 import com.example.mastermartini.data.remote.RetrofitClient
+import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.booleans.shouldBeTrue
-import io.kotest.matchers.collections.shouldHaveSize
+import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
@@ -15,15 +16,15 @@ import io.mockk.mockk
 import io.mockk.mockkObject
 import io.mockk.unmockkObject
 import java.io.IOException
+import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.test.runTest
 import retrofit2.Response
 
-// Microservicio de cursos (9092) simulado: se prueban las respuestas y el respaldo local
+// Microservicio de cursos simulado: la app ya no tiene catálogo local de respaldo
 class CapacitacionRepositoryRemotoTest : StringSpec({
 
     val api = mockk<CursosApiService>()
-    // Se toma un curso real del catálogo local como base para las respuestas simuladas
-    val base = CapacitacionRepository().obtenerCapacitaciones().first()
+    val base = cursoGratisDePrueba
 
     beforeTest {
         clearMocks(api)
@@ -39,13 +40,15 @@ class CapacitacionRepositoryRemotoTest : StringSpec({
 
     "los cursos remotos sin imagen reciben la imagen de su categoría" {
         runTest {
-            coEvery { api.obtenerCapacitaciones() } returns listOf(
-                base.copy(id = 10, categoria = "Panadería", imagenUrl = null),
-                base.copy(id = 11, categoria = "Heladería", imagenUrl = ""),
-                base.copy(id = 12, categoria = "Decoración", imagenUrl = null),
-                base.copy(id = 13, imagenUrl = "https://mi-imagen.jpg")
+            coEvery { api.obtenerCapacitaciones() } returns Response.success(
+                listOf(
+                    base.copy(id = 10, categoria = "Panadería", imagenUrl = null),
+                    base.copy(id = 11, categoria = "Heladería", imagenUrl = ""),
+                    base.copy(id = 12, categoria = "Decoración", imagenUrl = null),
+                    base.copy(id = 13, imagenUrl = "https://mi-imagen.jpg")
+                )
             )
-            val cursos = CapacitacionRepository().obtenerCapacitacionesRemotas()
+            val cursos = CapacitacionRepository().obtenerCapacitacionesRemotas().getOrThrow()
 
             cursos.map { it.imagenUrl } shouldBe listOf(
                 DatosEmpresa.URL_IMG_PANADERIA,
@@ -56,47 +59,95 @@ class CapacitacionRepositoryRemotoTest : StringSpec({
         }
     }
 
-    "si el servidor no tiene cursos se muestra el catálogo local" {
+    "si el servidor no tiene cursos devuelve una lista vacía (sin datos locales)" {
         runTest {
-            coEvery { api.obtenerCapacitaciones() } returns emptyList()
-            CapacitacionRepository().obtenerCapacitacionesRemotas() shouldHaveSize 6
+            coEvery { api.obtenerCapacitaciones() } returns Response.success(emptyList())
+            CapacitacionRepository().obtenerCapacitacionesRemotas().getOrThrow().shouldBeEmpty()
         }
     }
 
-    "sin conexión se muestra el catálogo local" {
+    "si el servidor responde 500 el catálogo devuelve ServidorException" {
+        runTest {
+            coEvery { api.obtenerCapacitaciones() } returns respuestaError(500, cuerpoError("Falla interna"))
+            val error = CapacitacionRepository().obtenerCapacitacionesRemotas().exceptionOrNull()
+            error.shouldBeInstanceOf<ServidorException>()
+            error.codigo shouldBe 500
+            error.mensajeServidor shouldBe "Falla interna"
+        }
+    }
+
+    "un catálogo exitoso sin cuerpo se trata como error del servidor" {
+        runTest {
+            coEvery { api.obtenerCapacitaciones() } returns Response.success(null)
+            CapacitacionRepository().obtenerCapacitacionesRemotas().exceptionOrNull()
+                .shouldBeInstanceOf<ServidorException>()
+        }
+    }
+
+    "sin conexión el catálogo devuelve el mensaje compartido de conexión" {
         runTest {
             coEvery { api.obtenerCapacitaciones() } throws IOException("sin red")
-            CapacitacionRepository().obtenerCapacitacionesRemotas() shouldHaveSize 6
+            CapacitacionRepository().obtenerCapacitacionesRemotas()
+                .exceptionOrNull()!!.message shouldBe MENSAJE_SIN_CONEXION
+        }
+    }
+
+    "si la corrutina se cancela, la cancelación no se convierte en error de conexión" {
+        runTest {
+            coEvery { api.obtenerCapacitaciones() } throws CancellationException("pantalla cerrada")
+            shouldThrow<CancellationException> {
+                CapacitacionRepository().obtenerCapacitacionesRemotas()
+            }
         }
     }
 
     // ---------- Detalle por id ----------
 
-    "obtenerCapacitacionPorIdRemoto devuelve el curso del servidor" {
+    "obtenerCapacitacionPorIdRemoto devuelve el curso del servidor con su imagen" {
         runTest {
-            coEvery { api.obtenerCapacitacion(20) } returns base.copy(id = 20)
-            CapacitacionRepository().obtenerCapacitacionPorIdRemoto(20)!!.id shouldBe 20
+            coEvery { api.obtenerCapacitacion(20) } returns Response.success(base.copy(id = 20, imagenUrl = null))
+            val curso = CapacitacionRepository().obtenerCapacitacionPorIdRemoto(20).getOrThrow()
+            curso.id shouldBe 20
+            curso.imagenUrl shouldBe DatosEmpresa.URL_IMG_CHOCOLATERIA
         }
     }
 
-    "si el servidor responde 404 el curso no existe" {
+    "si el servidor responde 404 se distingue como curso no encontrado" {
         runTest {
-            coEvery { api.obtenerCapacitacion(1) } throws errorHttp(404, cuerpoError("No existe", "NOT_FOUND"))
-            CapacitacionRepository().obtenerCapacitacionPorIdRemoto(1).shouldBeNull()
+            coEvery { api.obtenerCapacitacion(1) } returns
+                respuestaError(404, cuerpoError("Curso no encontrado", "NOT_FOUND"))
+            val error = CapacitacionRepository().obtenerCapacitacionPorIdRemoto(1).exceptionOrNull()
+            error.shouldBeInstanceOf<ServidorException>()
+            error.codigo shouldBe 404
+            error.mensajeServidor shouldBe "Curso no encontrado"
         }
     }
 
-    "si el servidor responde 500 se usa el curso local" {
+    "un detalle exitoso sin cuerpo se trata como error del servidor" {
         runTest {
-            coEvery { api.obtenerCapacitacion(2) } throws errorHttp(500, cuerpoError("Falla", "ERROR"))
-            CapacitacionRepository().obtenerCapacitacionPorIdRemoto(2)!!.id shouldBe 2
+            coEvery { api.obtenerCapacitacion(2) } returns Response.success(null)
+            val error = CapacitacionRepository().obtenerCapacitacionPorIdRemoto(2).exceptionOrNull()
+            error.shouldBeInstanceOf<ServidorException>()
+            error.mensajeServidor.shouldBeNull()
         }
     }
 
-    "sin conexión el detalle se busca en el catálogo local" {
+    "sin conexión el detalle devuelve el mensaje compartido de conexión" {
         runTest {
             coEvery { api.obtenerCapacitacion(3) } throws IOException("sin red")
-            CapacitacionRepository().obtenerCapacitacionPorIdRemoto(3)!!.id shouldBe 3
+            val error = CapacitacionRepository().obtenerCapacitacionPorIdRemoto(3).exceptionOrNull()
+            error.shouldBeInstanceOf<Exception>()
+            (error is ServidorException) shouldBe false
+            error.message shouldBe MENSAJE_SIN_CONEXION
+        }
+    }
+
+    "el detalle también deja pasar la cancelación" {
+        runTest {
+            coEvery { api.obtenerCapacitacion(3) } throws CancellationException("pantalla cerrada")
+            shouldThrow<CancellationException> {
+                CapacitacionRepository().obtenerCapacitacionPorIdRemoto(3)
+            }
         }
     }
 
@@ -131,11 +182,18 @@ class CapacitacionRepositoryRemotoTest : StringSpec({
         }
     }
 
-    "crearCapacitacion sin conexión avisa que no hay servidor de cursos" {
+    "crearCapacitacion sin conexión devuelve el mensaje compartido" {
         runTest {
             coEvery { api.crearCapacitacion(any(), any()) } throws IOException("sin red")
             CapacitacionRepository().crearCapacitacion(2, base)
-                .exceptionOrNull()!!.message shouldBe "No se pudo conectar con el servidor de cursos (9092)"
+                .exceptionOrNull()!!.message shouldBe MENSAJE_SIN_CONEXION
+        }
+    }
+
+    "crearCapacitacion deja pasar la cancelación" {
+        runTest {
+            coEvery { api.crearCapacitacion(any(), any()) } throws CancellationException("cancelado")
+            shouldThrow<CancellationException> { CapacitacionRepository().crearCapacitacion(2, base) }
         }
     }
 
@@ -165,6 +223,13 @@ class CapacitacionRepositoryRemotoTest : StringSpec({
         }
     }
 
+    "actualizarCapacitacion deja pasar la cancelación" {
+        runTest {
+            coEvery { api.actualizarCapacitacion(any(), any(), any()) } throws CancellationException("cancelado")
+            shouldThrow<CancellationException> { CapacitacionRepository().actualizarCapacitacion(2, 1, base) }
+        }
+    }
+
     "eliminarCapacitacion exitoso devuelve éxito" {
         runTest {
             coEvery { api.eliminarCapacitacion(1, 4) } returns Response.success(Unit)
@@ -186,6 +251,13 @@ class CapacitacionRepositoryRemotoTest : StringSpec({
         runTest {
             coEvery { api.eliminarCapacitacion(any(), any()) } throws IOException("sin red")
             CapacitacionRepository().eliminarCapacitacion(4, 1).isFailure.shouldBeTrue()
+        }
+    }
+
+    "eliminarCapacitacion deja pasar la cancelación" {
+        runTest {
+            coEvery { api.eliminarCapacitacion(any(), any()) } throws CancellationException("cancelado")
+            shouldThrow<CancellationException> { CapacitacionRepository().eliminarCapacitacion(4, 1) }
         }
     }
 })

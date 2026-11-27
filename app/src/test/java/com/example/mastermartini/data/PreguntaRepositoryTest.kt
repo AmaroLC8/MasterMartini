@@ -5,6 +5,7 @@ import com.example.mastermartini.data.remote.RetrofitClient
 import com.example.mastermartini.data.remote.dto.PreguntaRequest
 import com.example.mastermartini.data.remote.dto.RespuestaRequest
 import com.example.mastermartini.model.Pregunta
+import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.booleans.shouldBeTrue
 import io.kotest.matchers.nulls.shouldBeNull
@@ -17,6 +18,7 @@ import io.mockk.mockk
 import io.mockk.mockkObject
 import io.mockk.unmockkObject
 import java.io.IOException
+import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.test.runTest
 import retrofit2.Response
 
@@ -30,7 +32,7 @@ class PreguntaRepositoryTest : StringSpec({
         fechaPregunta = "2026-11-27T10:30:00"
     )
     val respondida = pregunta.copy(respuesta = "Unas 12 horas en frío", respondidaPor = "Instructor de prueba")
-    val sinConexion = "No se pudo conectar con el servidor de inscripciones (9093)"
+    val sinConexion = MENSAJE_SIN_CONEXION
 
     beforeTest {
         clearMocks(api)
@@ -198,6 +200,21 @@ class PreguntaRepositoryTest : StringSpec({
             error.shouldBeInstanceOf<ServidorException>()
             error.codigo shouldBe 500
             error.mensajeServidor.shouldBeNull()
+        }
+    }
+
+    "si la corrutina se cancela, ninguna función lo trata como error de conexión" {
+        runTest {
+            coEvery { api.preguntasDelCurso(any()) } throws CancellationException("pantalla cerrada")
+            coEvery { api.preguntar(any(), any(), any()) } throws CancellationException("pantalla cerrada")
+            coEvery { api.preguntasPendientes(any()) } throws CancellationException("pantalla cerrada")
+            coEvery { api.responderPregunta(any(), any(), any()) } throws CancellationException("pantalla cerrada")
+            coEvery { api.eliminarPregunta(any(), any()) } throws CancellationException("pantalla cerrada")
+            shouldThrow<CancellationException> { PreguntaRepository().listarDelCurso(2) }
+            shouldThrow<CancellationException> { PreguntaRepository().preguntar(1, 2, "Hola") }
+            shouldThrow<CancellationException> { PreguntaRepository().pendientes(3) }
+            shouldThrow<CancellationException> { PreguntaRepository().responder(3, 7, "Respuesta") }
+            shouldThrow<CancellationException> { PreguntaRepository().eliminar(1, 7) }
         }
     }
 

@@ -5,12 +5,12 @@ import com.example.mastermartini.data.remote.dto.PreguntaRequest
 import com.example.mastermartini.data.remote.dto.RespuestaRequest
 import com.example.mastermartini.data.remote.leerMensajeError
 import com.example.mastermartini.model.Pregunta
+import kotlin.coroutines.cancellation.CancellationException
 
 // Repositorio de preguntas al instructor conectado al microservicio de interacciones
 class PreguntaRepository {
 
     private val api = RetrofitClient.interaccionesApi
-    private val mensajeSinConexion = "No se pudo conectar con el servidor de inscripciones (9093)"
 
     // Trae las preguntas de un curso, de la más nueva a la más antigua
     suspend fun listarDelCurso(cursoId: Int): Result<List<Pregunta>> {
@@ -22,8 +22,10 @@ class PreguntaRepository {
             } else {
                 Result.failure(ServidorException(response.code(), leerMensajeError(response)))
             }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
-            Result.failure(Exception(mensajeSinConexion))
+            Result.failure(Exception(MENSAJE_SIN_CONEXION))
         }
     }
 
@@ -37,8 +39,10 @@ class PreguntaRepository {
             } else {
                 Result.failure(ServidorException(response.code(), leerMensajeError(response)))
             }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
-            Result.failure(Exception(mensajeSinConexion))
+            Result.failure(Exception(MENSAJE_SIN_CONEXION))
         }
     }
 
@@ -52,8 +56,10 @@ class PreguntaRepository {
             } else {
                 Result.failure(ServidorException(response.code(), leerMensajeError(response)))
             }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
-            Result.failure(Exception(mensajeSinConexion))
+            Result.failure(Exception(MENSAJE_SIN_CONEXION))
         }
     }
 
@@ -67,8 +73,10 @@ class PreguntaRepository {
             } else {
                 Result.failure(ServidorException(response.code(), leerMensajeError(response)))
             }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
-            Result.failure(Exception(mensajeSinConexion))
+            Result.failure(Exception(MENSAJE_SIN_CONEXION))
         }
     }
 
@@ -81,8 +89,10 @@ class PreguntaRepository {
             } else {
                 Result.failure(ServidorException(response.code(), leerMensajeError(response)))
             }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
-            Result.failure(Exception(mensajeSinConexion))
+            Result.failure(Exception(MENSAJE_SIN_CONEXION))
         }
     }
 }

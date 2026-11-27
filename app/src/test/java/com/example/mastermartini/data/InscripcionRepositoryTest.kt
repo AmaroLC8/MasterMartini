@@ -5,6 +5,7 @@ import com.example.mastermartini.data.remote.RetrofitClient
 import com.example.mastermartini.data.remote.dto.InscripcionRequest
 import com.example.mastermartini.data.remote.dto.ProgresoLeccionRequest
 import com.example.mastermartini.model.Inscripcion
+import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.booleans.shouldBeTrue
 import io.kotest.matchers.nulls.shouldBeNull
@@ -17,6 +18,7 @@ import io.mockk.mockk
 import io.mockk.mockkObject
 import io.mockk.unmockkObject
 import java.io.IOException
+import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.test.runTest
 import retrofit2.Response
 
@@ -25,7 +27,7 @@ class InscripcionRepositoryTest : StringSpec({
 
     val api = mockk<InteraccionesApi>()
     val inscripcion = Inscripcion(id = 10, usuarioId = 1, cursoId = 2, leccionesCompletadas = listOf("1-1"))
-    val sinConexion = "No se pudo conectar con el servidor de inscripciones (9093)"
+    val sinConexion = MENSAJE_SIN_CONEXION
 
     beforeTest {
         clearMocks(api)
@@ -148,6 +150,19 @@ class InscripcionRepositoryTest : StringSpec({
             error.shouldBeInstanceOf<ServidorException>()
             error.codigo shouldBe 500
             error.mensajeServidor.shouldBeNull()
+        }
+    }
+
+    "si la corrutina se cancela, inscribirse y cancelar no lo tratan como error de conexión" {
+        runTest {
+            coEvery { api.inscribirse(any(), any()) } throws CancellationException("pantalla cerrada")
+            coEvery { api.misInscripciones(any(), any()) } throws CancellationException("pantalla cerrada")
+            coEvery { api.marcarLeccion(any(), any(), any()) } throws CancellationException("pantalla cerrada")
+            coEvery { api.cancelar(any(), any()) } throws CancellationException("pantalla cerrada")
+            shouldThrow<CancellationException> { InscripcionRepository().inscribirse(1, 2) }
+            shouldThrow<CancellationException> { InscripcionRepository().misInscripciones(1) }
+            shouldThrow<CancellationException> { InscripcionRepository().marcarLeccion(1, 10, 1, 1, true) }
+            shouldThrow<CancellationException> { InscripcionRepository().cancelar(1, 10) }
         }
     }
 
