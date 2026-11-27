@@ -3,6 +3,8 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     // KSP lee las anotaciones de Room (@Entity, @Dao, @Database) y genera el código de la base de datos
     alias(libs.plugins.ksp)
+    // Kover mide qué porcentaje del código ejecutan las pruebas unitarias
+    alias(libs.plugins.kover)
 }
 
 android {
@@ -35,6 +37,10 @@ android {
     }
     buildFeatures {
         compose = true
+    }
+    // Las clases de Android (Log, etc.) devuelven valores por defecto en vez de fallar en las pruebas
+    testOptions {
+        unitTests.isReturnDefaultValues = true
     }
 }
 
@@ -90,4 +96,46 @@ dependencies {
 // Obligatorio al final de build.gradle.kts para ejecutar Kotest/JUnit 5
 tasks.withType<Test>().configureEach {
     useJUnitPlatform()
+}
+
+// Cobertura: solo la lógica (viewmodel, data, model) y mínimo 80 % de líneas
+kover {
+    reports {
+        filters {
+            includes {
+                packages(
+                    "com.example.mastermartini.viewmodel",
+                    "com.example.mastermartini.data",
+                    "com.example.mastermartini.model"
+                )
+            }
+            excludes {
+                packages("com.example.mastermartini.ui")
+                classes(
+                    "com.example.mastermartini.MainActivity*",
+                    // Código generado por Room
+                    "*_Impl",
+                    "*_Impl$*",
+                    // Interfaces de Retrofit y su cliente: no tienen lógica propia
+                    "com.example.mastermartini.data.remote.*Api",
+                    "com.example.mastermartini.data.remote.*Api$*",
+                    "com.example.mastermartini.data.remote.*ApiService",
+                    "com.example.mastermartini.data.remote.*ApiService$*",
+                    "com.example.mastermartini.data.remote.RetrofitClient*",
+                    "com.example.mastermartini.data.local.MasterMartiniDatabase*",
+                    // Solo envuelven cámara, GPS y subida de archivos de Android
+                    "com.example.mastermartini.data.FotoRepository*",
+                    "com.example.mastermartini.data.UbicacionRepository*",
+                    "com.example.mastermartini.data.CloudinaryRepository*"
+                )
+            }
+        }
+        verify {
+            // TODO tanda 2: quitar esta línea cuando los ViewModels lleguen al 80 % (hoy solo avisa)
+            warningInsteadOfFailure = true
+            rule {
+                minBound(80)
+            }
+        }
+    }
 }
