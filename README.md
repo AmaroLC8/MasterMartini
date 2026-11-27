@@ -122,6 +122,28 @@ com.example.mastermartini
 4. **Crear o elegir un emulador:** `Device Manager → Create Virtual Device`, o conectar un celular con la depuración USB activada.
 5. **Ejecutar:** seleccionar el dispositivo y presionar **Run** (▶) o `Shift + F10`.
 
+### Probar en un dispositivo físico
+
+En **debug** la app se conecta a los microservicios del PC por los puertos 9091 (usuarios), 9092 (cursos) y 9093 (interacciones). En el emulador usa `10.0.2.2`; en un celular usa `localhost`, así que hay que redirigir los puertos por USB:
+
+1. En el celular: **Ajustes → Acerca del teléfono**, tocar 7 veces "Número de compilación" y luego activar **Opciones de desarrollador → Depuración USB**.
+2. Conectar el celular por USB y aceptar el aviso de depuración.
+3. En PowerShell, ejecutar (cambiar `TU_USUARIO` si el SDK está en otra ruta):
+   ```
+   & "C:\Users\TU_USUARIO\AppData\Local\Android\Sdk\platform-tools\adb.exe" reverse tcp:9091 tcp:9091
+   & "C:\Users\TU_USUARIO\AppData\Local\Android\Sdk\platform-tools\adb.exe" reverse tcp:9092 tcp:9092
+   & "C:\Users\TU_USUARIO\AppData\Local\Android\Sdk\platform-tools\adb.exe" reverse tcp:9093 tcp:9093
+   ```
+   Hay que repetirlo cada vez que se desconecta el celular.
+
+**Opción por Wi-Fi:** con el celular y el PC en la misma red, agregar en `local.properties` la IP del PC (se ve con `ipconfig`):
+```
+servidor.host=192.168.1.15
+```
+Luego hacer **Sync** y volver a ejecutar. Si la propiedad existe, se usa en vez de `10.0.2.2` o `localhost`; para volver al modo normal, borrar la línea.
+
+En **release** la app usa una sola dirección HTTPS (`URL_SERVIDOR` en `app/build.gradle.kts`) para los tres microservicios.
+
 ---
 
 ## Cómo Usar la App

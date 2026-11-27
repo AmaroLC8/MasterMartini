@@ -1,3 +1,12 @@
+import java.util.Properties
+
+// Lee "servidor.host" de local.properties (opcional), por ejemplo la IP del PC para probar por Wi-Fi
+val propiedadesLocales = Properties().apply {
+    val archivo = rootProject.file("local.properties")
+    if (archivo.exists()) archivo.inputStream().use { load(it) }
+}
+val servidorHost: String = propiedadesLocales.getProperty("servidor.host", "")
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
@@ -24,7 +33,16 @@ android {
     }
 
     buildTypes {
+        debug {
+            // Debug arma la URL con host + puerto en RetrofitClient; URL_SERVIDOR no se usa aquí
+            buildConfigField("String", "URL_SERVIDOR", "\"\"")
+            buildConfigField("String", "SERVIDOR_HOST", "\"$servidorHost\"")
+        }
         release {
+            // En AWS habrá una sola dirección HTTPS y Caddy (o el API Gateway) reparte por ruta:
+            // /api/usuarios, /api/cursos, /api/inscripciones, /api/preguntas
+            buildConfigField("String", "URL_SERVIDOR", "\"https://PENDIENTE_AWS/\"")
+            buildConfigField("String", "SERVIDOR_HOST", "\"\"")
             optimization {
                 enable = true
                 packageScope = setOf("androidx.**", "kotlin.**", "kotlinx.**")
@@ -37,6 +55,8 @@ android {
     }
     buildFeatures {
         compose = true
+        // Genera la clase BuildConfig con DEBUG, URL_SERVIDOR y SERVIDOR_HOST
+        buildConfig = true
     }
     // Las clases de Android (Log, etc.) devuelven valores por defecto en vez de fallar en las pruebas
     testOptions {
