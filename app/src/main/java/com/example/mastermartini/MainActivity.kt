@@ -31,6 +31,7 @@ import com.example.mastermartini.ui.screens.RecuperarPasswordScreen
 import com.example.mastermartini.ui.screens.HomeScreen
 import com.example.mastermartini.ui.screens.LoginScreen
 import com.example.mastermartini.ui.screens.PerfilScreen
+import com.example.mastermartini.ui.screens.PreguntasPendientesScreen
 import com.example.mastermartini.ui.screens.ProductoDetalleScreen
 import com.example.mastermartini.ui.screens.ProductosScreen
 import com.example.mastermartini.ui.screens.RecetasScreen
@@ -48,6 +49,7 @@ import com.example.mastermartini.viewmodel.RecuperarPasswordViewModel
 import com.example.mastermartini.viewmodel.HomeViewModel
 import com.example.mastermartini.viewmodel.LoginViewModel
 import com.example.mastermartini.viewmodel.PerfilViewModel
+import com.example.mastermartini.viewmodel.PreguntasPendientesViewModel
 import com.example.mastermartini.viewmodel.ProductoDetalleViewModel
 import com.example.mastermartini.viewmodel.ProductosViewModel
 import com.example.mastermartini.viewmodel.RecetasViewModel
@@ -289,6 +291,15 @@ class MainActivity : ComponentActivity() {
                                 onVolver = { navController.popBackStack() }
                             )
                         }
+                        composable("panel/preguntas") {
+                            val preguntasPendientesViewModel: PreguntasPendientesViewModel =
+                                viewModel(factory = PreguntasPendientesViewModel.Factory)
+                            PreguntasPendientesScreen(
+                                viewModel = preguntasPendientesViewModel,
+                                onVolver = { navController.popBackStack() }
+                            )
+                        }
+
                         composable("panel/crear-curso") {
                             val crearCursoViewModel: com.example.mastermartini.viewmodel.CrearCursoViewModel = viewModel()
                             com.example.mastermartini.ui.screens.CrearCursoScreen(

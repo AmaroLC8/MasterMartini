@@ -23,18 +23,18 @@ class RecetasViewModelTest : StringSpec({
 
     "las secciones siguen el orden de las categorías del repositorio" {
         val estado = RecetasViewModel().uiState.value
-        estado.categorias shouldHaveSize 5
+        estado.categorias shouldHaveSize 6
         estado.secciones.keys.toList() shouldBe estado.categorias
         estado.secciones.values.sumOf { it.size } shouldBe 10
     }
 
     "elegir una categoría muestra solo sus recetas y una sola sección" {
         val vm = RecetasViewModel()
-        vm.seleccionarCategoria("Chocolatería")
+        vm.seleccionarCategoria("Pastelería")
         val estado = vm.uiState.value
-        estado.categoriaSeleccionada shouldBe "Chocolatería"
-        estado.recetas.map { it.id }.sorted() shouldContainExactly listOf(1, 10)
-        estado.secciones.keys shouldBe setOf("Chocolatería")
+        estado.categoriaSeleccionada shouldBe "Pastelería"
+        estado.recetas.map { it.id }.sorted() shouldContainExactly listOf(6, 8)
+        estado.secciones.keys shouldBe setOf("Pastelería")
 
         vm.seleccionarCategoria(null)
         vm.uiState.value.recetas shouldHaveSize 10
@@ -52,7 +52,7 @@ class RecetasViewModelTest : StringSpec({
         val vm = RecetasViewModel()
         vm.alternarSoloVeganas()
         vm.uiState.value.soloVeganas.shouldBeTrue()
-        vm.uiState.value.recetas.map { it.id }.sorted() shouldContainExactly listOf(5, 8, 10)
+        vm.uiState.value.recetas.map { it.id }.sorted() shouldContainExactly listOf(5, 8, 9)
 
         vm.alternarSoloVeganas()
         vm.uiState.value.soloVeganas.shouldBeFalse()
@@ -61,12 +61,12 @@ class RecetasViewModelTest : StringSpec({
 
     "los filtros se combinan y se conservan al cambiar el orden" {
         val vm = RecetasViewModel()
-        vm.seleccionarCategoria("Chocolatería")
+        vm.seleccionarCategoria("Pastelería")
         vm.alternarSoloVeganas()
         vm.cambiarOrden(OrdenRecetas.DURACION)
         val estado = vm.uiState.value
-        estado.recetas.map { it.id } shouldBe listOf(10)
-        estado.categoriaSeleccionada shouldBe "Chocolatería"
+        estado.recetas.map { it.id } shouldBe listOf(8)
+        estado.categoriaSeleccionada shouldBe "Pastelería"
         estado.soloVeganas.shouldBeTrue()
     }
 })

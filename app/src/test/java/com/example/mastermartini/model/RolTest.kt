@@ -21,14 +21,23 @@ class RolTest : StringSpec({
         rol.opcionesPanel().shouldBeEmpty()
     }
 
-    "Instructor responde preguntas y solo ve la opción de crear curso" {
+    "Instructor responde preguntas y ve crear curso y preguntas pendientes" {
         val rol = Rol.Instructor
         rol.codigo shouldBe "INSTRUCTOR"
         rol.puedeGestionarPlanPro.shouldBeFalse()
         rol.puedeGestionarUsuarios.shouldBeFalse()
         rol.puedeResponderPreguntas.shouldBeTrue()
         rol.puedeEliminarCursos.shouldBeFalse()
-        rol.opcionesPanel().map { it.ruta } shouldContainExactly listOf("panel/crear-curso")
+        rol.opcionesPanel().map { it.ruta } shouldContainExactly listOf("panel/crear-curso", "panel/preguntas")
+    }
+
+    "solo los roles que responden preguntas ven la opción de preguntas pendientes" {
+        for (rol in Rol.todos) {
+            val tieneOpcion = rol.opcionesPanel().any { it.ruta == "panel/preguntas" }
+            tieneOpcion shouldBe rol.puedeResponderPreguntas
+        }
+        val opcion = Rol.Instructor.opcionesPanel().first { it.ruta == "panel/preguntas" }
+        opcion.titulo shouldBe "Preguntas pendientes"
     }
 
     "Instructor solo puede editar sus propios cursos" {
@@ -50,7 +59,7 @@ class RolTest : StringSpec({
         rol.opcionesPanel().map { it.ruta } shouldContainExactly listOf("panel/clientes")
     }
 
-    "Administrador tiene todos los permisos y las tres opciones del panel" {
+    "Administrador tiene todos los permisos y las cuatro opciones del panel" {
         val rol = Rol.Administrador
         rol.codigo shouldBe "ADMINISTRADOR"
         rol.puedeGestionarPlanPro.shouldBeTrue()
@@ -59,7 +68,7 @@ class RolTest : StringSpec({
         rol.puedeEliminarCursos.shouldBeTrue()
         rol.puedeEditarCurso(instructorIdDelCurso = null, miId = null).shouldBeTrue()
         rol.opcionesPanel().map { it.ruta } shouldContainExactly
-            listOf("panel/clientes", "panel/usuarios", "panel/crear-curso")
+            listOf("panel/clientes", "panel/usuarios", "panel/crear-curso", "panel/preguntas")
     }
 
     "todos contiene los cuatro roles" {

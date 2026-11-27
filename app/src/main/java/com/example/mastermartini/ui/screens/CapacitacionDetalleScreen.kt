@@ -31,6 +31,7 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Forum
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
@@ -50,7 +51,11 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -59,6 +64,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
@@ -74,9 +80,12 @@ import androidx.compose.ui.unit.sp
 import com.example.mastermartini.data.DatosEmpresa
 import com.example.mastermartini.model.Leccion
 import com.example.mastermartini.model.Modulo
+import com.example.mastermartini.model.Pregunta
 import com.example.mastermartini.ui.components.DatoConIcono
+import com.example.mastermartini.ui.components.ErrorConReintentar
 import com.example.mastermartini.ui.components.EtiquetaAcceso
 import com.example.mastermartini.ui.components.EtiquetaVegana
+import com.example.mastermartini.ui.components.IconoValidacion
 import com.example.mastermartini.ui.theme.BlancoHueso
 import com.example.mastermartini.ui.theme.BlancoPuro
 import com.example.mastermartini.ui.theme.GrisBorde
@@ -108,8 +117,20 @@ fun CapacitacionDetalleScreen(
 
     val uiState by viewModel.uiState.collectAsState()
 
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    // Muestra una sola vez los avisos de éxito o error de las preguntas
+    LaunchedEffect(uiState.mensajeSnackbar) {
+        val mensaje = uiState.mensajeSnackbar
+        if (mensaje != null) {
+            snackbarHostState.showSnackbar(mensaje)
+            viewModel.snackbarMostrado()
+        }
+    }
+
     Scaffold(
         containerColor = BlancoHueso,
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = {
@@ -318,6 +339,22 @@ fun CapacitacionDetalleScreen(
                     }
                 }
 
+                TituloSeccion(texto = "Preguntas al instructor")
+                SeccionPreguntas(
+                    preguntas = uiState.preguntas,
+                    cargando = uiState.cargandoPreguntas,
+                    errorCarga = uiState.errorPreguntas,
+                    inscrito = uiState.estaInscrito,
+                    textoPregunta = uiState.textoPregunta,
+                    errorPregunta = uiState.errorPregunta,
+                    enviando = uiState.enviandoPregunta,
+                    onTextoChange = { texto -> viewModel.onTextoPreguntaChange(texto) },
+                    onEnviar = { viewModel.enviarPregunta() },
+                    onReintentar = { viewModel.cargarPreguntas(capacitacion.id) },
+                    puedeEliminar = { pregunta -> viewModel.puedeEliminarPregunta(pregunta) },
+                    onEliminar = { pregunta -> viewModel.abrirConfirmacionEliminarPregunta(pregunta) }
+                )
+
                 TituloSeccion(texto = "Incluye")
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     capacitacion.incluye.forEach { item ->
@@ -441,6 +478,35 @@ fun CapacitacionDetalleScreen(
         )
     }
 
+    if (uiState.preguntaAEliminar != null) {
+        AlertDialog(
+            onDismissRequest = { viewModel.cerrarConfirmacionEliminarPregunta() },
+            title = { Text(text = "Eliminar pregunta", fontWeight = FontWeight.Bold) },
+            text = {
+                Text(
+                    text = "¿Eliminar esta pregunta? Esta acción no se puede deshacer",
+                    fontSize = 17.sp
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = { viewModel.eliminarPregunta() },
+                    modifier = Modifier.heightIn(min = 48.dp)
+                ) {
+                    Text(text = "Eliminar", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = RojoItaliano)
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { viewModel.cerrarConfirmacionEliminarPregunta() },
+                    modifier = Modifier.heightIn(min = 48.dp)
+                ) {
+                    Text(text = "Cancelar", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = VerdeOscuro)
+                }
+            }
+        )
+    }
+
     if (uiState.mostrarConfirmacionEliminar) {
         AlertDialog(
             onDismissRequest = { viewModel.cerrarConfirmacionEliminar() },
@@ -468,6 +534,185 @@ fun CapacitacionDetalleScreen(
                 }
             }
         )
+    }
+}
+
+// Sección con el formulario para preguntar y la lista de preguntas del curso
+@Composable
+private fun SeccionPreguntas(
+    preguntas: List<Pregunta>,
+    cargando: Boolean,
+    errorCarga: String?,
+    inscrito: Boolean,
+    textoPregunta: String,
+    errorPregunta: String?,
+    enviando: Boolean,
+    onTextoChange: (String) -> Unit,
+    onEnviar: () -> Unit,
+    onReintentar: () -> Unit,
+    puedeEliminar: (Pregunta) -> Boolean,
+    onEliminar: (Pregunta) -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        if (inscrito) {
+            OutlinedTextField(
+                value = textoPregunta,
+                onValueChange = onTextoChange,
+                label = { Text("Escribe tu pregunta", fontSize = 16.sp) },
+                leadingIcon = { Icon(imageVector = Icons.Filled.Forum, contentDescription = null) },
+                trailingIcon = { IconoValidacion(valor = textoPregunta, error = errorPregunta) },
+                isError = errorPregunta != null,
+                supportingText = {
+                    // Error a la izquierda y contador de caracteres a la derecha
+                    Row(modifier = Modifier.fillMaxWidth()) {
+                        Text(
+                            text = errorPregunta ?: "",
+                            color = RojoItaliano,
+                            fontSize = 16.sp,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Text(
+                            text = "${textoPregunta.length}/${Pregunta.MAX_CARACTERES}",
+                            fontSize = 16.sp,
+                            color = TextoOscuro
+                        )
+                    }
+                },
+                enabled = !enviando,
+                minLines = 3,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = VerdeItaliano,
+                    cursorColor = VerdeItaliano,
+                    focusedContainerColor = BlancoPuro,
+                    unfocusedContainerColor = BlancoPuro
+                ),
+                shape = RoundedCornerShape(10.dp),
+                modifier = Modifier.fillMaxWidth()
+            )
+            Button(
+                onClick = onEnviar,
+                enabled = !enviando,
+                colors = ButtonDefaults.buttonColors(containerColor = VerdeItaliano, contentColor = BlancoPuro),
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 56.dp)
+            ) {
+                if (enviando) {
+                    CircularProgressIndicator(color = BlancoPuro, modifier = Modifier.size(24.dp))
+                } else {
+                    Text(text = "Enviar", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                }
+            }
+        } else {
+            Text(
+                text = "Inscríbete para hacer preguntas",
+                fontSize = 16.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = VerdeOscuro
+            )
+        }
+
+        when {
+            cargando -> {
+                Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxWidth()) {
+                    CircularProgressIndicator(color = VerdeItaliano)
+                }
+            }
+            errorCarga != null -> {
+                ErrorConReintentar(mensaje = errorCarga, onReintentar = onReintentar)
+            }
+            preguntas.isEmpty() -> {
+                Text(
+                    text = "Aún no hay preguntas en este curso",
+                    fontSize = 16.sp,
+                    color = TextoOscuro
+                )
+            }
+            else -> {
+                preguntas.forEach { pregunta ->
+                    TarjetaPregunta(
+                        pregunta = pregunta,
+                        puedeEliminar = puedeEliminar(pregunta),
+                        onEliminar = { onEliminar(pregunta) }
+                    )
+                }
+            }
+        }
+    }
+}
+
+// Tarjeta con el autor, la fecha, el texto y la respuesta destacada si existe
+@Composable
+private fun TarjetaPregunta(
+    pregunta: Pregunta,
+    puedeEliminar: Boolean,
+    onEliminar: () -> Unit
+) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = BlancoPuro),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        shape = RoundedCornerShape(14.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.padding(16.dp)
+        ) {
+            Text(
+                text = pregunta.autorNombre ?: "Alumno",
+                fontSize = 17.sp,
+                fontWeight = FontWeight.Bold,
+                color = TextoOscuro
+            )
+            if (pregunta.fechaLegible.isNotEmpty()) {
+                Text(text = pregunta.fechaLegible, fontSize = 16.sp, color = VerdeOscuro)
+            }
+            Text(text = pregunta.texto, fontSize = 16.sp, color = TextoOscuro)
+
+            if (pregunta.estaRespondida) {
+                // Respuesta destacada con fondo verde suave y borde
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(VerdeItaliano.copy(alpha = 0.10f), RoundedCornerShape(10.dp))
+                        .border(1.dp, VerdeItaliano, RoundedCornerShape(10.dp))
+                        .padding(12.dp)
+                ) {
+                    Text(
+                        text = "Respuesta de ${pregunta.respondidaPor ?: "el instructor"}",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = VerdeOscuro
+                    )
+                    Text(text = pregunta.respuesta ?: "", fontSize = 16.sp, color = TextoOscuro)
+                }
+            } else {
+                Text(
+                    text = "Esperando respuesta del instructor",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = TextoOscuro
+                )
+            }
+
+            if (puedeEliminar) {
+                TextButton(
+                    onClick = onEliminar,
+                    modifier = Modifier.heightIn(min = 48.dp)
+                ) {
+                    Icon(imageVector = Icons.Filled.Delete, contentDescription = null, tint = RojoItaliano)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Eliminar pregunta",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = RojoItaliano
+                    )
+                }
+            }
+        }
     }
 }
 
