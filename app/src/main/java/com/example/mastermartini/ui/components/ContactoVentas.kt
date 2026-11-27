@@ -33,7 +33,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.mastermartini.data.DatosEmpresa
 import com.example.mastermartini.ui.theme.BlancoPuro
-import com.example.mastermartini.ui.theme.DoradoCalidad
 import com.example.mastermartini.ui.theme.TextoOscuro
 import com.example.mastermartini.ui.theme.VerdeItaliano
 import com.example.mastermartini.ui.theme.VerdeOscuro
@@ -47,8 +46,8 @@ fun ContactoVentas(
 
     Card(
         colors = CardDefaults.cardColors(containerColor = BlancoPuro),
-        border = BorderStroke(1.dp, DoradoCalidad.copy(alpha = 0.6f)),
-        shape = RoundedCornerShape(12.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        shape = RoundedCornerShape(14.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(

@@ -1,6 +1,5 @@
 package com.example.mastermartini.ui.screens
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -22,6 +21,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.outlined.FavoriteBorder
+import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -135,8 +135,8 @@ fun FavoritosScreen(
                     Card(
                         onClick = { onVerDetalle(curso.id) },
                         colors = CardDefaults.cardColors(containerColor = BlancoPuro),
-                        border = BorderStroke(1.dp, DoradoCalidad.copy(alpha = 0.6f)),
-                        shape = RoundedCornerShape(10.dp),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                        shape = RoundedCornerShape(14.dp),
                         modifier = Modifier
                             .fillMaxWidth()
                             .animateItem()
@@ -183,12 +183,22 @@ fun FavoritosScreen(
                                 fontSize = 15.sp,
                                 color = TextoOscuro
                             )
-                            Text(
-                                text = "⏱️ Duración: ${curso.duracion}",
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = RojoItaliano
-                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Outlined.Schedule,
+                                    contentDescription = null,
+                                    tint = DoradoCalidad,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = "Duración: ${curso.duracion}",
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = RojoItaliano
+                                )
+                            }
 
                             TextButton(
                                 onClick = { onVerDetalle(curso.id) },

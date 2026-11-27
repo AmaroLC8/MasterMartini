@@ -19,6 +19,7 @@ import kotlinx.coroutines.launch
 
 // Estado de la pantalla de detalle de un curso online
 data class CapacitacionDetalleUiState(
+    val cargando: Boolean = true,
     val capacitacion: Capacitacion? = null,
     val producto: Producto? = null,
     val modulosAbiertos: Set<Int> = emptySet(),
@@ -60,6 +61,8 @@ class CapacitacionDetalleViewModel(application: Application) : AndroidViewModel(
     fun cargarCapacitacion(id: Int) {
         if (_uiState.value.capacitacion?.id == id) return
 
+        _uiState.update { it.copy(cargando = true) }
+
         viewModelScope.launch {
             val capacitacionEncontrada = capacitacionRepository.obtenerCapacitacionPorIdRemoto(id)
 
@@ -70,6 +73,7 @@ class CapacitacionDetalleViewModel(application: Application) : AndroidViewModel(
             }
 
             _uiState.value = CapacitacionDetalleUiState(
+                cargando = false,
                 capacitacion = capacitacionEncontrada,
                 producto = productoEncontrado,
                 modulosAbiertos = setOf(0),
@@ -91,6 +95,7 @@ class CapacitacionDetalleViewModel(application: Application) : AndroidViewModel(
             }
             _uiState.update {
                 it.copy(
+                    cargando = false,
                     capacitacion = capacitacionActualizada,
                     producto = productoEncontrado,
                     puedeEditar = calcularPuedeEditar(capacitacionActualizada),

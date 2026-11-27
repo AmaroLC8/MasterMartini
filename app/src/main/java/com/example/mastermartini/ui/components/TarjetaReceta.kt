@@ -1,6 +1,5 @@
 package com.example.mastermartini.ui.components
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -10,10 +9,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -43,8 +44,8 @@ fun TarjetaReceta(
     Card(
         onClick = { onVerDetalle(curso.id) },
         colors = CardDefaults.cardColors(containerColor = BlancoPuro),
-        border = BorderStroke(1.dp, DoradoCalidad.copy(alpha = 0.6f)),
-        shape = RoundedCornerShape(10.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        shape = RoundedCornerShape(14.dp),
         modifier = modifier.fillMaxWidth()
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -84,12 +85,22 @@ fun TarjetaReceta(
                 fontSize = 15.sp,
                 color = TextoOscuro
             )
-            Text(
-                text = "⏱️ Duración: ${curso.duracion}",
-                fontSize = 15.sp,
-                fontWeight = FontWeight.Bold,
-                color = RojoItaliano
-            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Outlined.Schedule,
+                    contentDescription = null,
+                    tint = DoradoCalidad,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = "Duración: ${curso.duracion}",
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = RojoItaliano
+                )
+            }
 
             TextButton(
                 onClick = { onVerDetalle(curso.id) },

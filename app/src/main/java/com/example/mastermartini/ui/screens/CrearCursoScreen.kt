@@ -2,7 +2,6 @@ package com.example.mastermartini.ui.screens
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -12,6 +11,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material.icons.filled.VideoLibrary
+import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -125,8 +125,8 @@ fun CrearCursoScreen(
 
             Card(
                 colors = CardDefaults.cardColors(containerColor = BlancoPuro),
-                border = BorderStroke(1.dp, GrisBorde),
-                shape = RoundedCornerShape(12.dp),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                shape = RoundedCornerShape(14.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(
@@ -201,12 +201,21 @@ fun CrearCursoScreen(
                     }
 
                     if (uiState.videoUrl.isNotBlank()) {
-                        Text(
-                            text = "✓ Video cargado en la nube",
-                            color = VerdeItaliano,
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.Bold
-                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Rounded.CheckCircle,
+                                contentDescription = null,
+                                tint = VerdeItaliano,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "Video cargado en la nube",
+                                color = VerdeItaliano,
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
                         key(uiState.videoUrl) {
                             ReproductorVideoLocal(videoUrl = uiState.videoUrl)
                         }

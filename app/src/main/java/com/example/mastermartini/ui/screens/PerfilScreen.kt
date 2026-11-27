@@ -34,6 +34,7 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.Quiz
 import androidx.compose.material.icons.filled.School
+import androidx.compose.material.icons.rounded.WorkspacePremium
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -158,15 +159,26 @@ fun PerfilScreen(
                 )
                 if (uiState.planPro) {
                     Spacer(modifier = Modifier.height(6.dp))
-                    Text(
-                        text = "★ Plan Pro activo",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = TextoOscuro,
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier
                             .background(DoradoCalidad, RoundedCornerShape(6.dp))
                             .padding(horizontal = 12.dp, vertical = 4.dp)
-                    )
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.WorkspacePremium,
+                            contentDescription = null,
+                            tint = TextoOscuro,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "Plan Pro activo",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = TextoOscuro
+                        )
+                    }
                 }
             }
 
@@ -345,8 +357,8 @@ private fun TarjetaPerfil(
 ) {
     Card(
         colors = CardDefaults.cardColors(containerColor = BlancoPuro),
-        border = BorderStroke(1.dp, DoradoCalidad.copy(alpha = 0.6f)),
-        shape = RoundedCornerShape(10.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        shape = RoundedCornerShape(14.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(
@@ -374,7 +386,7 @@ private fun BotonPanel(
         onClick = onClick,
         colors = CardDefaults.cardColors(containerColor = VerdeItaliano.copy(alpha = 0.08f)),
         border = BorderStroke(1.dp, VerdeItaliano),
-        shape = RoundedCornerShape(10.dp),
+        shape = RoundedCornerShape(14.dp),
         modifier = Modifier
             .fillMaxWidth()
             .heightIn(min = 56.dp)

@@ -23,6 +23,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.WorkspacePremium
+import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -175,7 +176,8 @@ private fun TarjetaMiCurso(
         onClick = onAbrir,
         colors = CardDefaults.cardColors(containerColor = BlancoPuro),
         border = BorderStroke(1.dp, VerdeItaliano),
-        shape = RoundedCornerShape(12.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        shape = RoundedCornerShape(14.dp),
         modifier = Modifier
             .fillMaxWidth()
             .heightIn(min = 56.dp)
@@ -214,7 +216,8 @@ private fun TarjetaPlanPro(precio: String) {
     Card(
         colors = CardDefaults.cardColors(containerColor = BlancoPuro),
         border = BorderStroke(2.dp, DoradoCalidad),
-        shape = RoundedCornerShape(12.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        shape = RoundedCornerShape(14.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
         Row(
@@ -256,8 +259,8 @@ private fun TarjetaCapacitacion(
     Card(
         onClick = { onVerCapacitacion(capacitacion.id) },
         colors = CardDefaults.cardColors(containerColor = BlancoPuro),
-        border = BorderStroke(1.dp, DoradoCalidad.copy(alpha = 0.6f)),
-        shape = RoundedCornerShape(10.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        shape = RoundedCornerShape(14.dp),
         modifier = modifier.fillMaxWidth()
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -298,12 +301,22 @@ private fun TarjetaCapacitacion(
                 fontSize = 16.sp,
                 color = TextoOscuro
             )
-            Text(
-                text = "⏱️ Duración: ${capacitacion.duracionTotal}",
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold,
-                color = RojoItaliano
-            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Outlined.Schedule,
+                    contentDescription = null,
+                    tint = DoradoCalidad,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = "Duración: ${capacitacion.duracionTotal}",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = RojoItaliano
+                )
+            }
             Text(
                 text = "Instructor: ${capacitacion.instructor}",
                 fontSize = 16.sp,
