@@ -38,7 +38,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.mastermartini.R
 import com.example.mastermartini.data.DatosEmpresa
+import com.example.mastermartini.ui.components.CargandoContenido
 import com.example.mastermartini.ui.components.ImagenCabeceraCatalogo
+import com.example.mastermartini.ui.components.TarjetaError
 import com.example.mastermartini.ui.theme.BlancoHueso
 import com.example.mastermartini.ui.theme.BlancoPuro
 import com.example.mastermartini.ui.theme.DoradoCalidad
@@ -46,6 +48,7 @@ import com.example.mastermartini.ui.theme.RojoItaliano
 import com.example.mastermartini.ui.theme.TextoOscuro
 import com.example.mastermartini.ui.theme.VerdeItaliano
 import com.example.mastermartini.ui.theme.VerdeOscuro
+import com.example.mastermartini.viewmodel.EstadoUi
 import com.example.mastermartini.viewmodel.HomeViewModel
 
 // Pantalla principal con MasterClass destacada, perfil del taller y catálogo de recetas
@@ -63,7 +66,9 @@ fun HomeScreen(
     onVerProductos: () -> Unit,
     onBuscar: () -> Unit
 ) {
-    val catalogoCursos by viewModel.cursos.collectAsState()
+    val estadoRecetas by viewModel.cursos.collectAsState()
+    // Recetas para la lista; vacía mientras carga o si hubo error
+    val catalogoCursos = (estadoRecetas as? EstadoUi.Exito)?.datos ?: emptyList()
     val favoritos by viewModel.favoritos.collectAsState()
     val totalFavoritos by viewModel.totalFavoritos.collectAsState()
 
@@ -286,6 +291,15 @@ fun HomeScreen(
                         color = TextoOscuro
                     )
                 }
+            }
+
+            // Mientras llegan las recetas se ve la ruedita; si fallan, la tarjeta con Reintentar
+            when (val estado = estadoRecetas) {
+                is EstadoUi.Cargando -> item { CargandoContenido() }
+                is EstadoUi.Error -> item {
+                    TarjetaError(mensaje = estado.mensaje, onReintentar = { viewModel.reintentar() })
+                }
+                is EstadoUi.Exito -> Unit
             }
 
             items(catalogoCursos, key = { it.id }) { curso ->

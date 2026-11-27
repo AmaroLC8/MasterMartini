@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.mastermartini.data.CursoRepository
 import com.example.mastermartini.data.FavoritoRepository
 import com.example.mastermartini.data.local.MasterMartiniDatabase
+import com.example.mastermartini.data.textoDeError
 import com.example.mastermartini.model.Curso
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -14,7 +15,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-// ViewModel de la pantalla principal que expone el catálogo de recetas y favoritos desde Room
+// ViewModel de la pantalla principal: recetas del servidor y favoritos desde Room
 class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
     private val cursoRepository = CursoRepository()
@@ -22,8 +23,9 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         MasterMartiniDatabase.getInstance(application).favoritoDao()
     )
 
-    private val _cursos = MutableStateFlow<List<Curso>>(emptyList())
-    val cursos: StateFlow<List<Curso>> = _cursos.asStateFlow()
+    // Recetas del servidor: Cargando, Exito (lista) o Error (con Reintentar)
+    private val _cursos = MutableStateFlow<EstadoUi<List<Curso>>>(EstadoUi.Cargando)
+    val cursos: StateFlow<EstadoUi<List<Curso>>> = _cursos.asStateFlow()
 
     val favoritos: StateFlow<List<Int>> = favoritoRepository.obtenerIdsFavoritos()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -32,11 +34,23 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
     init {
-        cargarCursos()
+        cargarCursos(forzarRecarga = false)
     }
 
-    private fun cargarCursos() {
-        _cursos.value = cursoRepository.obtenerCursos()
+    // Acción del botón Reintentar: vuelve a pedir las recetas al servidor
+    fun reintentar() {
+        cargarCursos(forzarRecarga = true)
+    }
+
+    // Lee las recetas (de memoria si ya llegaron antes) y actualiza el estado
+    private fun cargarCursos(forzarRecarga: Boolean) {
+        _cursos.value = EstadoUi.Cargando
+        viewModelScope.launch {
+            cursoRepository.obtenerRecetas(forzarRecarga).fold(
+                onSuccess = { lista -> _cursos.value = EstadoUi.Exito(lista) },
+                onFailure = { error -> _cursos.value = EstadoUi.Error(textoDeError(error)) }
+            )
+        }
     }
 
     // Agrega o quita una receta de favoritos en Room

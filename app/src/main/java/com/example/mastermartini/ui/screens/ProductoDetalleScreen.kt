@@ -12,6 +12,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -30,6 +31,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.mastermartini.ui.components.TarjetaError
+import com.example.mastermartini.ui.components.TarjetaNoDisponible
 import com.example.mastermartini.ui.components.BotonCatalogoPdf
 import com.example.mastermartini.ui.components.ContactoVentas
 import com.example.mastermartini.ui.components.EtiquetaVegana
@@ -93,13 +96,21 @@ fun ProductoDetalleScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(innerPadding)
+                    .padding(16.dp)
             ) {
-                Text(
-                    text = "Producto no encontrado",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = TextoOscuro
-                )
+                // Cargando, 404 o error de conexión con Reintentar
+                val errorCarga = uiState.errorCarga
+                when {
+                    uiState.noExiste -> TarjetaNoDisponible(
+                        titulo = "Este producto ya no está disponible",
+                        onVolver = onVolver
+                    )
+                    errorCarga != null -> TarjetaError(
+                        mensaje = errorCarga,
+                        onReintentar = { viewModel.reintentar() }
+                    )
+                    else -> CircularProgressIndicator(color = VerdeItaliano)
+                }
             }
         } else {
             Column(
@@ -171,7 +182,11 @@ fun ProductoDetalleScreen(
                     fontWeight = FontWeight.Bold,
                     color = TextoOscuro
                 )
-                if (uiState.recetas.isEmpty()) {
+                val errorRecetas = uiState.errorRecetas
+                if (errorRecetas != null) {
+                    // El producto se ve igual; solo faltan sus recetas
+                    TarjetaError(mensaje = errorRecetas, onReintentar = { viewModel.reintentar() })
+                } else if (uiState.recetas.isEmpty()) {
                     Text(
                         text = "Todavía no hay recetas con este producto en la app.",
                         fontSize = 16.sp,

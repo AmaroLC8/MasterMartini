@@ -38,6 +38,8 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.mastermartini.ui.components.TarjetaError
+import com.example.mastermartini.ui.components.TarjetaNoDisponible
 import com.example.mastermartini.ui.components.ContactoVentas
 import com.example.mastermartini.ui.components.DatoConIcono
 import com.example.mastermartini.ui.components.EtiquetaVegana
@@ -62,6 +64,7 @@ fun DetalleScreen(
     val marcados by viewModel.marcados.collectAsState()
     val pasosCompletados by viewModel.pasosCompletados.collectAsState()
     val productoInsumo by viewModel.productoInsumo.collectAsState()
+    val carga by viewModel.carga.collectAsState()
 
     Scaffold(
         containerColor = BlancoHueso,
@@ -103,12 +106,19 @@ fun DetalleScreen(
                     .padding(innerPadding)
                     .padding(16.dp)
             ) {
-                Text(
-                    text = "Receta no encontrada",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = TextoOscuro
-                )
+                // Cargando, 404 o error de conexión con Reintentar
+                val errorCarga = carga.errorCarga
+                when {
+                    carga.noExiste -> TarjetaNoDisponible(
+                        titulo = "Esta receta ya no está disponible",
+                        onVolver = onVolver
+                    )
+                    errorCarga != null -> TarjetaError(
+                        mensaje = errorCarga,
+                        onReintentar = { viewModel.reintentar() }
+                    )
+                    else -> CircularProgressIndicator(color = VerdeItaliano)
+                }
             }
         } else {
             Column(

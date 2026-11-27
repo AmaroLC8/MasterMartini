@@ -94,13 +94,13 @@ class CapacitacionDetalleViewModel(application: Application) : AndroidViewModel(
                     _uiState.value = CapacitacionDetalleUiState(
                         cargando = false,
                         capacitacion = capacitacion,
-                        producto = productoRepository.obtenerProductoPorNombre(capacitacion.insumoPrincipal),
                         modulosAbiertos = setOf(0),
                         puedeEditar = calcularPuedeEditar(capacitacion),
                         puedeEliminar = calcularPuedeEliminar(),
                         inscripcion = buscarMiInscripcion(id)
                     )
                     cargarPreguntas(id)
+                    cargarProductoDelCurso(capacitacion.insumoPrincipal)
                 },
                 onFailure = { error ->
                     _uiState.update {
@@ -128,13 +128,13 @@ class CapacitacionDetalleViewModel(application: Application) : AndroidViewModel(
                             capacitacion = capacitacion,
                             cursoNoExiste = false,
                             errorCarga = null,
-                            producto = productoRepository.obtenerProductoPorNombre(capacitacion.insumoPrincipal),
                             puedeEditar = calcularPuedeEditar(capacitacion),
                             puedeEliminar = calcularPuedeEliminar(),
                             inscripcion = buscarMiInscripcion(id)
                         )
                     }
                     cargarPreguntas(id)
+                    cargarProductoDelCurso(capacitacion.insumoPrincipal)
                 },
                 onFailure = { error ->
                     if (esCursoNoEncontrado(error)) {
@@ -149,6 +149,12 @@ class CapacitacionDetalleViewModel(application: Application) : AndroidViewModel(
                 }
             )
         }
+    }
+
+    // Busca el producto principal del curso; si no se puede cargar, el curso se ve igual sin su tarjeta
+    private suspend fun cargarProductoDelCurso(nombre: String) {
+        val producto = productoRepository.obtenerProductoPorNombre(nombre).getOrNull()
+        _uiState.update { it.copy(producto = producto) }
     }
 
     // El servidor responde 404 cuando el curso no existe o fue eliminado

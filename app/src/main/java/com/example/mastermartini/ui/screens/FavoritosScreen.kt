@@ -43,6 +43,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.mastermartini.ui.components.CargandoContenido
+import com.example.mastermartini.ui.components.TarjetaError
 import com.example.mastermartini.ui.theme.BlancoHueso
 import com.example.mastermartini.ui.theme.BlancoPuro
 import com.example.mastermartini.ui.theme.DoradoCalidad
@@ -50,6 +52,7 @@ import com.example.mastermartini.ui.theme.RojoItaliano
 import com.example.mastermartini.ui.theme.TextoOscuro
 import com.example.mastermartini.ui.theme.VerdeItaliano
 import com.example.mastermartini.ui.theme.VerdeOscuro
+import com.example.mastermartini.viewmodel.EstadoUi
 import com.example.mastermartini.viewmodel.FavoritosViewModel
 
 // Pantalla que muestra las recetas guardadas como favoritas en Room
@@ -60,7 +63,9 @@ fun FavoritosScreen(
     onVerDetalle: (Int) -> Unit,
     onIrARecetas: () -> Unit
 ) {
-    val cursosFavoritos by viewModel.cursosFavoritos.collectAsState()
+    val estadoFavoritos by viewModel.cursosFavoritos.collectAsState()
+    // Favoritos ya cruzados con las recetas del servidor; vacía mientras carga o si hubo error
+    val cursosFavoritos = (estadoFavoritos as? EstadoUi.Exito)?.datos ?: emptyList()
 
     Scaffold(
         containerColor = BlancoHueso,
@@ -68,7 +73,11 @@ fun FavoritosScreen(
             TopAppBar(
                 title = {
                     Text(
-                        text = "Mis favoritos (${cursosFavoritos.size})",
+                        text = if (estadoFavoritos is EstadoUi.Exito) {
+                            "Mis favoritos (${cursosFavoritos.size})"
+                        } else {
+                            "Mis favoritos"
+                        },
                         fontWeight = FontWeight.Bold
                     )
                 },
@@ -79,7 +88,19 @@ fun FavoritosScreen(
             )
         }
     ) { innerPadding ->
-        if (cursosFavoritos.isEmpty()) {
+        val estado = estadoFavoritos
+        if (estado is EstadoUi.Cargando) {
+            CargandoContenido(modifier = Modifier.padding(innerPadding))
+        } else if (estado is EstadoUi.Error) {
+            // Sin servidor no se sabe qué recetas son: se avisa en vez de mostrar una lista vacía
+            TarjetaError(
+                mensaje = estado.mensaje,
+                onReintentar = { viewModel.reintentar() },
+                modifier = Modifier
+                    .padding(innerPadding)
+                    .padding(16.dp)
+            )
+        } else if (cursosFavoritos.isEmpty()) {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center,

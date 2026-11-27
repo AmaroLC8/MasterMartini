@@ -2,10 +2,12 @@ package com.example.mastermartini
 
 import android.app.Application
 import com.example.mastermartini.data.CapacitacionRepository
+import com.example.mastermartini.data.CatalogoCache
 import com.example.mastermartini.data.CursoRepository
 import com.example.mastermartini.data.InscripcionRepository
 import com.example.mastermartini.data.cursoGratisDePrueba
 import com.example.mastermartini.data.cursoProDePrueba
+import com.example.mastermartini.data.recetasDePrueba
 import com.example.mastermartini.data.remote.CursosApiService
 import com.example.mastermartini.data.remote.RetrofitClient
 import com.example.mastermartini.model.Capacitacion
@@ -64,11 +66,20 @@ class CatalogoLogicTest : StringSpec({
         return estado.datos
     }
 
-    // PRUEBA 5: Repositorio de recetas/cursos retorna las 10 recetas
-    "5. CursoRepository debe retornar el catálogo completo de 10 recetas técnicas" {
-        val repository = CursoRepository()
-        val cursos = repository.obtenerCursos()
-        cursos.size shouldBe 10
+    // PRUEBA 5: el repositorio de recetas entrega lo que responde el servidor (ya no hay lista local)
+    "5. CursoRepository debe retornar las recetas que entrega el servidor" {
+        runTest {
+            CatalogoCache.limpiar()
+            val api = mockk<CursosApiService>()
+            mockkObject(RetrofitClient)
+            every { RetrofitClient.cursosApi } returns api
+            coEvery { api.obtenerRecetas() } returns Response.success(recetasDePrueba)
+
+            val recetas = CursoRepository().obtenerRecetas().getOrThrow()
+
+            recetas.size shouldBe 6
+            CatalogoCache.limpiar()
+        }
     }
 
     // PRUEBA 6: el repositorio de capacitaciones entrega lo que responde el servidor

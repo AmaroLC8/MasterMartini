@@ -43,6 +43,8 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.mastermartini.ui.components.CargandoContenido
+import com.example.mastermartini.ui.components.TarjetaError
 import com.example.mastermartini.ui.components.TarjetaReceta
 import com.example.mastermartini.ui.theme.BlancoHueso
 import com.example.mastermartini.ui.theme.BlancoPuro
@@ -51,6 +53,7 @@ import com.example.mastermartini.ui.theme.TextoOscuro
 import com.example.mastermartini.ui.theme.VerdeItaliano
 import com.example.mastermartini.ui.theme.VerdeOscuro
 import com.example.mastermartini.viewmodel.BuscarViewModel
+import com.example.mastermartini.viewmodel.EstadoUi
 
 // Pantalla de búsqueda en tiempo real sobre el catálogo de recetas
 @OptIn(ExperimentalMaterial3Api::class)
@@ -124,7 +127,16 @@ fun BuscarScreen(
                     .padding(16.dp)
             )
 
-            if (uiState.texto.isBlank()) {
+            val estado = uiState.estado
+            if (estado is EstadoUi.Cargando) {
+                CargandoContenido()
+            } else if (estado is EstadoUi.Error) {
+                TarjetaError(
+                    mensaje = estado.mensaje,
+                    onReintentar = { viewModel.reintentar() },
+                    modifier = Modifier.padding(16.dp)
+                )
+            } else if (uiState.texto.isBlank()) {
                 Column(modifier = Modifier.padding(horizontal = 16.dp)) {
                     Text(
                         text = "Sugerencias",
