@@ -131,8 +131,6 @@ kover {
             }
         }
         verify {
-            // TODO tanda 2: quitar esta línea cuando los ViewModels lleguen al 80 % (hoy solo avisa)
-            warningInsteadOfFailure = true
             rule {
                 minBound(80)
             }

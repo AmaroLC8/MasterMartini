@@ -157,7 +157,7 @@ Las pruebas están en `app/src/test` y usan **Kotest** (StringSpec), **MockK** y
 
 **Ver el reporte:** abrir `app/build/reports/kover/htmlDebug/index.html` en el navegador.
 
-**Revisar el mínimo de 80 % de líneas:** `.\gradlew.bat koverVerifyDebug` (por ahora solo muestra un aviso si la cobertura queda bajo el 80 %).
+**Revisar el mínimo de 80 % de líneas:** `.\gradlew.bat koverVerifyDebug` (falla si la cobertura queda bajo el 80 %; `gradlew build` también lo revisa).
 
 Kover mide solo la lógica (`viewmodel`, `data` y `model`). Esto queda fuera del cálculo:
 
