@@ -31,7 +31,9 @@ class CursoRepository {
                     "1 pizca de sal de mar para decorar (opcional)"
                 ),
                 rendimiento = "Rinde 40 bombones",
-                dificultad = "Avanzada"
+                dificultad = "Avanzada",
+                videoUrl = DatosEmpresa.URL_VIDEO_MASTERCLASS,
+                imagenUrl = DatosEmpresa.URL_IMG_CHOCOLATERIA
             ),
             Curso(
                 id = 2,
@@ -55,7 +57,9 @@ class CursoRepository {
                     "Colorante en gel (opcional)"
                 ),
                 rendimiento = "Decora 2 tortas de 22 cm",
-                dificultad = "Fácil"
+                dificultad = "Fácil",
+                videoUrl = DatosEmpresa.URL_VIDEO_MASTERCLASS,
+                imagenUrl = DatosEmpresa.URL_IMG_PASTELERIA
             ),
             Curso(
                 id = 3,
@@ -81,7 +85,9 @@ class CursoRepository {
                     "1 huevo para pintar"
                 ),
                 rendimiento = "Rinde 30 palmeras",
-                dificultad = "Avanzada"
+                dificultad = "Avanzada",
+                videoUrl = DatosEmpresa.URL_VIDEO_MASTERCLASS,
+                imagenUrl = DatosEmpresa.URL_IMG_PANADERIA
             ),
             Curso(
                 id = 4,
@@ -110,7 +116,9 @@ class CursoRepository {
                     "1 torta de mousse congelada de 20 cm"
                 ),
                 rendimiento = "Cubre 1 torta de 20 cm",
-                dificultad = "Avanzada"
+                dificultad = "Avanzada",
+                videoUrl = DatosEmpresa.URL_VIDEO_MASTERCLASS,
+                imagenUrl = DatosEmpresa.URL_IMG_CHOCOLATERIA
             ),
             Curso(
                 id = 5,
@@ -137,7 +145,9 @@ class CursoRepository {
                 ),
                 rendimiento = "Rinde 1 litro (8 porciones)",
                 dificultad = "Media",
-                esVegano = true
+                esVegano = true,
+                videoUrl = DatosEmpresa.URL_VIDEO_MASTERCLASS,
+                imagenUrl = DatosEmpresa.URL_IMG_CHOCOLATERIA
             ),
             Curso(
                 id = 6,
@@ -162,7 +172,9 @@ class CursoRepository {
                     "1 pizca de sal"
                 ),
                 rendimiento = "Rellena 20 macarons",
-                dificultad = "Media"
+                dificultad = "Media",
+                videoUrl = DatosEmpresa.URL_VIDEO_MASTERCLASS,
+                imagenUrl = DatosEmpresa.URL_IMG_PASTELERIA
             ),
             Curso(
                 id = 7,
@@ -190,7 +202,9 @@ class CursoRepository {
                     "Azúcar Glass para espolvorear (opcional)"
                 ),
                 rendimiento = "Rinde 12 bollos",
-                dificultad = "Media"
+                dificultad = "Media",
+                videoUrl = DatosEmpresa.URL_VIDEO_MASTERCLASS,
+                imagenUrl = DatosEmpresa.URL_IMG_PANADERIA
             ),
             Curso(
                 id = 8,
@@ -217,7 +231,9 @@ class CursoRepository {
                 ),
                 rendimiento = "Rinde 8 vasitos de 150 ml",
                 dificultad = "Media",
-                esVegano = true
+                esVegano = true,
+                videoUrl = DatosEmpresa.URL_VIDEO_MASTERCLASS,
+                imagenUrl = DatosEmpresa.URL_IMG_PASTELERIA
             ),
             Curso(
                 id = 9,
@@ -242,7 +258,9 @@ class CursoRepository {
                     "Fruta fresca para decorar (frutillas, kiwi o durazno)"
                 ),
                 rendimiento = "Rinde 12 tartaletas",
-                dificultad = "Fácil"
+                dificultad = "Fácil",
+                videoUrl = DatosEmpresa.URL_VIDEO_MASTERCLASS,
+                imagenUrl = DatosEmpresa.URL_IMG_PASTELERIA
             ),
             Curso(
                 id = 10,
@@ -268,7 +286,9 @@ class CursoRepository {
                 ),
                 rendimiento = "Rinde 30 trufas",
                 dificultad = "Fácil",
-                esVegano = true
+                esVegano = true,
+                videoUrl = DatosEmpresa.URL_VIDEO_MASTERCLASS,
+                imagenUrl = DatosEmpresa.URL_IMG_CHOCOLATERIA
             )
         )
     }

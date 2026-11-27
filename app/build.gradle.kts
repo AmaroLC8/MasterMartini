@@ -73,6 +73,9 @@ dependencies {
     // Reproductor de video moderno (soporta videos locales y enlaces HTTPS de Cloudinary)
     implementation("androidx.media3:media3-exoplayer:1.4.1")
     implementation("androidx.media3:media3-ui:1.4.1")
+
+    // Carga de imágenes desde Cloudinary en Compose
+    implementation("io.coil-kt:coil-compose:2.7.0")
     // Kotest (Requerido por Guía 15)
     testImplementation("io.kotest:kotest-runner-junit5:5.8.0")
     testImplementation("io.kotest:kotest-assertions-core:5.8.0")

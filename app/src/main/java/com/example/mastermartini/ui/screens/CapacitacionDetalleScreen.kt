@@ -36,6 +36,8 @@ import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.SignalCellularAlt
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -69,6 +71,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.mastermartini.data.DatosEmpresa
 import com.example.mastermartini.model.Leccion
 import com.example.mastermartini.model.Modulo
 import com.example.mastermartini.ui.components.DatoConIcono
@@ -76,7 +79,6 @@ import com.example.mastermartini.ui.components.EtiquetaAcceso
 import com.example.mastermartini.ui.components.EtiquetaVegana
 import com.example.mastermartini.ui.theme.BlancoHueso
 import com.example.mastermartini.ui.theme.BlancoPuro
-import com.example.mastermartini.ui.theme.DoradoCalidad
 import com.example.mastermartini.ui.theme.GrisBorde
 import com.example.mastermartini.ui.theme.RojoItaliano
 import com.example.mastermartini.ui.theme.TextoOscuro
@@ -138,26 +140,39 @@ fun CapacitacionDetalleScreen(
     ) { innerPadding ->
         val capacitacion = uiState.capacitacion
 
-        if (capacitacion == null) {
-            Box(
-                contentAlignment = Alignment.Center,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding)
-                    .padding(16.dp)
-            ) {
-                Text(
-                    text = "Curso no encontrado",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = TextoOscuro
-                )
+        when {
+            uiState.cargando -> {
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding)
+                ) {
+                    CircularProgressIndicator(color = VerdeItaliano)
+                }
             }
-        } else {
-            // Prioriza el video resumen y usa la primera lección como respaldo
-            val urlVideo = capacitacion.videoResumenUrl?.takeIf { it.isNotBlank() }
-                ?: capacitacion.modulos.firstOrNull()?.lecciones?.firstOrNull()?.videoUrl
-                    ?.takeIf { it.isNotBlank() }
+            capacitacion == null -> {
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding)
+                        .padding(16.dp)
+                ) {
+                    Text(
+                        text = "Curso no encontrado",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = TextoOscuro
+                    )
+                }
+            }
+            else -> {
+                // Prioriza el video resumen y usa la primera lección o el video maestro como respaldo
+                val urlVideo = capacitacion.videoResumenUrl?.takeIf { it.isNotBlank() }
+                    ?: capacitacion.modulos.firstOrNull()?.lecciones?.firstOrNull()?.videoUrl
+                        ?.takeIf { it.isNotBlank() }
+                    ?: DatosEmpresa.URL_VIDEO_MASTERCLASS
 
             Column(
                 modifier = Modifier
@@ -242,8 +257,8 @@ fun CapacitacionDetalleScreen(
 
                 Card(
                     colors = CardDefaults.cardColors(containerColor = BlancoPuro),
-                    border = BorderStroke(1.dp, DoradoCalidad.copy(alpha = 0.6f)),
-                    shape = RoundedCornerShape(12.dp),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                    shape = RoundedCornerShape(14.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
@@ -393,6 +408,7 @@ fun CapacitacionDetalleScreen(
                     }
                 }
             }
+            }
         }
     }
 
@@ -473,7 +489,8 @@ private fun TarjetaAvance(
     Card(
         colors = CardDefaults.cardColors(containerColor = BlancoPuro),
         border = BorderStroke(2.dp, VerdeItaliano),
-        shape = RoundedCornerShape(12.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        shape = RoundedCornerShape(14.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(
@@ -542,11 +559,13 @@ private fun TituloSeccion(texto: String) {
 @Composable
 private fun FilaConCheck(texto: String) {
     Row(verticalAlignment = Alignment.Top) {
-        Text(
-            text = "✓",
-            fontSize = 18.sp,
-            fontWeight = FontWeight.Bold,
-            color = VerdeItaliano
+        Icon(
+            imageVector = Icons.Rounded.CheckCircle,
+            contentDescription = null,
+            tint = VerdeItaliano,
+            modifier = Modifier
+                .padding(top = 2.dp)
+                .size(20.dp)
         )
         Spacer(modifier = Modifier.width(10.dp))
         Text(
@@ -583,8 +602,8 @@ private fun BloqueModulo(
 
     Card(
         colors = CardDefaults.cardColors(containerColor = BlancoPuro),
-        border = BorderStroke(1.dp, GrisBorde),
-        shape = RoundedCornerShape(12.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        shape = RoundedCornerShape(14.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
         Row(
@@ -700,12 +719,21 @@ private fun FilaLeccion(
                 .background(colorFondo, CircleShape)
                 .border(2.dp, VerdeItaliano, CircleShape)
         ) {
-            Text(
-                text = if (vista) "✓" else "$numero",
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold,
-                color = colorContenido
-            )
+            if (vista) {
+                Icon(
+                    imageVector = Icons.Rounded.Check,
+                    contentDescription = null,
+                    tint = colorContenido,
+                    modifier = Modifier.size(20.dp)
+                )
+            } else {
+                Text(
+                    text = "$numero",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = colorContenido
+                )
+            }
         }
         Spacer(modifier = Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {

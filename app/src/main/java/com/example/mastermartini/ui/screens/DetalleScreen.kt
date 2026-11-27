@@ -15,9 +15,14 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.outlined.MenuBook
 import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.SignalCellularAlt
+import androidx.compose.material.icons.outlined.PlayCircle
+import androidx.compose.material.icons.outlined.ShoppingBasket
+import androidx.compose.material.icons.rounded.Celebration
+import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -26,9 +31,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -36,6 +41,7 @@ import androidx.compose.ui.unit.sp
 import com.example.mastermartini.ui.components.ContactoVentas
 import com.example.mastermartini.ui.components.DatoConIcono
 import com.example.mastermartini.ui.components.EtiquetaVegana
+import com.example.mastermartini.ui.components.ImagenCabeceraCatalogo
 import com.example.mastermartini.ui.theme.*
 import com.example.mastermartini.viewmodel.DetalleViewModel
 
@@ -113,10 +119,20 @@ fun DetalleScreen(
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
+                // Imagen principal de la receta antes de la ficha descriptiva
+                ImagenCabeceraCatalogo(
+                    imagenUrl = cursoActual.imagenUrl,
+                    descripcion = cursoActual.titulo,
+                    categoriaOTema = cursoActual.categoria,
+                    alto = 190.dp,
+                    contentScale = ContentScale.Crop,
+                    forma = RoundedCornerShape(14.dp)
+                )
+
                 Card(
                     colors = CardDefaults.cardColors(containerColor = BlancoPuro),
-                    border = BorderStroke(1.dp, DoradoCalidad.copy(alpha = 0.6f)),
-                    shape = RoundedCornerShape(12.dp),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                    shape = RoundedCornerShape(14.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
@@ -201,20 +217,38 @@ fun DetalleScreen(
                     }
                 }
 
-                Text(
-                    text = "🎥 Video de la receta",
-                    fontSize = 17.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = TextoOscuro
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Outlined.PlayCircle,
+                        contentDescription = null,
+                        tint = VerdeItaliano,
+                        modifier = Modifier.size(22.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Video de la receta",
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = TextoOscuro
+                    )
+                }
                 ReproductorVideoLocal(videoUrl = cursoActual.videoUrl)
 
-                Text(
-                    text = "🧺 Ingredientes",
-                    fontSize = 17.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = TextoOscuro
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Outlined.ShoppingBasket,
+                        contentDescription = null,
+                        tint = VerdeItaliano,
+                        modifier = Modifier.size(22.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Ingredientes",
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = TextoOscuro
+                    )
+                }
 
                 val totalIngredientes = cursoActual.ingredientes.size
                 val totalListos = marcados.size
@@ -296,12 +330,21 @@ fun DetalleScreen(
                     }
                 }
 
-                Text(
-                    text = "📖 Paso a paso",
-                    fontSize = 17.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = TextoOscuro
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Outlined.MenuBook,
+                        contentDescription = null,
+                        tint = VerdeItaliano,
+                        modifier = Modifier.size(22.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Paso a paso",
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = TextoOscuro
+                    )
+                }
 
                 val totalPasos = cursoActual.pasos.size
                 val totalCompletados = pasosCompletados.size
@@ -357,17 +400,28 @@ fun DetalleScreen(
                 }
 
                 AnimatedVisibility(visible = totalPasos > 0 && totalCompletados == totalPasos) {
-                    Text(
-                        text = "¡Receta terminada! 🎉",
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = BlancoPuro,
-                        textAlign = TextAlign.Center,
+                    Row(
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(VerdeItaliano, RoundedCornerShape(12.dp))
+                            .background(VerdeItaliano, RoundedCornerShape(14.dp))
                             .padding(16.dp)
-                    )
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.Celebration,
+                            contentDescription = null,
+                            tint = DoradoCalidad,
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "¡Receta terminada!",
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = BlancoPuro
+                        )
+                    }
                 }
 
                 ContactoVentas(
@@ -414,12 +468,21 @@ private fun FilaPaso(
                 .background(colorFondo, CircleShape)
                 .border(2.dp, VerdeItaliano, CircleShape)
         ) {
-            Text(
-                text = if (completado) "✓" else "$numero",
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold,
-                color = colorContenido
-            )
+            if (completado) {
+                Icon(
+                    imageVector = Icons.Rounded.Check,
+                    contentDescription = null,
+                    tint = colorContenido,
+                    modifier = Modifier.size(20.dp)
+                )
+            } else {
+                Text(
+                    text = "$numero",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = colorContenido
+                )
+            }
         }
         Spacer(modifier = Modifier.width(12.dp))
         Text(

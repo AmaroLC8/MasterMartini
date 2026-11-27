@@ -16,7 +16,8 @@ data class Capacitacion(
     val loQueLograras: List<String>,
     val incluye: List<String>,
     val modulos: List<Modulo>,
-    val esVegano: Boolean = false
+    val esVegano: Boolean = false,
+    val imagenUrl: String? = null
 ) {
     val totalLecciones: Int
         get() = modulos.sumOf { modulo -> modulo.lecciones.size }

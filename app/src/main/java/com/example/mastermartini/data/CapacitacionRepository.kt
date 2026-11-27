@@ -12,14 +12,25 @@ class CapacitacionRepository {
 
     private val mensajeSinConexion = "No se pudo conectar con el servidor de cursos (9092)"
 
-    // Obtiene el catálogo remoto desde Retrofit o recurre al respaldo local si falla
+    // Obtiene el catálogo remoto desde Retrofit con respaldo local y completa imagenUrl por categoría
     suspend fun obtenerCapacitacionesRemotas(): List<Capacitacion> {
         return try {
             val remotos = RetrofitClient.cursosApi.obtenerCapacitaciones()
+                .map { completarImagen(it) }
             remotos.ifEmpty { obtenerCapacitaciones() }
         } catch (e: Exception) {
             obtenerCapacitaciones()
         }
+    }
+
+    private fun completarImagen(capacitacion: Capacitacion): Capacitacion {
+        if (!capacitacion.imagenUrl.isNullOrBlank()) return capacitacion
+        val respaldo = when (capacitacion.categoria) {
+            "Chocolatería", "Heladería" -> DatosEmpresa.URL_IMG_CHOCOLATERIA
+            "Panadería" -> DatosEmpresa.URL_IMG_PANADERIA
+            else -> DatosEmpresa.URL_IMG_PASTELERIA
+        }
+        return capacitacion.copy(imagenUrl = respaldo)
     }
 
     // Crea un nuevo curso en el microservicio enviando X-Usuario-Id
@@ -83,6 +94,8 @@ class CapacitacionRepository {
                 instructor = "Chef Elena Quiroga",
                 duracionTotal = "2 h 5 min",
                 insumoPrincipal = "Chocolate Ariba",
+                videoResumenUrl = DatosEmpresa.URL_VIDEO_MASTERCLASS,
+                imagenUrl = DatosEmpresa.URL_IMG_CHOCOLATERIA,
                 loQueLograras = listOf(
                     "Templar chocolate sin termómetro usando el método de la tabla",
                     "Saber si el chocolate quedó bien templado con la prueba del papel",
@@ -168,6 +181,8 @@ class CapacitacionRepository {
                 instructor = "Maestro panadero Hugo Retamal",
                 duracionTotal = "1 h 40 min",
                 insumoPrincipal = "Master Export Horneo",
+                videoResumenUrl = DatosEmpresa.URL_VIDEO_MASTERCLASS,
+                imagenUrl = DatosEmpresa.URL_IMG_PANADERIA,
                 loQueLograras = listOf(
                     "Reconocer cuándo la masa está lista con la prueba de la ventana",
                     "Hacer fermentar la masa en casa, sin cámara de fermentación",
@@ -242,6 +257,8 @@ class CapacitacionRepository {
                 instructor = "Chef Paula Ibarra",
                 duracionTotal = "1 h 45 min",
                 insumoPrincipal = "Bravo Crem",
+                videoResumenUrl = DatosEmpresa.URL_VIDEO_MASTERCLASS,
+                imagenUrl = DatosEmpresa.URL_IMG_PASTELERIA,
                 loQueLograras = listOf(
                     "Batir Bravo Crem hasta el punto firme sin que se corte",
                     "Cubrir y alisar una torta de 22 cm con espátula",
@@ -323,6 +340,8 @@ class CapacitacionRepository {
                 instructor = "Chef Tomás Riquelme",
                 duracionTotal = "2 h 20 min",
                 insumoPrincipal = "Gran Master Hoja",
+                videoResumenUrl = DatosEmpresa.URL_VIDEO_MASTERCLASS,
+                imagenUrl = DatosEmpresa.URL_IMG_PANADERIA,
                 loQueLograras = listOf(
                     "Laminar masa de hoja con 3 vueltas dobles sin que se rompa",
                     "Cortar y enrollar croissants de 60 g, todos del mismo tamaño",
@@ -404,6 +423,8 @@ class CapacitacionRepository {
                 instructor = "Chef Carmen Sepúlveda",
                 duracionTotal = "1 h 50 min",
                 insumoPrincipal = "Ariba Zero Latto",
+                videoResumenUrl = DatosEmpresa.URL_VIDEO_MASTERCLASS,
+                imagenUrl = DatosEmpresa.URL_IMG_CHOCOLATERIA,
                 loQueLograras = listOf(
                     "Preparar sorbete vegano de chocolate amargo con Ariba Zero Latto",
                     "Hacer sorbete cremoso sin máquina, revolviendo cada 30 minutos",
@@ -485,6 +506,8 @@ class CapacitacionRepository {
                 instructor = "Chef Andrés Molina",
                 duracionTotal = "2 h 40 min",
                 insumoPrincipal = "Decor Up",
+                videoResumenUrl = DatosEmpresa.URL_VIDEO_MASTERCLASS,
+                imagenUrl = DatosEmpresa.URL_IMG_PASTELERIA,
                 loQueLograras = listOf(
                     "Armar una torta mousse de 3 capas al revés, en molde con acetato",
                     "Preparar una mousse firme con Decor Up que se corte limpia",
@@ -580,7 +603,7 @@ class CapacitacionRepository {
     // Consulta una capacitación remota por ID usando respaldo local salvo HTTP 404
     suspend fun obtenerCapacitacionPorIdRemoto(id: Int): Capacitacion? {
         return try {
-            RetrofitClient.cursosApi.obtenerCapacitacion(id)
+            completarImagen(RetrofitClient.cursosApi.obtenerCapacitacion(id))
         } catch (e: HttpException) {
             if (e.code() == 404) null else obtenerCapacitacionPorId(id)
         } catch (e: Exception) {

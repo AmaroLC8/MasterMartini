@@ -1,14 +1,16 @@
 package com.example.mastermartini.ui.components
 
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.mastermartini.ui.theme.BlancoPuro
@@ -21,16 +23,34 @@ fun ChipOpcion(
     texto: String,
     seleccionado: Boolean,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    icono: ImageVector? = null
 ) {
     FilterChip(
         selected = seleccionado,
         onClick = onClick,
         label = { Text(text = texto, fontSize = 16.sp) },
-        leadingIcon = if (seleccionado) {
-            { Icon(imageVector = Icons.Filled.Check, contentDescription = null) }
-        } else {
-            null
+        leadingIcon = when {
+            seleccionado -> {
+                {
+                    Icon(
+                        imageVector = Icons.Rounded.Check,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            }
+            icono != null -> {
+                {
+                    Icon(
+                        imageVector = icono,
+                        contentDescription = null,
+                        tint = VerdeItaliano,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            }
+            else -> null
         },
         colors = FilterChipDefaults.filterChipColors(
             selectedContainerColor = VerdeItaliano,

@@ -34,6 +34,8 @@ import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.Store
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.outlined.PhotoCamera
+import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -244,7 +246,12 @@ fun RegistroScreen(
                         modifier = Modifier.fillMaxSize()
                     )
                 } else {
-                    Text("📷", fontSize = 36.sp)
+                    Icon(
+                        imageVector = Icons.Outlined.PhotoCamera,
+                        contentDescription = null,
+                        tint = VerdeItaliano,
+                        modifier = Modifier.size(36.dp)
+                    )
                 }
             }
 
@@ -514,14 +521,26 @@ fun RegistroScreen(
                     colors = CardDefaults.cardColors(
                         containerColor = VerdeItaliano.copy(alpha = 0.12f)
                     ),
+                    shape = RoundedCornerShape(14.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text(
-                        text = "✓ Formulario validado correctamente",
-                        modifier = Modifier.padding(12.dp),
-                        color = VerdeOscuro,
-                        fontWeight = FontWeight.Bold
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(12.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.CheckCircle,
+                            contentDescription = null,
+                            tint = VerdeItaliano,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Formulario validado correctamente",
+                            color = VerdeOscuro,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
             }
 

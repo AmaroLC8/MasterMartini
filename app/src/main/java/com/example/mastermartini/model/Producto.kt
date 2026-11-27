@@ -7,5 +7,6 @@ data class Producto(
     val linea: String,
     val descripcion: String,
     val usos: List<String>,
-    val esVegano: Boolean = false
+    val esVegano: Boolean = false,
+    val imagenUrl: String? = null
 )
