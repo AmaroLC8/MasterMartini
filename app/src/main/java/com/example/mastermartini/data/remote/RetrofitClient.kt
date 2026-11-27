@@ -1,6 +1,7 @@
 package com.example.mastermartini.data.remote
 
 import android.os.Build
+import com.example.mastermartini.BuildConfig
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
@@ -24,13 +25,15 @@ object RetrofitClient {
     }
 
     // 10.0.2.2 apunta al PC desde el emulador; localhost funciona en dispositivo físico vía adb reverse
+    // SERVIDOR_HOST viene de "servidor.host" en local.properties (vacío si no está)
     private val host: String by lazy {
-        if (isEmulator) "10.0.2.2" else "localhost"
+        UrlServidor.elegirHost(BuildConfig.SERVIDOR_HOST, isEmulator)
     }
 
-    private val BASE_URL_CURSOS get() = "http://$host:9092/"
-    private val BASE_URL_USUARIOS get() = "http://$host:9091/"
-    private val BASE_URL_INTERACCIONES get() = "http://$host:9093/"
+    // Debug: host + puerto de cada microservicio. Release: BuildConfig.URL_SERVIDOR para los tres
+    private val BASE_URL_CURSOS get() = UrlServidor.armarUrl(BuildConfig.DEBUG, host, 9092, BuildConfig.URL_SERVIDOR)
+    private val BASE_URL_USUARIOS get() = UrlServidor.armarUrl(BuildConfig.DEBUG, host, 9091, BuildConfig.URL_SERVIDOR)
+    private val BASE_URL_INTERACCIONES get() = UrlServidor.armarUrl(BuildConfig.DEBUG, host, 9093, BuildConfig.URL_SERVIDOR)
 
     private val logging = HttpLoggingInterceptor().apply {
         level = HttpLoggingInterceptor.Level.BODY
