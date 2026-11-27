@@ -35,41 +35,29 @@ import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.FavoriteBorder
 
-// El molde de datos (Curso) está en model/Curso.kt y la lista en data/CursoRepository.kt.
-// Esta pantalla solo DIBUJA los cursos que le entrega el HomeViewModel (MVVM).
-
+// Pantalla principal con MasterClass destacada, perfil del taller y catálogo de recetas
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
-    // ViewModel que entrega el catálogo de cursos y los favoritos (lo crea MainActivity)
     viewModel: HomeViewModel,
-    // Datos del perfil y la acción del botón, que manda el MainActivity
     nombreUsuario: String,
     rubroUsuario: String,
     rutUsuario: String,
     correoUsuario: String,
-    onEditarDatos: () -> Unit,// MainActivity decide a dónde navegar (abre "registro"
+    onEditarDatos: () -> Unit,
     onIrAEncuesta: () -> Unit,
-    // Recibe el id del curso tocado; MainActivity navega a "detalle/{id}"
     onVerDetalle: (Int) -> Unit,
-    // Tarjeta "Nuestros productos": MainActivity navega a "productos"
     onVerProductos: () -> Unit,
-    // Lupa de la barra superior: MainActivity navega a "buscar"
     onBuscar: () -> Unit
 ) {
-    // Colores estilo bandera italiana de Master Martini
     val verdeItaliano = Color(0xFF008C45)
     val rojoItaliano = Color(0xFFCD212A)
     val doradoCalidad = Color(0xFFC59B27)
     val blancoHueso = Color(0xFFF9F9F7)
     val textoOscuro = Color(0xFF1E232A)
 
-    // Escuchamos la lista de cursos del ViewModel. collectAsState() convierte el StateFlow
-    // en un estado de Compose: si la lista cambia, la pantalla se vuelve a dibujar sola.
     val catalogoCursos by viewModel.cursos.collectAsState()
 
-    // Favoritos guardados en Room: los ids marcados y cuántos son.
-    // Cuando se toca un corazón, Room avisa el cambio y estos valores se actualizan solos.
     val favoritos by viewModel.favoritos.collectAsState()
     val totalFavoritos by viewModel.totalFavoritos.collectAsState()
 
@@ -99,7 +87,6 @@ fun HomeScreen(
                             )
                         }
 
-                        // Contador de Favoritos en la TopBar
                         if (totalFavoritos > 0) {
                         Surface(
                             color = rojoItaliano,
@@ -127,13 +114,10 @@ fun HomeScreen(
                     }
                     }
                 },
-                // actions: botones a la derecha de la barra. La lupa abre "Buscar",
-                // que ya no está en la barra inferior. IconButton mide 48 dp (fácil de tocar).
                 actions = {
                     IconButton(onClick = onBuscar) {
                         Icon(
                             imageVector = Icons.Default.Search,
-                            // No es decorativo: es el único texto que TalkBack puede leer del botón
                             contentDescription = "Buscar recetas",
                             tint = Color.White
                         )
@@ -154,7 +138,6 @@ fun HomeScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            // 1. Encabezado Corporativo (Logo + Franja Tricolor Italiana)
             item {
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -181,7 +164,6 @@ fun HomeScreen(
                 }
             }
 
-            // 2. MasterClass: video destacado
             item {
                 Text(
                     text = "🎥 MasterClass destacada",
@@ -190,13 +172,11 @@ fun HomeScreen(
                     color = textoOscuro
                 )
                 Spacer(modifier = Modifier.height(6.dp))
-                // El enlace del video está en DatosEmpresa (no escrito en la pantalla)
                 ReproductorVideoLocal(
                     videoUrl = DatosEmpresa.URL_VIDEO_MASTERCLASS
                 )
             }
 
-            // 3. Tarjeta de Bienvenida con Datos del Perfil
             item {
                 Card(
                     colors = CardDefaults.cardColors(containerColor = Color.White),
@@ -232,9 +212,6 @@ fun HomeScreen(
                 }
             }
 
-            // 3b. Tarjeta "Nuestros productos" (arriba del catálogo de recetas, bien visible).
-            // Card con onClick: toda la tarjeta abre el catálogo de productos.
-            // Fondo verde con texto blanco para que se distinga de las tarjetas de recetas (blancas).
             item {
                 Card(
                     onClick = onVerProductos,
@@ -248,7 +225,6 @@ fun HomeScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.padding(16.dp)
                     ) {
-                        // Decorativo: el texto de al lado dice qué hace la tarjeta
                         Icon(
                             imageVector = Icons.Filled.Inventory2,
                             contentDescription = null,
@@ -256,7 +232,6 @@ fun HomeScreen(
                             modifier = Modifier.size(32.dp)
                         )
                         Spacer(modifier = Modifier.width(12.dp))
-                        // weight(1f): los textos usan el ancho que deja la flecha
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 text = "Nuestros productos",
@@ -279,7 +254,6 @@ fun HomeScreen(
                 }
             }
 
-            // 4. Título del Catálogo de Recetas
             item {
                 Text(
                     text = "📖 Catálogo de Recetas Técnicas e Insumos",
@@ -289,24 +263,15 @@ fun HomeScreen(
                 )
             }
 
-            // 5. Lista Dinámica de Cursos / Recetas
             items(catalogoCursos, key = { it.id }) { curso ->
                 val esFavorito = favoritos.contains(curso.id)
 
-                // Animación del corazón: crece a 1.3 veces su tamaño cuando es favorito y vuelve a 1 al quitarlo.
-                // animateFloatAsState no salta de golpe: Compose calcula los valores intermedios en cada cuadro.
-                // spring con DampingRatioMediumBouncy da un pequeño rebote, como un resorte.
-                // Va dentro de items() para que cada curso tenga su propia animación
-                // (key = id hace que cada corazón conserve la suya aunque la lista cambie).
                 val escalaCorazon by animateFloatAsState(
                     targetValue = if (esFavorito) 1.3f else 1f,
                     animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
                     label = "escalaCorazon"
                 )
 
-                // Card con onClick: toda la tarjeta se puede tocar para abrir la receta.
-                // El corazón (IconButton) tiene su propio onClick y "se queda" con el toque,
-                // por eso tocar el corazón NO abre el detalle.
                 Card(
                     onClick = { onVerDetalle(curso.id) },
                     colors = CardDefaults.cardColors(containerColor = Color.White),
@@ -339,9 +304,6 @@ fun HomeScreen(
                                 )
                             }
 
-                            // Botón de Favorito (Corazón).
-                            // 56.dp: área táctil grande, pensada para usuarios mayores.
-                            // contentDescription dice el curso y la acción, para que TalkBack lea qué hace el botón.
                             IconButton(
                                 onClick = { viewModel.alternarFavorito(curso.id) },
                                 modifier = Modifier.size(56.dp)
@@ -354,7 +316,7 @@ fun HomeScreen(
                                         "Agregar ${curso.titulo} a favoritos"
                                     },
                                     tint = if (esFavorito) rojoItaliano else Color.Gray,
-                                    modifier = Modifier.scale(escalaCorazon) // aplica la animación
+                                    modifier = Modifier.scale(escalaCorazon)
                                 )
                             }
                         }
@@ -390,9 +352,6 @@ fun HomeScreen(
                             )
                         }
 
-                        // Botón visible "Ver receta": hace lo mismo que tocar la tarjeta,
-                        // pero deja claro que hay más información (útil para usuarios mayores
-                        // que no saben que la tarjeta completa se puede tocar). 48 dp de alto mínimo.
                         TextButton(
                             onClick = { onVerDetalle(curso.id) },
                             modifier = Modifier
@@ -408,7 +367,7 @@ fun HomeScreen(
                             Spacer(modifier = Modifier.width(4.dp))
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                                contentDescription = null, // el texto "Ver receta" ya lo explica
+                                contentDescription = null,
                                 tint = verdeItaliano
                             )
                         }
@@ -416,7 +375,6 @@ fun HomeScreen(
                 }
             }
 
-            // 6. Botón Encuesta de Preferencias y Ubicación (GPS)
             item {
                 Button(
                     onClick = onIrAEncuesta,
@@ -435,7 +393,6 @@ fun HomeScreen(
                 }
             }
 
-            // 7. Botón Editar Datos
             item {
                 OutlinedButton(
                     onClick = onEditarDatos,

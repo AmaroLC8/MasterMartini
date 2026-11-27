@@ -16,15 +16,10 @@ import androidx.compose.ui.unit.sp
 import com.example.mastermartini.ui.theme.RojoItaliano
 import com.example.mastermartini.ui.theme.TextoOscuro
 
-// UN DATO CON SU ÍCONO (ej: 🕒 15 min) (componente reutilizable)
-// Lo usan:
-// - DetalleScreen: duración, rendimiento y dificultad de la receta.
-// - CapacitacionDetalleScreen: nivel, duración, módulos e instructor del curso online.
-// Está en un solo lugar para que los datos se vean iguales en las dos pantallas.
+// Muestra un ícono rojo corporativo acompañado de su texto descriptivo
 @Composable
 fun DatoConIcono(icono: ImageVector, texto: String) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        // Decorativo (contentDescription = null): el texto de al lado ya dice el dato
         Icon(
             imageVector = icono,
             contentDescription = null,

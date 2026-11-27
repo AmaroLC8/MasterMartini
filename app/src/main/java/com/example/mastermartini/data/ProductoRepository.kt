@@ -3,21 +3,13 @@ package com.example.mastermartini.data
 import com.example.mastermartini.model.Curso
 import com.example.mastermartini.model.Producto
 
-// REPOSITORIO DE PRODUCTOS
-// Es la única parte de la app que sabe de dónde salen los productos Master Martini.
-// Igual que CursoRepository, hoy los datos están escritos aquí con listOf().
-// Las descripciones son las del catálogo de la marca; los usos son ejemplos coherentes con ellas.
-// IMPORTANTE: los nombres deben ser IGUALES a los de CursoRepository (con mayúsculas y tildes),
-// porque obtenerRecetasQueUsan() los busca dentro del insumo y los ingredientes de cada receta.
+// Repositorio del catálogo de productos comerciales Master Martini
 class ProductoRepository {
 
-    // Para buscar las recetas que usan cada producto
     private val cursoRepository = CursoRepository()
 
-    // Devuelve todos los productos, ordenados por línea
     fun obtenerProductos(): List<Producto> {
         return listOf(
-            // --- MARGARINAS ---
             Producto(
                 id = 1,
                 nombre = "Gran Master Hoja",
@@ -33,7 +25,6 @@ class ProductoRepository {
                 usos = listOf("Brioche y panes dulces", "Queques y masas dulces", "Masas saladas horneadas")
             ),
 
-            // --- MANTECAS ---
             Producto(
                 id = 3,
                 nombre = "Manteca Unigral",
@@ -46,7 +37,6 @@ class ProductoRepository {
                 )
             ),
 
-            // --- CREMAS VEGETALES ---
             Producto(
                 id = 4,
                 nombre = "Bravo Crem",
@@ -84,7 +74,6 @@ class ProductoRepository {
                 esVegano = true
             ),
 
-            // --- CHOCOLATES Y COBERTURAS ---
             Producto(
                 id = 9,
                 nombre = "Chocolate Ariba",
@@ -115,7 +104,6 @@ class ProductoRepository {
                 usos = listOf("Decorar tortas y galletas", "Bañar con colores", "Rellenar")
             ),
 
-            // --- PASTELERÍA INSTANTÁNEA (mezclas en polvo) ---
             Producto(
                 id = 13,
                 nombre = "Crema Pastelera",
@@ -152,7 +140,6 @@ class ProductoRepository {
                 usos = listOf("Espolvorear panes y postres", "Glaseados")
             ),
 
-            // --- FRITURA ---
             Producto(
                 id = 18,
                 nombre = "Vita Frit",
@@ -163,7 +150,6 @@ class ProductoRepository {
         )
     }
 
-    // Las líneas de productos, en el orden en que se muestran
     fun obtenerLineas(): List<String> {
         return listOf(
             "Margarinas",
@@ -175,24 +161,15 @@ class ProductoRepository {
         )
     }
 
-    // Busca UN producto por su id (lo usa la pantalla de detalle del producto).
-    // Devuelve null si no existe, y la pantalla dice "Producto no encontrado".
     fun obtenerProductoPorId(id: Int): Producto? {
         return obtenerProductos().find { producto -> producto.id == id }
     }
 
-    // Busca UN producto por su nombre exacto (lo usa el Detalle de una receta:
-    // con el insumo "Chocolate Ariba" encuentra el producto para abrirlo).
-    // Devuelve null si ningún producto se llama así.
     fun obtenerProductoPorNombre(nombre: String): Producto? {
         return obtenerProductos().find { producto -> producto.nombre == nombre }
     }
 
-    // Recetas que usan el producto: las que lo tienen como insumo principal
-    // o lo nombran en alguno de sus ingredientes.
-    // contains revisa si el nombre aparece DENTRO del texto:
-    // "600 g de Chocolate Ariba amargo".contains("Chocolate Ariba") -> true.
-    // Distingue mayúsculas y tildes: por eso los nombres deben ser iguales en los dos repositorios.
+    // Filtra recetas que utilizan este producto como insumo principal o ingrediente
     fun obtenerRecetasQueUsan(producto: Producto): List<Curso> {
         return cursoRepository.obtenerCursos().filter { curso ->
             curso.insumo.contains(producto.nombre) ||

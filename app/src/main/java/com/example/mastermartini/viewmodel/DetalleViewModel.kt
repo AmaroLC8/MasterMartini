@@ -15,91 +15,48 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-// VIEWMODEL DE LA PANTALLA DETALLE
-// Entrega a DetalleScreen el curso que el usuario tocó en Home (con sus pasos de receta)
-// y los checklists de ingredientes y de pasos guardados en Room.
-// Es AndroidViewModel (y no ViewModel normal) porque necesita el Context (application)
-// para abrir la base de datos, igual que HomeViewModel.
+// ViewModel del detalle de receta que gestiona datos del curso, insumo y checklists en Room
 class DetalleViewModel(application: Application) : AndroidViewModel(application) {
 
-    // Fuente de los cursos (la misma que usa HomeViewModel)
     private val cursoRepository = CursoRepository()
-
-    // Fuente del checklist: se abre la base de datos (singleton), se saca su DAO
-    // y se le pasa al repositorio. El ViewModel solo usa el repositorio.
     private val checklistRepository = ChecklistRepository(
         MasterMartiniDatabase.getInstance(application).checklistDao()
     )
-
-    // Curso que se está mostrando: privado y mutable (solo este ViewModel lo cambia).
-    // Es Curso? (puede ser null) porque parte vacío y porque el id podría no existir.
-    private val _curso = MutableStateFlow<Curso?>(null)
-
-    // Versión pública de solo lectura: DetalleScreen la observa con collectAsState()
-    val curso: StateFlow<Curso?> = _curso.asStateFlow()
-
-    // Posiciones de los ingredientes marcados del curso (ej. [0, 2] = el 1° y el 3° están listos).
-    // Privado y mutable; parte vacío hasta que Room responde.
-    private val _marcados = MutableStateFlow<List<Int>>(emptyList())
-
-    // Versión pública de solo lectura para la pantalla
-    val marcados: StateFlow<List<Int>> = _marcados.asStateFlow()
-
-    // Posiciones de los PASOS completados del curso (ej. [0, 1] = los dos primeros pasos hechos).
-    // Funciona igual que _marcados, pero con la tabla "checklist_pasos".
-    private val _pasosCompletados = MutableStateFlow<List<Int>>(emptyList())
-
-    // Versión pública de solo lectura para la pantalla
-    val pasosCompletados: StateFlow<List<Int>> = _pasosCompletados.asStateFlow()
-
-    // Para encontrar el producto Master Martini que usa la receta (su insumo)
     private val productoRepository = ProductoRepository()
 
-    // Producto del insumo de la receta (ej. "Chocolate Ariba"). null si no se encontró
-    // un producto con ese nombre: en ese caso la pantalla muestra el insumo como texto normal.
-    private val _productoInsumo = MutableStateFlow<Producto?>(null)
+    private val _curso = MutableStateFlow<Curso?>(null)
+    val curso: StateFlow<Curso?> = _curso.asStateFlow()
 
-    // Versión pública de solo lectura para la pantalla
+    private val _marcados = MutableStateFlow<List<Int>>(emptyList())
+    val marcados: StateFlow<List<Int>> = _marcados.asStateFlow()
+
+    private val _pasosCompletados = MutableStateFlow<List<Int>>(emptyList())
+    val pasosCompletados: StateFlow<List<Int>> = _pasosCompletados.asStateFlow()
+
+    private val _productoInsumo = MutableStateFlow<Producto?>(null)
     val productoInsumo: StateFlow<Producto?> = _productoInsumo.asStateFlow()
 
-    // Guarda la corrutina que está escuchando a Room, para poder detenerla
-    // si se carga otro curso (así no quedan dos escuchando a la vez).
     private var trabajoChecklist: Job? = null
-
-    // Lo mismo, pero para la corrutina que escucha los pasos completados
     private var trabajoPasos: Job? = null
 
-    // La llama DetalleScreen con el id que llegó por la navegación ("detalle/3" → id = 3).
-    // Si el repositorio no encuentra el curso, _curso queda en null y la pantalla
-    // muestra "Receta no encontrada" (la app no se cae).
+    // Carga la receta, su producto insumo y suscribe los checklists persistidos en Room
     fun cargarCurso(id: Int) {
         val cursoEncontrado = cursoRepository.obtenerCursoPorId(id)
         _curso.value = cursoEncontrado
 
-        // Se busca el producto por el nombre EXACTO del insumo.
-        // Si no hay curso o ningún producto se llama así, queda en null.
         _productoInsumo.value = if (cursoEncontrado != null) {
             productoRepository.obtenerProductoPorNombre(cursoEncontrado.insumo)
         } else {
             null
         }
 
-        // Se detiene la escucha anterior (si había una) antes de empezar la nueva
         trabajoChecklist?.cancel()
-
-        // viewModelScope.launch abre una corrutina que vive mientras viva el ViewModel.
-        // collect se queda ESCUCHANDO el Flow de Room: cada vez que la tabla cambia
-        // (al marcar, desmarcar o reiniciar), llega la lista nueva y se copia a _marcados.
-        // Así la pantalla se actualiza sola, sin volver a consultar a mano.
         trabajoChecklist = viewModelScope.launch {
             checklistRepository.obtenerMarcados(id).collect { listaMarcados ->
                 _marcados.value = listaMarcados
             }
         }
 
-        // Lo mismo para los pasos: se detiene la escucha anterior y se escucha la del curso nuevo.
-        // Son dos corrutinas distintas porque cada collect se queda escuchando "para siempre":
-        // si se pusieran en la misma, el segundo collect nunca empezaría.
         trabajoPasos?.cancel()
         trabajoPasos = viewModelScope.launch {
             checklistRepository.obtenerPasosCompletados(id).collect { listaPasos ->
@@ -108,20 +65,16 @@ class DetalleViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    // Se llama al tocar un ingrediente: si ya estaba marcado lo desmarca, si no lo marca.
-    // No se cambia _marcados a mano: se guarda en Room y Room avisa el cambio por el Flow.
+    // Cambia el estado marcado de un ingrediente en Room
     fun alternarIngrediente(indice: Int) {
-        // Si no hay curso cargado, no hay nada que guardar
         val cursoActual = _curso.value ?: return
         val estabaMarcado = _marcados.value.contains(indice)
 
         viewModelScope.launch {
-            // !estabaMarcado: si estaba marcado se guarda false, y si no, true
             checklistRepository.marcar(cursoActual.id, indice, !estabaMarcado)
         }
     }
 
-    // Desmarca todos los ingredientes del curso actual (botón "Reiniciar lista")
     fun reiniciarChecklist() {
         val cursoActual = _curso.value ?: return
         viewModelScope.launch {
@@ -129,8 +82,7 @@ class DetalleViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    // Se llama al tocar un paso: si estaba completado lo desmarca, si no lo marca.
-    // Igual que alternarIngrediente: se guarda en Room y Room avisa el cambio por el Flow.
+    // Cambia el estado completado de un paso en Room
     fun alternarPaso(indice: Int) {
         val cursoActual = _curso.value ?: return
         val estabaCompletado = _pasosCompletados.value.contains(indice)
@@ -140,7 +92,6 @@ class DetalleViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    // Deja todos los pasos del curso actual sin completar (botón "Reiniciar pasos")
     fun reiniciarPasos() {
         val cursoActual = _curso.value ?: return
         viewModelScope.launch {

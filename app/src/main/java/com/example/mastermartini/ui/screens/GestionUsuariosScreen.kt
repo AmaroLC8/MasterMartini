@@ -70,9 +70,7 @@ import com.example.mastermartini.ui.theme.VerdeOscuro
 import com.example.mastermartini.viewmodel.EstadoUi
 import com.example.mastermartini.viewmodel.GestionUsuariosViewModel
 
-// PANEL "USUARIOS Y ROLES" (ruta "panel/usuarios", solo Administrador)
-// Todos los usuarios con filtro por rol. En cada fila: cambiar el rol (menú desplegable)
-// y eliminar la cuenta (con confirmación). Solo DIBUJA: las reglas están en el ViewModel.
+// Panel exclusivo de Administrador para filtrar usuarios, cambiar roles y eliminar cuentas
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GestionUsuariosScreen(
@@ -82,11 +80,8 @@ fun GestionUsuariosScreen(
     val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
 
-    // Usuario que se quiere eliminar (null = no hay diálogo abierto).
-    // Es estado SOLO visual (abrir/cerrar el diálogo), como el de "Cerrar sesión" en Perfil.
     var usuarioAEliminar by remember { mutableStateOf<Usuario?>(null) }
 
-    // Muestra el Snackbar cuando el ViewModel pone un mensaje (igual que en GestionClientesScreen)
     LaunchedEffect(uiState.mensajeSnackbar) {
         val mensaje = uiState.mensajeSnackbar
         if (mensaje != null) {
@@ -123,8 +118,6 @@ fun GestionUsuariosScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
-            // FILTRO POR ROL: "Todos" + un chip por cada rol de Rol.todos.
-            // Si mañana se agrega un rol, aparece aquí solo (no se escribe a mano).
             Row(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier
@@ -146,7 +139,6 @@ fun GestionUsuariosScreen(
                 }
             }
 
-            // POLIMORFISMO con EstadoUi: un dibujo distinto para cada caso
             when (val estado = uiState.estado) {
                 is EstadoUi.Cargando -> {
                     Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
@@ -155,7 +147,6 @@ fun GestionUsuariosScreen(
                 }
 
                 is EstadoUi.Error -> {
-                    // Ej. "No tienes permiso para hacer esta acción." si no es Administrador
                     ErrorConReintentar(mensaje = estado.mensaje, onReintentar = { viewModel.cargar() })
                 }
 
@@ -176,11 +167,9 @@ fun GestionUsuariosScreen(
                             items(estado.datos, key = { usuario -> usuario.id }) { usuario ->
                                 FilaUsuario(
                                     usuario = usuario,
-                                    // La REGLA la decide el ViewModel; la pantalla solo la usa
                                     esPropio = viewModel.esPropio(usuario),
                                     guardando = usuario.id in uiState.guardando,
                                     onCambiarRol = { rol -> viewModel.cambiarRol(usuario, rol) },
-                                    // No elimina directo: abre el diálogo de confirmación
                                     onEliminar = { usuarioAEliminar = usuario },
                                     modifier = Modifier.animateItem()
                                 )
@@ -192,8 +181,6 @@ fun GestionUsuariosScreen(
         }
     }
 
-    // DIÁLOGO DE CONFIRMACIÓN antes de eliminar (eliminar no se puede deshacer).
-    // Se copia a una variable local para usarla sin "!!".
     val porEliminar = usuarioAEliminar
     if (porEliminar != null) {
         AlertDialog(
@@ -228,8 +215,7 @@ fun GestionUsuariosScreen(
     }
 }
 
-// UNA FILA DE USUARIO: nombre, correo, botón del rol con su menú y botón eliminar.
-// En la fila del propio administrador (esPropio) los controles van desactivados y dice "Tú".
+// Fila de usuario con selector desplegable de rol y opción para eliminar
 @Composable
 private fun FilaUsuario(
     usuario: Usuario,
@@ -239,10 +225,8 @@ private fun FilaUsuario(
     onEliminar: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    // ¿Está abierto el menú de roles de esta fila? Estado solo visual
     var menuAbierto by remember { mutableStateOf(false) }
 
-    // Los controles se pueden usar si NO es su propia fila y no hay una acción en curso
     val controlesActivos = !esPropio && !guardando
 
     Card(
@@ -257,7 +241,6 @@ private fun FilaUsuario(
                     Text(text = usuario.nombre, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = TextoOscuro)
                     Text(text = usuario.correo, fontSize = 16.sp, color = TextoOscuro)
                 }
-                // Etiqueta "Tú": explica con TEXTO por qué sus controles están desactivados
                 if (esPropio) {
                     Text(
                         text = "Tú",
@@ -275,8 +258,6 @@ private fun FilaUsuario(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                // ROL ACTUAL + MENÚ DESPLEGABLE.
-                // Box: el DropdownMenu se abre "pegado" al botón que está en el mismo Box.
                 Box(modifier = Modifier.weight(1f)) {
                     OutlinedButton(
                         onClick = { menuAbierto = true },
@@ -285,20 +266,17 @@ private fun FilaUsuario(
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = VerdeOscuro),
                         modifier = Modifier
                             .heightIn(min = 48.dp)
-                            // TalkBack: dice de quién es el rol y cuál tiene (hay un botón igual en cada fila)
                             .semantics {
                                 contentDescription = "Rol de ${usuario.nombre}: ${usuario.rol.nombreVisible}. Toca para cambiarlo"
                             }
                     ) {
                         Text(text = "Rol: ${usuario.rol.nombreVisible}", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
-                        // Decorativo: la flecha indica que se despliega un menú
                         Icon(imageVector = Icons.Filled.ArrowDropDown, contentDescription = null)
                     }
                     DropdownMenu(
                         expanded = menuAbierto,
                         onDismissRequest = { menuAbierto = false }
                     ) {
-                        // Una opción por rol. El rol actual lleva ✓ (no depende solo del color)
                         Rol.todos.forEach { rol ->
                             DropdownMenuItem(
                                 text = { Text(text = rol.nombreVisible, fontSize = 16.sp) },
@@ -317,7 +295,6 @@ private fun FilaUsuario(
                     }
                 }
 
-                // Indicador mientras se cambia el rol o se elimina este usuario
                 if (guardando) {
                     CircularProgressIndicator(
                         color = VerdeItaliano,
@@ -327,13 +304,10 @@ private fun FilaUsuario(
                     Spacer(modifier = Modifier.width(8.dp))
                 }
 
-                // ELIMINAR. NO es decorativo: el ícono es lo único que dice qué hace el botón,
-                // por eso su contentDescription dice a quién elimina. IconButton mide 48 dp.
                 IconButton(onClick = onEliminar, enabled = controlesActivos) {
                     Icon(
                         imageVector = Icons.Filled.Delete,
                         contentDescription = "Eliminar a ${usuario.nombre}",
-                        // Rojo si se puede usar; gris (por defecto) si está desactivado
                         tint = if (controlesActivos) RojoItaliano else TextoOscuro.copy(alpha = 0.38f)
                     )
                 }

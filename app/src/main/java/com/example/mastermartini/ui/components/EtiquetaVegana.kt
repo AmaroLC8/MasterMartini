@@ -13,14 +13,9 @@ import androidx.compose.ui.unit.sp
 import com.example.mastermartini.ui.theme.VerdeItaliano
 import com.example.mastermartini.ui.theme.VerdeOscuro
 
-// ETIQUETA "APTO VEGANO 🌱" (componente reutilizable)
-// La usan TarjetaReceta (Recetas y Buscar) y DetalleScreen, junto a la categoría.
-// Es verde CLARO con borde y texto verde oscuro, para que se distinga de la etiqueta de
-// categoría (verde fuerte con texto blanco) y no parezca otra sección.
-// Solo informa: no se puede tocar.
+// Etiqueta visual para recetas y productos aptos veganos
 @Composable
 fun EtiquetaVegana(
-    // Tamaño de la letra: un poco más grande en el Detalle que en las tarjetas
     tamanoTexto: Int = 14
 ) {
     Text(

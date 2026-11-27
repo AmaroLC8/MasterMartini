@@ -35,20 +35,15 @@ import com.example.mastermartini.ui.theme.*
 import com.example.mastermartini.viewmodel.PasoRecuperar
 import com.example.mastermartini.viewmodel.RecuperarPasswordViewModel
 
-// PANTALLA RECUPERAR CONTRASEÑA (se abre desde "¿Olvidaste tu contraseña?" del Login)
-// Paso 1: correo -> paso 2: código + nueva contraseña -> listo.
-// Solo DIBUJA el estado del RecuperarPasswordViewModel y le avisa lo que escribe o toca
-// el usuario: las validaciones y las llamadas al repositorio están en el ViewModel.
+// Pantalla en pasos para solicitar código y restablecer la contraseña
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RecuperarPasswordScreen(
     viewModel: RecuperarPasswordViewModel,
-    // Flecha de la barra y botón final "Volver a iniciar sesión" (popBackStack en MainActivity)
     onVolver: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
-    // Mismos colores de los campos que en Login y Registro
     val textFieldColors = OutlinedTextFieldDefaults.colors(
         focusedBorderColor = VerdeItaliano,
         focusedLabelColor = VerdeItaliano,
@@ -63,7 +58,6 @@ fun RecuperarPasswordScreen(
     Scaffold(
         containerColor = BlancoHueso,
         topBar = {
-            // Barra verde con flecha para volver al login (mismo estilo que DetalleScreen)
             TopAppBar(
                 title = { Text(text = "Recuperar contraseña", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
@@ -91,16 +85,12 @@ fun RecuperarPasswordScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(20.dp)
         ) {
-            // AnimatedContent: cuando cambia uiState.paso, el contenido viejo se desvanece
-            // y aparece el nuevo (en vez de cambiar de golpe). "paso" es el valor al que se anima.
             AnimatedContent(
                 targetState = uiState.paso,
                 transitionSpec = { fadeIn() togetherWith fadeOut() },
                 label = "pasoRecuperar"
             ) { paso ->
-                // when con un enum: Kotlin obliga a cubrir los 3 pasos
                 when (paso) {
-                    // ===== PASO 1: CORREO =====
                     PasoRecuperar.CORREO -> Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         TextoPaso(
                             titulo = "Paso 1 de 2",
@@ -112,7 +102,6 @@ fun RecuperarPasswordScreen(
                             label = { Text("Correo electrónico") },
                             leadingIcon = { Icon(Icons.Filled.Email, contentDescription = "Correo") },
                             trailingIcon = { IconoValidacion(valor = uiState.correo, error = uiState.errorCorreo) },
-                            // Teclado con @ a mano
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                             isError = uiState.errorCorreo != null,
                             supportingText = { TextoError(uiState.errorCorreo) },
@@ -130,15 +119,12 @@ fun RecuperarPasswordScreen(
                         )
                     }
 
-                    // ===== PASO 2: CÓDIGO Y NUEVA CONTRASEÑA =====
                     PasoRecuperar.CODIGO -> Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         TextoPaso(titulo = "Paso 2 de 2", texto = "Correo: ${uiState.correo.trim()}")
 
-                        // Aviso informativo (verde, con ícono): "Si el correo está registrado..."
                         val mensaje = uiState.mensaje
                         if (mensaje != null) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                // Decorativo: el texto de al lado ya lo explica
                                 Icon(Icons.Filled.Info, contentDescription = null, tint = VerdeOscuro)
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(text = mensaje, fontSize = 16.sp, color = VerdeOscuro, fontWeight = FontWeight.SemiBold)
@@ -151,7 +137,6 @@ fun RecuperarPasswordScreen(
                             label = { Text("Código de 6 números") },
                             leadingIcon = { Icon(Icons.Filled.Pin, contentDescription = "Código") },
                             trailingIcon = { IconoValidacion(valor = uiState.codigo, error = uiState.errorCodigo) },
-                            // Teclado solo de números: más fácil para usuarios mayores
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
                             isError = uiState.errorCodigo != null,
                             supportingText = { TextoError(uiState.errorCodigo) },
@@ -199,7 +184,6 @@ fun RecuperarPasswordScreen(
                             cargando = uiState.cargando,
                             onClick = { viewModel.restablecer() }
                         )
-                        // Botón secundario: pide otro código (por si no llegó o venció)
                         OutlinedButton(
                             onClick = { viewModel.reenviarCodigo() },
                             enabled = !uiState.cargando,
@@ -211,7 +195,6 @@ fun RecuperarPasswordScreen(
                         ) {
                             Text(text = "Reenviar código", fontSize = 16.sp, fontWeight = FontWeight.Bold)
                         }
-                        // Ayuda para probar mientras no hay backend que envíe correos
                         Text(
                             text = "Mientras el servidor no envía correos, el código aparece en el Logcat (etiqueta RecuperarPassword)",
                             fontSize = 16.sp,
@@ -219,13 +202,11 @@ fun RecuperarPasswordScreen(
                         )
                     }
 
-                    // ===== LISTO =====
                     PasoRecuperar.LISTO -> Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(16.dp),
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        // Decorativo: el texto de abajo ya dice que salió bien
                         Icon(
                             imageVector = Icons.Filled.CheckCircle,
                             contentDescription = null,
@@ -258,7 +239,6 @@ fun RecuperarPasswordScreen(
     }
 }
 
-// Título del paso ("Paso 1 de 2") y su explicación
 @Composable
 private fun TextoPaso(titulo: String, texto: String) {
     Column {
@@ -268,7 +248,6 @@ private fun TextoPaso(titulo: String, texto: String) {
     }
 }
 
-// Mensaje de error de un campo (debajo del campo), con animación como en Registro
 @Composable
 private fun TextoError(error: String?) {
     AnimatedVisibility(visible = error != null) {
@@ -276,7 +255,6 @@ private fun TextoError(error: String?) {
     }
 }
 
-// Error que devolvió el repositorio (ícono ⚠ + texto, no solo color), como en Login
 @Composable
 private fun AvisoError(error: String?) {
     AnimatedVisibility(visible = error != null) {
@@ -288,8 +266,6 @@ private fun AvisoError(error: String?) {
     }
 }
 
-// Botón verde grande (54 dp) con indicador de carga, igual que "INGRESAR" del Login.
-// Mientras carga se desactiva: así no se manda la misma petición dos veces.
 @Composable
 private fun BotonPrincipal(
     texto: String,

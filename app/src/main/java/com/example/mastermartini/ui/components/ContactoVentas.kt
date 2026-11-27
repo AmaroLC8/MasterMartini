@@ -38,18 +38,9 @@ import com.example.mastermartini.ui.theme.TextoOscuro
 import com.example.mastermartini.ui.theme.VerdeItaliano
 import com.example.mastermartini.ui.theme.VerdeOscuro
 
-// TARJETA "¿NECESITAS ESTE PRODUCTO?" (componente reutilizable)
-// La usan DetalleScreen (receta) y ProductoDetalleScreen (producto).
-// Tiene 3 botones de contacto con ventas: WhatsApp, correo y teléfono.
-//
-// Los 3 usan INTENTS IMPLÍCITOS: no decimos QUÉ app abrir, sino QUÉ ACCIÓN queremos
-// ("enviar un texto", "escribir un correo", "marcar un número"), y Android busca una app
-// instalada que sepa hacerlo. Nuestra app no envía nada por sí misma: por eso no necesita
-// permisos de internet, SMS ni llamadas.
+// Tarjeta reutilizable de contacto con ventas por WhatsApp, correo y teléfono
 @Composable
 fun ContactoVentas(
-    // Mensaje ya armado que se envía por WhatsApp o como cuerpo del correo.
-    // Ej: "Hola, quiero información sobre Chocolate Ariba."
     mensaje: String
 ) {
     val context = LocalContext.current
@@ -76,7 +67,6 @@ fun ContactoVentas(
                 color = TextoOscuro
             )
 
-            // 1. WHATSAPP: botón relleno verde (la opción más usada)
             Button(
                 onClick = { consultarPorWhatsApp(context, mensaje) },
                 colors = ButtonDefaults.buttonColors(containerColor = VerdeItaliano),
@@ -90,14 +80,12 @@ fun ContactoVentas(
                 Text(text = "Consultar por WhatsApp", fontSize = 17.sp, fontWeight = FontWeight.Bold)
             }
 
-            // 2. CORREO
             BotonContactoSecundario(
                 texto = "Enviar correo",
                 icono = { Icon(imageVector = Icons.Filled.Email, contentDescription = null) },
                 onClick = { enviarCorreo(context, mensaje) }
             )
 
-            // 3. TELÉFONO
             BotonContactoSecundario(
                 texto = "Llamar a ventas",
                 icono = { Icon(imageVector = Icons.Filled.Call, contentDescription = null) },
@@ -107,8 +95,6 @@ fun ContactoVentas(
     }
 }
 
-// Botón con borde verde (correo y teléfono). Es private porque solo lo usa esta tarjeta.
-// icono: @Composable () -> Unit recibe el ícono a dibujar, igual que "label" en un chip.
 @Composable
 private fun BotonContactoSecundario(
     texto: String,
@@ -130,18 +116,11 @@ private fun BotonContactoSecundario(
     }
 }
 
-// --- FUNCIONES QUE ARMAN Y LANZAN CADA INTENT ---
-// Son funciones normales (no @Composable): solo reciben el Context y lanzan el Intent.
-// Todas tienen try/catch de ActivityNotFoundException: si el celular no tiene una app
-// para esa acción, se avisa con un Toast y la app NO se cae.
-
-// WHATSAPP
+// Abre WhatsApp con el mensaje prellenado o selector de mensajería si no está instalado
 private fun consultarPorWhatsApp(context: Context, mensaje: String) {
     val numero = DatosEmpresa.WHATSAPP_VENTAS
 
     if (numero.isEmpty()) {
-        // SIN NÚMERO (hoy): se abre WhatsApp con el mensaje escrito, y el usuario elige a quién mandarlo.
-        // ACTION_SEND = "compartir este texto". setPackage("com.whatsapp") = "pero solo con WhatsApp".
         val intentWhatsApp = Intent(Intent.ACTION_SEND)
         intentWhatsApp.type = "text/plain"
         intentWhatsApp.putExtra(Intent.EXTRA_TEXT, mensaje)
@@ -150,8 +129,6 @@ private fun consultarPorWhatsApp(context: Context, mensaje: String) {
         try {
             context.startActivity(intentWhatsApp)
         } catch (e: ActivityNotFoundException) {
-            // No hay WhatsApp: se ofrece el mismo mensaje con CUALQUIER app que comparta texto
-            // (SMS, Gmail, Telegram...). createChooser muestra la lista para que el usuario elija.
             val intentCompartir = Intent(Intent.ACTION_SEND)
             intentCompartir.type = "text/plain"
             intentCompartir.putExtra(Intent.EXTRA_TEXT, mensaje)
@@ -162,9 +139,6 @@ private fun consultarPorWhatsApp(context: Context, mensaje: String) {
             }
         }
     } else {
-        // CON NÚMERO: wa.me abre el chat con ese número y el mensaje ya escrito.
-        // Uri.encode convierte espacios, tildes y comillas en un formato seguro para una dirección web
-        // (ej. " " -> "%20"). Sin esto, el mensaje se cortaría en el primer espacio.
         val direccion = "https://wa.me/$numero?text=${Uri.encode(mensaje)}"
         val intent = Intent(Intent.ACTION_VIEW, Uri.parse(direccion))
         try {
@@ -175,9 +149,7 @@ private fun consultarPorWhatsApp(context: Context, mensaje: String) {
     }
 }
 
-// CORREO
-// ACTION_SENDTO + "mailto:" = "escribir un correo a esta dirección". Solo responden apps de correo
-// (Gmail, Outlook...), no WhatsApp ni otras apps de compartir.
+// Abre la app de correo predeterminada con destinatario, asunto y mensaje
 private fun enviarCorreo(context: Context, mensaje: String) {
     val intent = Intent(Intent.ACTION_SENDTO, Uri.parse("mailto:" + DatosEmpresa.CORREO_VENTAS))
     intent.putExtra(Intent.EXTRA_SUBJECT, "Consulta desde la app Master Martini")
@@ -189,23 +161,16 @@ private fun enviarCorreo(context: Context, mensaje: String) {
     }
 }
 
-// TELÉFONO
-// ACTION_DIAL abre el MARCADOR con el número escrito, pero NO llama: el usuario decide si
-// aprieta el botón verde. Por eso NO necesita permiso.
-// ACTION_CALL sí llamaría directo, pero necesita el permiso peligroso CALL_PHONE
-// (pedirlo en el Manifest y en ejecución). No lo usamos: es más simple y más seguro.
-// Si TELEFONO_VENTAS está vacío, el marcador se abre vacío.
+// Abre el marcador telefónico sin iniciar la llamada automáticamente
 private fun llamarAVentas(context: Context) {
     val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:" + DatosEmpresa.TELEFONO_VENTAS))
     try {
         context.startActivity(intent)
     } catch (e: ActivityNotFoundException) {
-        // Ej: una tablet sin teléfono
         mostrarAviso(context, "Este dispositivo no puede hacer llamadas.")
     }
 }
 
-// Aviso corto abajo de la pantalla (igual que en BotonCatalogoPdf)
 private fun mostrarAviso(context: Context, texto: String) {
     Toast.makeText(context, texto, Toast.LENGTH_LONG).show()
 }

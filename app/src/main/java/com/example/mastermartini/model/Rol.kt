@@ -1,8 +1,5 @@
 package com.example.mastermartini.model
 
-// OPCIONES DEL PANEL que comparten varios roles. Se escriben UNA vez aquí
-// (Ventas y Administrador usan la misma de clientes). Son private: solo las usa este archivo.
-
 private val OPCION_CREAR_CURSO = OpcionPanel(
     titulo = "Crear curso online",
     descripcion = "Publica un curso con video de Cloudinary en el catálogo",
@@ -20,123 +17,59 @@ private val OPCION_USUARIOS = OpcionPanel(
     ruta = "panel/usuarios"
 )
 
-// ROL DEL USUARIO (POO: HERENCIA Y POLIMORFISMO)
-//
-// "sealed class" (clase sellada) = una clase PADRE cuyas clases hijas están TODAS escritas
-// en este mismo archivo. Nadie puede inventar un rol nuevo en otra parte de la app.
-// Por eso un "when (rol)" sabe que solo existen estos 4 casos y no necesita un "else".
-//
-// HERENCIA: Cliente, Instructor, Ventas y Administrador HEREDAN de Rol (": Rol(...)").
-// Todos reciben del padre los mismos datos: codigo y nombreVisible.
-//
-// POLIMORFISMO: el padre declara propiedades "abstract" (sin valor) y CADA hijo las define
-// a su manera. Así, quien tenga un Rol puede preguntar "rol.puedeGestionarPlanPro" sin saber
-// qué rol es: cada uno responde lo suyo. Ejemplo:
-//     val rol: Rol = Rol.Ventas
-//     rol.puedeGestionarPlanPro   // true (lo dice Ventas)
-//     rol.puedeGestionarUsuarios  // false
-// Sin polimorfismo habría que escribir un if por cada rol en cada pantalla
-// (if (rol == "VENTAS" || rol == "ADMINISTRADOR") ...), repetido en muchos lugares.
-//
-// codigo: el texto que usa el backend ("CLIENTE", "VENTAS"...). Se guarda en SharedPreferences.
-// nombreVisible: el texto que se muestra en pantalla ("Cliente", "Ventas"...).
+// Roles de usuario y sus permisos de negocio en la aplicación
 sealed class Rol(val codigo: String, val nombreVisible: String) {
 
-    // ¿Puede activar o quitar el Plan Pro y ver la lista de usuarios? (backend: VENTAS o ADMINISTRADOR)
     abstract val puedeGestionarPlanPro: Boolean
-
-    // ¿Puede cambiar el rol de otros usuarios o eliminarlos? (backend: solo ADMINISTRADOR)
     abstract val puedeGestionarUsuarios: Boolean
-
-    // ¿Puede responder las preguntas de los alumnos en los cursos?
     abstract val puedeResponderPreguntas: Boolean
-
-    // CURSOS ONLINE: ¿qué botones ve en el detalle de un curso?
-    // OJO: esto SOLO decide qué botones se muestran. El servidor de cursos IGUAL revisa los
-    // permisos en cada petición (y responde 403 si no corresponde), así nadie se salta la regla.
-
-    // ¿Puede editar ESTE curso? Recibe el id del dueño del curso y el id de quien está conectado.
-    // Es una FUNCIÓN (y no una propiedad) porque la respuesta depende del curso:
-    // un Instructor puede editar sus cursos, pero no los de otro instructor.
     abstract fun puedeEditarCurso(instructorIdDelCurso: Long?, miId: Long?): Boolean
-
-    // ¿Puede eliminar cursos? (backend: solo ADMINISTRADOR)
     abstract val puedeEliminarCursos: Boolean
-
-    // Botones de su "Panel de trabajo" en el Perfil (título, descripción y ruta).
-    // Vacía = no tiene panel. PerfilScreen solo recorre esta lista: NO pregunta qué rol es.
     abstract fun opcionesPanel(): List<OpcionPanel>
 
-    // "data object" = un objeto único (hay UN solo Cliente en toda la app, no se crea con "Cliente()")
-    // que además se imprime bonito: println(Rol.Cliente) muestra "Cliente".
-
-    // CLIENTE: el emprendedor que usa la app. No tiene permisos especiales.
     data object Cliente : Rol(codigo = "CLIENTE", nombreVisible = "Cliente") {
         override val puedeGestionarPlanPro = false
         override val puedeGestionarUsuarios = false
         override val puedeResponderPreguntas = false
-        // No edita ni elimina cursos (los parámetros no se usan: siempre responde false)
         override fun puedeEditarCurso(instructorIdDelCurso: Long?, miId: Long?) = false
         override val puedeEliminarCursos = false
-        // Sin panel de trabajo
         override fun opcionesPanel(): List<OpcionPanel> = emptyList()
     }
 
-    // INSTRUCTOR: dicta los cursos online y responde las dudas de sus alumnos
     data object Instructor : Rol(codigo = "INSTRUCTOR", nombreVisible = "Instructor") {
         override val puedeGestionarPlanPro = false
         override val puedeGestionarUsuarios = false
         override val puedeResponderPreguntas = true
-        // Edita SOLO sus propios cursos: el dueño del curso debe ser él.
-        // Si alguno de los dos es null (curso local sin dueño, o sin sesión), NO puede:
-        // así dos null no cuentan como "iguales".
         override fun puedeEditarCurso(instructorIdDelCurso: Long?, miId: Long?): Boolean {
             return instructorIdDelCurso != null && miId != null && instructorIdDelCurso == miId
         }
-        // No elimina cursos (solo el Administrador)
         override val puedeEliminarCursos = false
-        // Ninguna por ahora. Se agregan cuando se conecten los cursos
-        // (ej. "Mis cursos" y "Preguntas de alumnos").
         override fun opcionesPanel(): List<OpcionPanel> = listOf(OPCION_CREAR_CURSO)
     }
 
-    // VENTAS: coordina las suscripciones al Plan Pro con los clientes
     data object Ventas : Rol(codigo = "VENTAS", nombreVisible = "Ventas") {
         override val puedeGestionarPlanPro = true
         override val puedeGestionarUsuarios = false
         override val puedeResponderPreguntas = false
-        // Ventas gestiona suscripciones, no cursos: no edita ni elimina
         override fun puedeEditarCurso(instructorIdDelCurso: Long?, miId: Long?) = false
         override val puedeEliminarCursos = false
         override fun opcionesPanel(): List<OpcionPanel> = listOf(OPCION_CLIENTES)
     }
 
-    // ADMINISTRADOR: puede hacer todo
     data object Administrador : Rol(codigo = "ADMINISTRADOR", nombreVisible = "Administrador") {
         override val puedeGestionarPlanPro = true
         override val puedeGestionarUsuarios = true
         override val puedeResponderPreguntas = true
-        // Edita CUALQUIER curso (sea de quien sea) y puede eliminarlos
         override fun puedeEditarCurso(instructorIdDelCurso: Long?, miId: Long?) = true
         override val puedeEliminarCursos = true
-        // Lo mismo que Ventas, más la gestión de usuarios
         override fun opcionesPanel(): List<OpcionPanel> = listOf(OPCION_CLIENTES, OPCION_USUARIOS,OPCION_CREAR_CURSO)
     }
 
-    // companion object = lo que pertenece a la CLASE Rol y no a un rol en particular.
-    // Se usa así: Rol.desdeCodigo("VENTAS"), Rol.todos.
     companion object {
-
-        // Los 4 roles. Se escribe con "get()" (se arma cada vez que se pide) y no como
-        // "val todos = listOf(...)": los hijos se crean DESPUÉS que el padre, y una lista
-        // armada al crear el padre podría quedar con un rol en null.
         val todos: List<Rol>
             get() = listOf(Cliente, Instructor, Ventas, Administrador)
 
-        // Convierte el texto guardado (o el que manda el backend) en un Rol.
-        // uppercase() acepta "ventas" o "Ventas". find devuelve null si no hay ninguno con ese código,
-        // y en ese caso se usa Cliente (?:): el rol con MENOS permisos, así un dato raro
-        // nunca le da permisos de más a nadie.
+        // Resuelve un rol desde su código de texto, usando Cliente por defecto
         fun desdeCodigo(codigo: String): Rol {
             return todos.find { rol -> rol.codigo == codigo.trim().uppercase() } ?: Cliente
         }

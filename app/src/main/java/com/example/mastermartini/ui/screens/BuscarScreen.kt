@@ -52,33 +52,21 @@ import com.example.mastermartini.ui.theme.VerdeItaliano
 import com.example.mastermartini.ui.theme.VerdeOscuro
 import com.example.mastermartini.viewmodel.BuscarViewModel
 
-// PANTALLA BUSCAR
-// Campo de texto que busca recetas mientras se escribe.
-// Solo DIBUJA lo que le entrega el BuscarViewModel (MVVM): la búsqueda (filtrar,
-// quitar tildes, minúsculas) se hace en el ViewModel. Aquí solo se avisa qué se escribió.
+// Pantalla de búsqueda en tiempo real sobre el catálogo de recetas
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BuscarScreen(
-    // ViewModel con el texto escrito y los resultados (lo crea MainActivity)
     viewModel: BuscarViewModel,
-    // Recibe el id de la receta tocada; MainActivity navega a "detalle/{id}", igual que desde Home
     onVerDetalle: (Int) -> Unit,
-    // Flecha para volver. Buscar ya no es una pestaña de la barra inferior: se abre con
-    // la lupa de Inicio o de Recetas, así que necesita su propio botón para regresar.
     onVolver: () -> Unit
 ) {
-    // Escuchamos el estado del ViewModel. Con cada letra, el ViewModel busca otra vez
-    // y esta pantalla se vuelve a dibujar con los resultados nuevos.
     val uiState by viewModel.uiState.collectAsState()
 
-    // Sirve para quitar el foco del campo de texto, y así se cierra el teclado
     val focusManager = LocalFocusManager.current
 
     Scaffold(
         containerColor = BlancoHueso,
         topBar = {
-            // Barra verde con el título y flecha para volver (mismo estilo que DetalleScreen).
-            // Se llega desde la lupa de Inicio o Recetas, y la flecha vuelve a esa pantalla.
             TopAppBar(
                 title = { Text(text = "Buscar", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
@@ -98,23 +86,16 @@ fun BuscarScreen(
             )
         }
     ) { innerPadding ->
-        // Column: arriba el buscador (queda fijo) y abajo lo que corresponda
-        // (sugerencias, resultados o el aviso de "no encontramos")
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
-            // CAMPO DE BÚSQUEDA
             OutlinedTextField(
                 value = uiState.texto,
-                // Con cada letra se avisa al ViewModel, que guarda el texto y busca
                 onValueChange = { nuevoTexto -> viewModel.onTextoChange(nuevoTexto) },
                 placeholder = { Text("Busca por receta, sección o ingrediente", fontSize = 16.sp) },
-                // Lupa a la izquierda. contentDescription = null: es decorativa, el texto de ayuda ya explica el campo
                 leadingIcon = { Icon(imageVector = Icons.Filled.Search, contentDescription = null) },
-                // Botón X a la derecha, SOLO si hay algo escrito (si el campo está vacío no hay nada que borrar).
-                // IconButton mide 48 dp: área fácil de tocar.
                 trailingIcon = {
                     if (uiState.texto.isNotEmpty()) {
                         IconButton(onClick = { viewModel.limpiar() }) {
@@ -125,12 +106,8 @@ fun BuscarScreen(
                         }
                     }
                 },
-                // Una sola línea: Enter no salta de línea, sino que ejecuta la acción del teclado
                 singleLine = true,
-                // ImeAction.Search: el botón Enter del teclado se ve como una LUPA
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                // Al tocar esa lupa del teclado, se cierra el teclado. No hace falta buscar aquí:
-                // la búsqueda ya se hizo mientras se escribía.
                 keyboardActions = KeyboardActions(onSearch = { focusManager.clearFocus() }),
                 textStyle = TextStyle(fontSize = 18.sp),
                 colors = OutlinedTextFieldDefaults.colors(
@@ -148,8 +125,6 @@ fun BuscarScreen(
             )
 
             if (uiState.texto.isBlank()) {
-                // 1. CAMPO VACÍO: sugerencias para no dejar la pantalla en blanco
-                //    y para quien no sabe qué escribir.
                 Column(modifier = Modifier.padding(horizontal = 16.dp)) {
                     Text(
                         text = "Sugerencias",
@@ -158,15 +133,11 @@ fun BuscarScreen(
                         color = VerdeOscuro
                     )
                     Spacer(modifier = Modifier.height(8.dp))
-                    // FlowRow: pone los botones uno al lado del otro y, si no caben,
-                    // pasa a la línea de abajo (así se ven las 5 secciones sin deslizar)
                     FlowRow(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         uiState.categorias.forEach { categoria ->
-                            // Al tocar una sugerencia se escribe esa sección en el buscador,
-                            // igual que si el usuario la hubiera tecleado
                             AssistChip(
                                 onClick = {
                                     viewModel.onTextoChange(categoria)
@@ -181,22 +152,18 @@ fun BuscarScreen(
                                     labelColor = TextoOscuro,
                                     leadingIconContentColor = VerdeItaliano
                                 ),
-                                // 48 dp de alto: botón grande y fácil de tocar (el normal mide 32 dp)
                                 modifier = Modifier.height(48.dp)
                             )
                         }
                     }
                 }
             } else if (uiState.resultados.isEmpty()) {
-                // 2. SE ESCRIBIÓ ALGO PERO NO HAY RESULTADOS: se avisa qué se buscó,
-                //    para que el usuario vea si escribió mal
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(24.dp)
                 ) {
-                    // contentDescription = null: es decorativo, el texto de abajo lo explica
                     Icon(
                         imageVector = Icons.Filled.SearchOff,
                         contentDescription = null,
@@ -220,8 +187,6 @@ fun BuscarScreen(
                     )
                 }
             } else {
-                // 3. HAY RESULTADOS: cuántos son y la lista
-                // "1 resultado" en singular, "3 resultados" en plural
                 val cantidad = uiState.resultados.size
                 Text(
                     text = if (cantidad == 1) "1 resultado" else "$cantidad resultados",
@@ -230,7 +195,6 @@ fun BuscarScreen(
                     color = VerdeOscuro,
                     modifier = Modifier.padding(horizontal = 16.dp)
                 )
-                // weight(1f): la lista ocupa todo el alto que queda libre
                 LazyColumn(
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(14.dp),
@@ -238,8 +202,6 @@ fun BuscarScreen(
                         .fillMaxWidth()
                         .weight(1f)
                 ) {
-                    // key = id + animateItem(): al escribir otra letra, las tarjetas que
-                    // siguen coincidiendo se deslizan a su lugar y las que ya no, se desvanecen
                     items(uiState.resultados, key = { curso -> curso.id }) { curso ->
                         TarjetaReceta(
                             curso = curso,

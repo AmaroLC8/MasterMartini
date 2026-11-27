@@ -38,37 +38,25 @@ import com.example.mastermartini.ui.theme.VerdeOscuro
 import com.example.mastermartini.viewmodel.OrdenRecetas
 import com.example.mastermartini.viewmodel.RecetasViewModel
 
-// PANTALLA DE RECETAS POR SECCIÓN
-// Muestra todo el catálogo agrupado por sección, con botones para filtrar y ordenar.
-// Solo DIBUJA lo que le entrega el RecetasViewModel (MVVM): el filtro, el orden y la
-// agrupación se hacen en el ViewModel. Aquí solo se avisa qué botón tocó el usuario.
+// Catálogo de recetas agrupadas por sección con filtros y ordenamiento
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RecetasScreen(
-    // ViewModel con las recetas filtradas y ordenadas (lo crea MainActivity)
     viewModel: RecetasViewModel,
-    // Recibe el id de la receta tocada; MainActivity navega a "detalle/{id}", igual que desde Home
     onVerDetalle: (Int) -> Unit,
-    // Lupa de la barra superior: MainActivity navega a "buscar"
     onBuscar: () -> Unit
 ) {
-    // Escuchamos el estado del ViewModel. Cada vez que se toca un filtro o un orden,
-    // el ViewModel arma un estado nuevo y esta pantalla se vuelve a dibujar sola.
     val uiState by viewModel.uiState.collectAsState()
 
     Scaffold(
         containerColor = BlancoHueso,
         topBar = {
-            // Barra verde con el título (sin flecha: se llega desde la barra inferior, no desde otra pantalla)
             TopAppBar(
                 title = { Text(text = "Recetas", fontWeight = FontWeight.Bold) },
-                // actions: botones a la derecha de la barra. La lupa abre "Buscar",
-                // que ya no está en la barra inferior. IconButton mide 48 dp (fácil de tocar).
                 actions = {
                     IconButton(onClick = onBuscar) {
                         Icon(
                             imageVector = Icons.Filled.Search,
-                            // No es decorativo: es el único texto que TalkBack puede leer del botón
                             contentDescription = "Buscar recetas",
                             tint = BlancoPuro
                         )
@@ -81,15 +69,11 @@ fun RecetasScreen(
             )
         }
     ) { innerPadding ->
-        // Column: arriba los filtros (quedan fijos) y abajo la lista (es lo único que se desplaza)
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
-            // FILA DE SECCIONES: "Todas" + las 5 categorías.
-            // horizontalScroll: si los botones no caben en el ancho del celular,
-            // se pueden deslizar hacia el lado en vez de cortarse.
             Row(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier
@@ -97,13 +81,11 @@ fun RecetasScreen(
                     .horizontalScroll(rememberScrollState())
                     .padding(horizontal = 16.dp, vertical = 8.dp)
             ) {
-                // "Todas" está elegida cuando no hay ninguna categoría (null)
                 ChipOpcion(
                     texto = "Todas",
                     seleccionado = uiState.categoriaSeleccionada == null,
                     onClick = { viewModel.seleccionarCategoria(null) }
                 )
-                // Un botón por cada categoría que entrega el ViewModel
                 uiState.categorias.forEach { categoria ->
                     ChipOpcion(
                         texto = categoria,
@@ -113,7 +95,6 @@ fun RecetasScreen(
                 }
             }
 
-            // FILA DE ORDEN: "Ordenar por:" y dos botones
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -139,8 +120,6 @@ fun RecetasScreen(
                 )
             }
 
-            // FILTRO VEGANO: un solo botón que se enciende y se apaga.
-            // Va en su propia fila porque no es una sección ni un orden: se suma a los dos.
             ChipOpcion(
                 texto = "Solo veganas 🌱",
                 seleccionado = uiState.soloVeganas,
@@ -148,8 +127,6 @@ fun RecetasScreen(
                 modifier = Modifier.padding(start = 16.dp, top = 4.dp)
             )
 
-            // LISTA DE RECETAS
-            // weight(1f): la lista ocupa todo el alto que dejan libre las dos filas de arriba
             LazyColumn(
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp),
@@ -158,8 +135,6 @@ fun RecetasScreen(
                     .weight(1f)
             ) {
                 if (uiState.recetas.isEmpty()) {
-                    // Si una sección no tiene recetas, se avisa en vez de dejar la pantalla en blanco.
-                    // Con "Solo veganas" encendido el mensaje lo dice, para que el usuario sepa por qué.
                     item {
                         Text(
                             text = if (uiState.soloVeganas) {
@@ -172,11 +147,7 @@ fun RecetasScreen(
                         )
                     }
                 } else if (uiState.categoriaSeleccionada == null) {
-                    // "TODAS": un título por sección y sus recetas debajo.
-                    // secciones es un Map; forEach entrega cada par (categoría, lista de recetas).
                     uiState.secciones.forEach { (categoria, recetasDeLaSeccion) ->
-                        // Título de la sección, ej: "Chocolatería (2)".
-                        // key = "seccion_..." : un texto, para que no choque con los ids (números) de las recetas
                         item(key = "seccion_$categoria") {
                             Text(
                                 text = "$categoria (${recetasDeLaSeccion.size})",
@@ -188,7 +159,6 @@ fun RecetasScreen(
                                     .animateItem()
                             )
                         }
-                        // Las recetas de esa sección, en el orden elegido
                         items(recetasDeLaSeccion, key = { curso -> curso.id }) { curso ->
                             TarjetaReceta(
                                 curso = curso,
@@ -198,11 +168,7 @@ fun RecetasScreen(
                         }
                     }
                 } else {
-                    // UNA SECCIÓN ELEGIDA: solo sus recetas, sin títulos (el botón marcado ya dice cuál es)
                     items(uiState.recetas, key = { curso -> curso.id }) { curso ->
-                        // animateItem(): como cada tarjeta tiene su key (el id), al cambiar de filtro
-                        // o de orden las tarjetas se deslizan a su nuevo lugar en vez de saltar,
-                        // y las que salen o entran se desvanecen suavemente.
                         TarjetaReceta(
                             curso = curso,
                             onVerDetalle = onVerDetalle,

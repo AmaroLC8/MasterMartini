@@ -1,5 +1,6 @@
 package com.example.mastermartini.model
 
+// DTO para mapear cursos del microservicio al modelo Curso
 data class CursoDto(
     val id: Int = 0,
     val titulo: String? = null,
@@ -15,14 +16,13 @@ data class CursoDto(
     val incluye: List<String>? = null,
     val modulos: List<ModuloDto>? = null
 ) {
-    // Convierte el JSON del microservicio a tu modelo Curso con valores seguros (nunca null)
+    // Convierte el DTO del microservicio al modelo de dominio con valores por defecto
     fun toCurso(): Curso {
         val pasosExtraidos = modulos
             ?.flatMap { it.lecciones.orEmpty() }
             ?.mapNotNull { it.descripcion ?: it.titulo }
             .orEmpty()
 
-        // Toma el video resumen del curso o, si es null, el de la primera lección
         val videoFinal = videoResumenUrl
             ?: modulos?.firstOrNull()?.lecciones?.firstOrNull()?.videoUrl
 

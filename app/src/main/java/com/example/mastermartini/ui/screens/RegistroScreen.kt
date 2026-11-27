@@ -53,10 +53,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import com.example.mastermartini.R
-import com.example.mastermartini.ui.components.IconoValidacion // Ícono ✓/⚠ compartido con LoginScreen
+import com.example.mastermartini.ui.components.IconoValidacion
 import com.example.mastermartini.ui.theme.*
 import com.example.mastermartini.viewmodel.RegistroViewModel
 
+// Pantalla de registro y edición de perfil con cámara, galería, vibración y validación
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RegistroScreen(
@@ -66,14 +67,9 @@ fun RegistroScreen(
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
 
-    // ¿Se está mostrando el panel de abajo con las 3 opciones de foto?
-    // Es estado SOLO visual (abrir/cerrar un panel), por eso puede vivir en un remember de la pantalla.
-    // La foto en sí NO: esa la guarda el ViewModel (uiState.fotoLocal) para que no se pierda.
     var mostrarOpcionesFoto by remember { mutableStateOf(false) }
 
-    // RECURSO NATIVO 1: Cámara fotográfica mediante ActivityResultLauncher (IE 2.4.1)
-    // TakePicturePreview() abre la cámara y devuelve la foto como Bitmap (o null si se cancela).
-    // Si se cancela no se hace nada: queda la foto que había.
+    // Launchers nativos para cámara, selector visual y archivos
     val camaraLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicturePreview()
     ) { foto ->
@@ -82,9 +78,6 @@ fun RegistroScreen(
         }
     }
 
-    // GALERÍA: PickVisualMedia() abre el selector de fotos del sistema (Photo Picker).
-    // NO necesita permiso: el usuario elige UNA foto y Android solo nos da acceso a esa,
-    // no a toda la galería. Devuelve un Uri (la "dirección" de la foto) o null si se cancela.
     val galeriaLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()
     ) { uri ->
@@ -93,9 +86,6 @@ fun RegistroScreen(
         }
     }
 
-    // ARCHIVOS: GetContent() abre el explorador de archivos del celular (Descargas, Drive, etc.).
-    // Tampoco necesita permiso, por la misma razón: el usuario elige el archivo.
-    // Devuelve un Uri o null si se cancela.
     val archivosLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri ->
@@ -104,8 +94,6 @@ fun RegistroScreen(
         }
     }
 
-    // Abre la cámara. El try/catch evita que la app se caiga si el
-    // dispositivo no tiene una app de cámara instalada.
     fun abrirCamara() {
         try {
             camaraLauncher.launch(null)
@@ -114,9 +102,7 @@ fun RegistroScreen(
         }
     }
 
-    // PERMISO DE CÁMARA EN TIEMPO DE EJECUCIÓN (IE 2.4.1)
-    // Desde Android 6 los permisos "peligrosos" como CAMERA se piden mientras la app se usa.
-    // Este launcher muestra el diálogo del sistema y nos devuelve true (aceptó) o false (rechazó).
+    // Solicitud en tiempo de ejecución del permiso de cámara
     val permisoCamaraLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { concedido ->
@@ -127,8 +113,6 @@ fun RegistroScreen(
         }
     }
 
-    // Opción "Tomar foto": si el permiso ya fue aceptado antes, abrimos la cámara directo;
-    // si no, primero lo pedimos con el diálogo del sistema.
     fun tomarFoto() {
         val tienePermiso = ContextCompat.checkSelfPermission(
             context, Manifest.permission.CAMERA
@@ -141,8 +125,6 @@ fun RegistroScreen(
         }
     }
 
-    // Opción "Elegir de la galería". ImageOnly: solo muestra fotos (no videos).
-    // try/catch por si el celular no tiene cómo abrir el selector (la app no se cae).
     fun elegirDeGaleria() {
         try {
             galeriaLauncher.launch(
@@ -153,7 +135,6 @@ fun RegistroScreen(
         }
     }
 
-    // Opción "Buscar en archivos". "image/*" = cualquier tipo de imagen (JPG, PNG, WEBP...)
     fun buscarEnArchivos() {
         try {
             archivosLauncher.launch("image/*")
@@ -162,15 +143,13 @@ fun RegistroScreen(
         }
     }
 
-    // RECURSO NATIVO 2: Motor de vibración física del celular (IE 2.4.1)
-    // "as?" devuelve null si el celular no tiene vibrador, y "?." evita que la app se caiga en ese caso
+    // Pulso háptico al completar el registro
     fun ejecutarVibracion() {
         val vibrador = context.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
         @Suppress("DEPRECATION")
-        vibrador?.vibrate(100) // Pulso háptico de 100 ms al validar
+        vibrador?.vibrate(100)
     }
 
-    // Estilo unificado para los campos de texto con los colores corporativos
     val textFieldColors = OutlinedTextFieldDefaults.colors(
         focusedBorderColor = VerdeItaliano,
         unfocusedBorderColor = GrisBorde,
@@ -225,7 +204,6 @@ fun RegistroScreen(
                     .padding(bottom = 6.dp)
             )
 
-            // Detalle tricolor de la bandera italiana (corporativo Master Martini)
             Row(
                 modifier = Modifier
                     .width(120.dp)
@@ -249,9 +227,6 @@ fun RegistroScreen(
                 color = TextoOscuro.copy(alpha = 0.7f)
             )
 
-            // PREVISUALIZACIÓN DE LA FOTO DEL LOCAL (círculo con 📷 si aún no hay foto).
-            // La foto viene del ViewModel: así se ve también al volver a abrir la app.
-            // Se copia a una variable local para poder revisar si es null y usarla sin "!!".
             val fotoLocal = uiState.fotoLocal
             Box(
                 contentAlignment = Alignment.Center,
@@ -265,8 +240,6 @@ fun RegistroScreen(
                     Image(
                         bitmap = fotoLocal.asImageBitmap(),
                         contentDescription = "Foto del local",
-                        // Crop: agranda la foto hasta llenar todo el círculo y recorta lo que sobra
-                        // (sin deformarla). Sin esto, una foto alargada dejaría bordes vacíos.
                         contentScale = ContentScale.Crop,
                         modifier = Modifier.fillMaxSize()
                     )
@@ -275,7 +248,6 @@ fun RegistroScreen(
                 }
             }
 
-            // BOTÓN QUE ABRE LAS OPCIONES DE FOTO (cámara, galería o archivos)
             OutlinedButton(
                 onClick = { mostrarOpcionesFoto = true },
                 colors = ButtonDefaults.outlinedButtonColors(
@@ -291,10 +263,6 @@ fun RegistroScreen(
                 Text("Agregar foto del local", fontWeight = FontWeight.SemiBold)
             }
 
-            // PANEL DE ABAJO (ModalBottomSheet) con las 3 formas de agregar la foto.
-            // Solo se dibuja mientras mostrarOpcionesFoto sea true.
-            // onDismissRequest: se llama si el usuario lo cierra deslizando hacia abajo,
-            // tocando fuera o con Atrás. En ese caso no pasa nada más.
             if (mostrarOpcionesFoto) {
                 ModalBottomSheet(
                     onDismissRequest = { mostrarOpcionesFoto = false },
@@ -308,7 +276,6 @@ fun RegistroScreen(
                             color = TextoOscuro,
                             modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)
                         )
-                        // Cada opción primero cierra el panel y después abre lo que corresponda
                         OpcionFoto(
                             icono = Icons.Filled.PhotoCamera,
                             texto = "Tomar foto",
@@ -337,7 +304,6 @@ fun RegistroScreen(
                 }
             }
 
-            // AVISO DE CÁMARA: aparece con animación si se negó el permiso o no hay cámara
             AnimatedVisibility(visible = uiState.avisoCamara != null) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -357,19 +323,15 @@ fun RegistroScreen(
                 }
             }
 
-            // CAMPO 1: NOMBRE DEL LOCAL O DUEÑO
-            // La pantalla solo muestra uiState y avisa al ViewModel cada vez que el usuario escribe
             OutlinedTextField(
                 value = uiState.nombre,
                 onValueChange = { viewModel.onNombreChange(it) },
                 label = { Text("Nombre del Local o Dueño") },
-                // ÍCONOS (IE 2.1.2): a la izquierda indica qué dato va; a la derecha, si está bien o mal
                 leadingIcon = { Icon(Icons.Filled.Store, contentDescription = "Nombre del local") },
                 trailingIcon = { IconoValidacion(valor = uiState.nombre, error = uiState.errorNombre) },
                 isError = uiState.errorNombre != null,
                 colors = textFieldColors,
                 supportingText = {
-                    // ANIMACIÓN (IE 2.2.2): Transición suave para el mensaje de error
                     AnimatedVisibility(visible = uiState.errorNombre != null) {
                         Text(uiState.errorNombre ?: "", color = RojoItaliano)
                     }
@@ -378,8 +340,6 @@ fun RegistroScreen(
                 shape = RoundedCornerShape(10.dp)
             )
 
-            // Al EDITAR los datos, el RUT y el correo se muestran pero no se pueden cambiar
-            // (el backend no los cambia en PUT /{id}). Se avisa con texto para que no parezca un error.
             if (uiState.esEdicion) {
                 Text(
                     text = "El RUT y el correo no se pueden cambiar desde aquí.",
@@ -389,8 +349,6 @@ fun RegistroScreen(
                 )
             }
 
-            // CAMPO 2: RUT EMPRESA (SINTÉTICO). El ViewModel revisa formato y dígito verificador
-            // readOnly: al editar se ve normal (buen contraste) pero no se puede escribir
             OutlinedTextField(
                 value = uiState.rut,
                 onValueChange = { viewModel.onRutChange(it) },
@@ -409,7 +367,6 @@ fun RegistroScreen(
                 shape = RoundedCornerShape(10.dp)
             )
 
-            // CAMPO 3: CORREO ELECTRÓNICO
             OutlinedTextField(
                 value = uiState.correo,
                 onValueChange = { viewModel.onCorreoChange(it) },
@@ -428,8 +385,6 @@ fun RegistroScreen(
                 shape = RoundedCornerShape(10.dp)
             )
 
-            // CAMPO CONTRASEÑA: la que después se pide en el login (mínimo 4 caracteres, lo revisa el ViewModel).
-            // Solo al crear la cuenta: al editar los datos no se pide (no se cambia desde aquí).
             if (!uiState.esEdicion) {
                 OutlinedTextField(
                     value = uiState.password,
@@ -437,7 +392,6 @@ fun RegistroScreen(
                     label = { Text("Crea una Contraseña") },
                     leadingIcon = { Icon(Icons.Filled.Lock, contentDescription = "Contraseña") },
                     trailingIcon = { IconoValidacion(valor = uiState.password, error = uiState.errorPassword) },
-                    // Muestra puntos en vez de las letras, para que no se lea la contraseña en pantalla
                     visualTransformation = PasswordVisualTransformation(),
                     isError = uiState.errorPassword != null,
                     supportingText = {
@@ -450,14 +404,12 @@ fun RegistroScreen(
                 )
             }
 
-            // CAMPO 4: TELÉFONO CELULAR
             OutlinedTextField(
                 value = uiState.telefono,
                 onValueChange = { viewModel.onTelefonoChange(it) },
                 label = { Text("Celular (Ej: 9 1234 5678)") },
                 leadingIcon = { Icon(Icons.Filled.Phone, contentDescription = "Teléfono") },
                 trailingIcon = { IconoValidacion(valor = uiState.telefono, error = uiState.errorTelefono) },
-                // Abre el teclado numérico del celular: más fácil para usuarios mayores
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                 isError = uiState.errorTelefono != null,
                 colors = textFieldColors,
@@ -470,7 +422,6 @@ fun RegistroScreen(
                 shape = RoundedCornerShape(10.dp)
             )
 
-            // SELECTOR DE ESPECIALIDAD TÉCNICA (FilterChips)
             Text(
                 text = "Especialidad Técnica:",
                 fontWeight = FontWeight.SemiBold,
@@ -496,9 +447,6 @@ fun RegistroScreen(
                 }
             }
 
-            // PREGUNTA: ¿CUÁNTAS PERSONAS TRABAJAN EN TU NEGOCIO? (RadioButton, se elige una sola)
-            // Reemplaza a "Tamaño del negocio: Micro / Pequeño / Mediano": una pregunta concreta
-            // que cualquiera puede responder, y con la opción "Prefiero no decirlo".
             Text(
                 text = "¿Cuántas personas trabajan en tu negocio?",
                 fontSize = 17.sp,
@@ -506,17 +454,12 @@ fun RegistroScreen(
                 color = TextoOscuro,
                 modifier = Modifier.align(Alignment.Start)
             )
-            // selectableGroup(): le avisa a TalkBack que estas filas son UN grupo de opciones
-            // (lee "opción 2 de 5"), igual que un grupo de radio buttons.
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .selectableGroup()
             ) {
-                // Las opciones vienen del ViewModel (no se escriben en la pantalla)
                 viewModel.opcionesPersonas.forEach { opcion ->
-                    // Toda la FILA se puede tocar (no solo el circulito), de 48 dp como mínimo.
-                    // selectable + Role.RadioButton: TalkBack la lee como "botón de opción, seleccionado/no".
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier
@@ -528,8 +471,6 @@ fun RegistroScreen(
                                 role = Role.RadioButton
                             )
                     ) {
-                        // onClick = null: el toque lo maneja la fila completa (selectable),
-                        // así no se registra dos veces al tocar justo el círculo
                         RadioButton(
                             selected = uiState.personasNegocio == opcion,
                             onClick = null,
@@ -543,8 +484,6 @@ fun RegistroScreen(
                     }
                 }
             }
-            // ERROR DE LA PREGUNTA: aparece con animación solo al tocar "Registrar" sin haber elegido,
-            // y se va apenas se elige una opción (onPersonasNegocioChange lo borra)
             AnimatedVisibility(visible = uiState.errorPersonas != null) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -566,7 +505,6 @@ fun RegistroScreen(
                 }
             }
 
-            // ANIMACIÓN FUNCIONAL: Banner reactivo cuando todos los datos son válidos
             AnimatedVisibility(
                 visible = uiState.esFormularioValido,
                 enter = fadeIn(),
@@ -587,8 +525,6 @@ fun RegistroScreen(
                 }
             }
 
-            // ERROR DEL REPOSITORIO (ej. "Ya existe una cuenta con ese correo..."): es el mensaje
-            // de la UsuarioException que atrapó el ViewModel. Ícono + texto, no solo color.
             AnimatedVisibility(visible = uiState.errorGeneral != null) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -609,19 +545,13 @@ fun RegistroScreen(
                 }
             }
 
-            // BOTÓN PRINCIPAL (Altura 54dp para accesibilidad de mayores de 50 años)
             Button(
                 onClick = {
-                    // El ViewModel llama a este bloque SOLO si el repositorio respondió bien:
-                    // por eso la vibración sigue siendo solo en el éxito
                     viewModel.guardarPerfil {
-                        ejecutarVibracion() // Dispara la vibración física
-                        onRegistroCompletado() // Navega hacia HomeScreen
+                        ejecutarVibracion()
+                        onRegistroCompletado()
                     }
                 },
-                // Se puede tocar cuando los campos de texto están bien. Si falta elegir cuántas
-                // personas trabajan, al tocarlo guardarPerfil() muestra ese error y no guarda.
-                // Mientras carga se desactiva, para no enviar el registro dos veces.
                 enabled = uiState.puedeIntentarRegistrar && !uiState.cargando,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = VerdeItaliano,
@@ -635,7 +565,6 @@ fun RegistroScreen(
                 shape = RoundedCornerShape(10.dp)
             ) {
                 if (uiState.cargando) {
-                    // Círculo pequeño que gira mientras se espera la respuesta
                     CircularProgressIndicator(
                         color = TextoOscuro,
                         strokeWidth = 2.dp,
@@ -655,9 +584,7 @@ fun RegistroScreen(
     }
 }
 
-// UNA OPCIÓN DEL PANEL DE FOTO: fila completa de 56 dp con ícono + texto.
-// Toda la fila se puede tocar (no solo el texto): blanco grande para usuarios mayores.
-// Es private porque solo la usa esta pantalla.
+// Fila de opción en el selector inferior de fotografía
 @Composable
 private fun OpcionFoto(
     icono: ImageVector,
@@ -669,11 +596,9 @@ private fun OpcionFoto(
         modifier = Modifier
             .fillMaxWidth()
             .height(56.dp)
-            // role = Button: TalkBack la anuncia como "botón"
             .clickable(role = Role.Button, onClick = onClick)
             .padding(horizontal = 24.dp)
     ) {
-        // contentDescription = null: el texto de al lado ya dice qué hace
         Icon(
             imageVector = icono,
             contentDescription = null,
