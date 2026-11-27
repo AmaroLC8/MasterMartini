@@ -91,62 +91,56 @@ class CursoRepository {
             ),
             Curso(
                 id = 4,
-                titulo = "Técnica del Glaseado Espejo Brillante",
-                insumo = "Cobertura Caravella",
-                chef = "Chef Sofía Lombardo",
-                duracion = "25 min",
+                titulo = "Torta Chocolate Avellana Caravella",
+                insumo = "Caravella Escamas Chocolate",
+                chef = "Chef Master Martini",
+                duracion = "35 min",
                 pasos = listOf(
-                    "Congela el postre que vas a cubrir por al menos 4 horas.",
-                    "Hidrata la gelatina en agua fría por 5 minutos.",
-                    "Hierve el agua con el azúcar y la glucosa. Retira del fuego y agrega la leche condensada y la gelatina.",
-                    "Vierte la mezcla caliente sobre la Cobertura Caravella picada y mezcla sin formar burbujas.",
-                    "Deja enfriar el glaseado hasta 32 °C.",
-                    "Vierte el glaseado sobre el postre congelado, de una sola vez.",
-                    "Retira el exceso con una espátula y refrigera."
+                    "Divide el bizcochuelo de chocolate en 3 partes parejas.",
+                    "Humedece la primera capa con el jarabe de remojo.",
+                    "Rellena con chocolate avellana y mermelada de guinda, e incorpora el segundo bizcochuelo.",
+                    "Repite el remojo y el relleno, y coloca la última capa de bizcochuelo.",
+                    "Cubre la superficie y el contorno de la torta con ganache de chocolate negro.",
+                    "Decora con Caravella escamas de chocolate."
                 ),
                 categoria = "Decoración",
-                descripcion = "Aprende a cubrir postres congelados con un glaseado de chocolate liso y brillante como un espejo, usando una cobertura que no necesita templado.",
+                descripcion = "Aprende a armar, rellenar y cubrir una torta de chocolate y avellana con ganache y escamas Caravella.",
                 ingredientes = listOf(
-                    "200 g de Cobertura Caravella",
-                    "150 g de azúcar",
-                    "150 g de glucosa",
-                    "75 ml de agua",
-                    "100 g de leche condensada",
-                    "10 g de gelatina sin sabor",
-                    "1 torta de mousse congelada de 20 cm"
+                    "1 bizcochuelo de chocolate (15 personas)",
+                    "160 g de chocolate avellana",
+                    "200 g de mermelada de guinda",
+                    "300 g de jarabe de remojo",
+                    "200 g de ganache de chocolate negro",
+                    "100 g de Caravella escamas de chocolate"
                 ),
-                rendimiento = "Cubre 1 torta de 20 cm",
-                dificultad = "Avanzada",
-                videoUrl = DatosEmpresa.URL_VIDEO_MASTERCLASS,
+                rendimiento = "Rinde 15 porciones",
+                dificultad = "Media",
+                videoUrl = DatosEmpresa.URL_VIDEO_TORTA_CHOCOLATE_AVELLANA,
                 imagenUrl = DatosEmpresa.URL_IMG_CHOCOLATERIA
             ),
             Curso(
                 id = 5,
-                titulo = "Sorbete Vegano de Chocolate Amargo",
-                insumo = "Ariba Zero Latto",
-                chef = "Maestro Matteo Bianco",
-                duracion = "40 min",
+                titulo = "Helado Artesanal de Mix de Berries",
+                insumo = "Orasì Soia",
+                chef = "Chef Ignacio Bravo Durán",
+                duracion = "20 min",
                 pasos = listOf(
-                    "Calienta el agua con el azúcar hasta que el azúcar se disuelva por completo.",
-                    "Agrega el cacao en polvo y la sal, y revuelve hasta que no queden grumos.",
-                    "Retira del fuego, agrega el Ariba Zero Latto picado y mezcla hasta que se derrita.",
-                    "Enfría la mezcla y déjala reposar 4 horas en el refrigerador.",
-                    "Bate en la máquina de helados hasta que quede cremoso.",
-                    "Guarda el sorbete en el congelador a -18 °C."
+                    "Vierte 1 litro de base Orasì Soia en un jarro medidor.",
+                    "Agrega los 400 g de mix de berries sobre la base vegetal.",
+                    "Mixea hasta lograr una mezcla completamente homogénea.",
+                    "Lleva la mezcla a la máquina mantecadora de helados.",
+                    "Espera 12 minutos de mantecado, retira y monta para servir."
                 ),
                 categoria = "Heladería",
-                descripcion = "Aprende a preparar un sorbete cremoso de chocolate amargo hecho con agua, sin leche ni huevo, apto para clientes veganos.",
+                descripcion = "Prepara un helado artesanal vegano de frutos rojos usando base Orasì Soia y mix de berries.",
                 ingredientes = listOf(
-                    "600 ml de agua",
-                    "180 g de azúcar",
-                    "150 g de Ariba Zero Latto",
-                    "40 g de cacao en polvo sin azúcar",
-                    "1 pizca de sal"
+                    "1 litro de base Orasì Soia",
+                    "400 g de mix de berries"
                 ),
-                rendimiento = "Rinde 1 litro (8 porciones)",
-                dificultad = "Media",
+                rendimiento = "Rinde 1,4 litros aprox.",
+                dificultad = "Fácil",
                 esVegano = true,
-                videoUrl = DatosEmpresa.URL_VIDEO_MASTERCLASS,
+                videoUrl = DatosEmpresa.URL_VIDEO_HELADO_BERRIES,
                 imagenUrl = DatosEmpresa.URL_IMG_CHOCOLATERIA
             ),
             Curso(
@@ -208,93 +202,92 @@ class CursoRepository {
             ),
             Curso(
                 id = 8,
-                titulo = "Mousse Vegana de Fruta de la Pasión",
-                insumo = "Orasì",
-                chef = "Chef Valentina Morales",
-                duracion = "20 min",
+                titulo = "Arroz con Leche con Orasì Almendra",
+                insumo = "Orasì Bio Almendra",
+                chef = "Chef Master Martini",
+                duracion = "25 min",
                 pasos = listOf(
-                    "Enfría la Orasì en el refrigerador a 4 °C desde el día anterior.",
-                    "Hierve la pulpa de fruta de la pasión con el azúcar y el agar-agar por 2 minutos, sin dejar de revolver.",
-                    "Deja entibiar la mezcla hasta unos 40 °C.",
-                    "Bate la Orasì a medio punto, que todavía se mueva al inclinar el bol.",
-                    "Une la crema batida a la pulpa con movimientos envolventes.",
-                    "Rellena los vasitos y refrigera por 4 horas."
+                    "En una cacerola, incorpora el arroz y el agua junto con la canela en rama y las cáscaras de naranja.",
+                    "Cocina a fuego medio hasta que el arroz comience a ablandarse.",
+                    "Incorpora los 800 ml de Orasì Bio Almendra y sigue revolviendo constantemente.",
+                    "Añade el endulzante a gusto y continúa revolviendo hasta obtener cremosidad.",
+                    "Sirve tibio o frío en pocillos y decora con canela."
                 ),
                 categoria = "Pastelería",
-                descripcion = "Aprende a preparar una mousse liviana de maracuyá sin leche, huevo ni gelatina animal, apta para clientes veganos.",
+                descripcion = "Prepara un arroz con leche cremoso y 100% vegetal usando Orasì Bio Almendra, canela y cáscara de naranja.",
                 ingredientes = listOf(
-                    "400 ml de Orasì",
-                    "200 ml de pulpa de fruta de la pasión",
-                    "60 g de azúcar",
-                    "2 g de agar-agar en polvo",
-                    "Semillas de fruta de la pasión para decorar"
+                    "250 g de arroz",
+                    "500 ml de agua",
+                    "Canela en rama",
+                    "Cáscaras de naranja",
+                    "Endulzante a gusto",
+                    "800 ml de Orasì Bio Almendra"
                 ),
-                rendimiento = "Rinde 8 vasitos de 150 ml",
-                dificultad = "Media",
+                rendimiento = "Rinde 6 porciones",
+                dificultad = "Fácil",
                 esVegano = true,
-                videoUrl = DatosEmpresa.URL_VIDEO_MASTERCLASS,
+                videoUrl = DatosEmpresa.URL_VIDEO_ARROZ_CON_LECHE,
                 imagenUrl = DatosEmpresa.URL_IMG_PASTELERIA
             ),
             Curso(
                 id = 9,
-                titulo = "Tartaletas de Fruta con Crema Pastelera",
-                insumo = "Crema Pastelera",
-                chef = "Chef Carlos Gutiérrez",
-                duracion = "30 min",
+                titulo = "Fetuccini en Salsa de Setas con Orasì Avena",
+                insumo = "Orasì Bio Avena",
+                chef = "Chef Master Martini",
+                duracion = "25 min",
                 pasos = listOf(
-                    "Hornea las bases de tartaleta a 170 °C hasta que estén doradas y déjalas enfriar.",
-                    "Pon la leche fría en un bol.",
-                    "Agrega el polvo de Crema Pastelera de a poco (revisa la proporción del envase).",
-                    "Bate 3 a 4 minutos hasta que espese. No hay que cocinarla.",
-                    "Refrigera la crema 10 minutos y rellena las tartaletas con una manga.",
-                    "Decora con fruta fresca."
+                    "En un sartén con aceite, agrega las setas y los aliños para saltear.",
+                    "Prepara la salsa añadiendo los 300 ml de Orasì Bio Avena y la harina blanca.",
+                    "Agrega algo de aliño y revuelve hasta obtener una consistencia cremosa.",
+                    "Cuece la pasta al dente y escúrrela.",
+                    "Adhiere los fetuccini a la salsa de setas y combina bien antes de servir."
                 ),
-                categoria = "Pastelería",
-                descripcion = "Aprende a rellenar tartaletas de venta diaria con crema pastelera instantánea: se prepara en frío y queda siempre igual.",
+                categoria = "Cocina",
+                descripcion = "Prepara fetuccini en salsa cremosa de setas sin lácteos utilizando Orasì Bio Avena.",
                 ingredientes = listOf(
-                    "12 bases de tartaleta",
-                    "500 ml de leche fría",
-                    "150 g de Crema Pastelera",
-                    "Fruta fresca para decorar (frutillas, kiwi o durazno)"
+                    "120 g de pasta (fetuccini)",
+                    "150 g de setas",
+                    "50 g de harina blanca",
+                    "100 ml de aceite",
+                    "Aliños a gusto",
+                    "300 ml de Orasì Bio Avena"
                 ),
-                rendimiento = "Rinde 12 tartaletas",
+                rendimiento = "Rinde 2 porciones",
                 dificultad = "Fácil",
-                videoUrl = DatosEmpresa.URL_VIDEO_MASTERCLASS,
+                esVegano = true,
+                videoUrl = DatosEmpresa.URL_VIDEO_FETUCCINI_SETAS,
                 imagenUrl = DatosEmpresa.URL_IMG_PASTELERIA
             ),
             Curso(
                 id = 10,
-                titulo = "Trufas Veganas de Cacao Intenso",
-                insumo = "Ariba Zero Latto",
-                chef = "Maestro Andrea Conti",
-                duracion = "15 min",
+                titulo = "Helado Artesanal de Avellana",
+                insumo = "Pasta de Avellana Master Martini",
+                chef = "Chef Ignacio Bravo Durán",
+                duracion = "20 min",
                 pasos = listOf(
-                    "Pica el Ariba Zero Latto en trozos pequeños.",
-                    "Calienta la Orasì hasta que hierva suavemente.",
-                    "Vierte la Orasì sobre el chocolate, espera 1 minuto y mezcla hasta lograr una ganache lisa.",
-                    "Refrigera la ganache 2 horas, hasta que esté firme.",
-                    "Forma bolitas del mismo tamaño con una cuchara o con las manos frías.",
-                    "Pasa cada bolita por el cacao en polvo y guárdalas en un lugar fresco."
+                    "Añade 1 litro de base blanca y 100 g de pasta de avellana en un jarro.",
+                    "Mixea hasta integrar por completo la pasta de avellana.",
+                    "Vierte la mezcla en la mantecadora (equipo Frigomat G10) hasta lograr cremosidad.",
+                    "Sirve en copa acompañado de brownie y avellana trozada."
                 ),
-                categoria = "Chocolatería",
-                descripcion = "Aprende a formar trufas de ganache vegana del mismo tamaño y a cubrirlas con cacao para venderlas en cajas de regalo.",
+                categoria = "Heladería",
+                descripcion = "Elabora un helado artesanal de avellana cremoso con base blanca, pasta de avellana, brownie y avellanas trozadas.",
                 ingredientes = listOf(
-                    "250 g de Ariba Zero Latto",
-                    "125 ml de Orasì",
-                    "60 g de cacao en polvo sin azúcar",
-                    "50 g de nueces picadas para cubrir (opcional)"
+                    "1 litro de base blanca",
+                    "100 g de pasta de avellana",
+                    "100 g de brownie",
+                    "20 g de avellana trozada"
                 ),
-                rendimiento = "Rinde 30 trufas",
+                rendimiento = "Rinde 1,2 litros aprox.",
                 dificultad = "Fácil",
-                esVegano = true,
-                videoUrl = DatosEmpresa.URL_VIDEO_MASTERCLASS,
+                videoUrl = DatosEmpresa.URL_VIDEO_HELADO_AVELLANA,
                 imagenUrl = DatosEmpresa.URL_IMG_CHOCOLATERIA
             )
         )
     }
 
     fun obtenerCategorias(): List<String> {
-        return listOf("Chocolatería", "Pastelería", "Panadería", "Heladería", "Decoración")
+        return listOf("Chocolatería", "Pastelería", "Panadería", "Heladería", "Decoración", "Cocina")
     }
 
     fun obtenerCursoPorId(id: Int): Curso? {

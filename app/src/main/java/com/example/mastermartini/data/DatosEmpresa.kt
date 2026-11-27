@@ -15,6 +15,18 @@ object DatosEmpresa {
     const val URL_VIDEO_MASTERCLASS =
         "https://res.cloudinary.com/t5y3rddt/video/upload/v1795651333/6605708-hd_1920_1080_25fps.mp4"
 
+    // Videos de recetas en Cloudinary (nube ohimrm8m)
+    const val URL_VIDEO_ARROZ_CON_LECHE =
+        "https://res.cloudinary.com/ohimrm8m/video/upload/v1795782169/video1.mp4"
+    const val URL_VIDEO_FETUCCINI_SETAS =
+        "https://res.cloudinary.com/ohimrm8m/video/upload/v1795782172/video2.mp4"
+    const val URL_VIDEO_HELADO_BERRIES =
+        "https://res.cloudinary.com/ohimrm8m/video/upload/v1795782184/video3.mp4"
+    const val URL_VIDEO_TORTA_CHOCOLATE_AVELLANA =
+        "https://res.cloudinary.com/ohimrm8m/video/upload/v1795782186/video4.mp4"
+    const val URL_VIDEO_HELADO_AVELLANA =
+        "https://res.cloudinary.com/ohimrm8m/video/upload/v1795782189/video5.mp4"
+
     // Imágenes temáticas en Cloudinary para recetas, cursos y productos
     const val URL_IMG_CHOCOLATERIA =
         "https://res.cloudinary.com/ohimrm8m/image/upload/v1795741497/dolce.jpg"
