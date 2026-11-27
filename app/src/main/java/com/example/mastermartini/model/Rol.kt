@@ -17,6 +17,12 @@ private val OPCION_USUARIOS = OpcionPanel(
     ruta = "panel/usuarios"
 )
 
+private val OPCION_PREGUNTAS = OpcionPanel(
+    titulo = "Preguntas pendientes",
+    descripcion = "Responde las dudas de los alumnos de los cursos",
+    ruta = "panel/preguntas"
+)
+
 // Roles de usuario y sus permisos de negocio en la aplicación
 sealed class Rol(val codigo: String, val nombreVisible: String) {
 
@@ -44,7 +50,7 @@ sealed class Rol(val codigo: String, val nombreVisible: String) {
             return instructorIdDelCurso != null && miId != null && instructorIdDelCurso == miId
         }
         override val puedeEliminarCursos = false
-        override fun opcionesPanel(): List<OpcionPanel> = listOf(OPCION_CREAR_CURSO)
+        override fun opcionesPanel(): List<OpcionPanel> = listOf(OPCION_CREAR_CURSO, OPCION_PREGUNTAS)
     }
 
     data object Ventas : Rol(codigo = "VENTAS", nombreVisible = "Ventas") {
@@ -62,7 +68,7 @@ sealed class Rol(val codigo: String, val nombreVisible: String) {
         override val puedeResponderPreguntas = true
         override fun puedeEditarCurso(instructorIdDelCurso: Long?, miId: Long?) = true
         override val puedeEliminarCursos = true
-        override fun opcionesPanel(): List<OpcionPanel> = listOf(OPCION_CLIENTES, OPCION_USUARIOS,OPCION_CREAR_CURSO)
+        override fun opcionesPanel(): List<OpcionPanel> = listOf(OPCION_CLIENTES, OPCION_USUARIOS, OPCION_CREAR_CURSO, OPCION_PREGUNTAS)
     }
 
     companion object {

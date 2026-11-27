@@ -3,8 +3,10 @@ package com.example.mastermartini.viewmodel
 import com.example.mastermartini.data.AlmacenamientoLocal
 import com.example.mastermartini.data.CapacitacionRepository
 import com.example.mastermartini.data.InscripcionRepository
+import com.example.mastermartini.data.PreguntaRepository
 import com.example.mastermartini.data.ServidorException
 import com.example.mastermartini.model.Inscripcion
+import com.example.mastermartini.model.Pregunta
 import com.example.mastermartini.model.Rol
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.booleans.shouldBeFalse
@@ -33,11 +35,20 @@ class CapacitacionDetalleViewModelTest : StringSpec({
     val cursoGratis = CapacitacionRepository().obtenerCapacitaciones().first { it.id == 1 }
     val cursoPro = CapacitacionRepository().obtenerCapacitaciones().first { it.id == 4 }
     val miInscripcion = Inscripcion(id = 50, usuarioId = 5, cursoId = 1, leccionesCompletadas = listOf("0-0", "0-1"))
+    val miPregunta = Pregunta(id = 80, cursoId = 1, usuarioId = 5, autorNombre = "Alumno de prueba", texto = "¿Sirve otro chocolate?")
+    val preguntaAjena = Pregunta(
+        id = 81, cursoId = 1, usuarioId = 9, autorNombre = "Otro alumno", texto = "¿Cuánto dura?",
+        respuesta = "Unas dos horas", respondidaPor = "Instructor de prueba"
+    )
 
     beforeTest {
         Dispatchers.setMain(StandardTestDispatcher())
         // Los repositorios y AlmacenamientoLocal se crean dentro del ViewModel
-        mockkConstructor(CapacitacionRepository::class, InscripcionRepository::class, AlmacenamientoLocal::class)
+        mockkConstructor(
+            CapacitacionRepository::class, InscripcionRepository::class,
+            PreguntaRepository::class, AlmacenamientoLocal::class
+        )
+        coEvery { anyConstructed<PreguntaRepository>().listarDelCurso(any()) } returns Result.success(emptyList())
         coEvery { anyConstructed<CapacitacionRepository>().obtenerCapacitacionPorIdRemoto(1) } returns cursoGratis
         coEvery { anyConstructed<CapacitacionRepository>().obtenerCapacitacionPorIdRemoto(4) } returns cursoPro
         coEvery { anyConstructed<CapacitacionRepository>().obtenerCapacitacionPorIdRemoto(99) } returns null
@@ -469,6 +480,239 @@ class CapacitacionDetalleViewModelTest : StringSpec({
 
             vm.uiState.value.inscripcion shouldBe miInscripcion
             vm.uiState.value.mensajeErrorInscripcion shouldBe "No se pudo conectar con el servidor de inscripciones (9093)"
+        }
+    }
+
+    // ---------- Preguntas al instructor ----------
+
+    "cargar el curso trae también sus preguntas" {
+        runTest {
+            coEvery { anyConstructed<PreguntaRepository>().listarDelCurso(1) } returns
+                Result.success(listOf(preguntaAjena, miPregunta))
+            val vm = CapacitacionDetalleViewModel(app)
+            vm.cargarCapacitacion(1)
+            advanceUntilIdle()
+            vm.uiState.value.preguntas shouldBe listOf(preguntaAjena, miPregunta)
+            vm.uiState.value.cargandoPreguntas.shouldBeFalse()
+            vm.uiState.value.errorPreguntas.shouldBeNull()
+        }
+    }
+
+    "si el curso no existe no se piden preguntas" {
+        runTest {
+            val vm = CapacitacionDetalleViewModel(app)
+            vm.cargarCapacitacion(99)
+            vm.recargarCapacitacion(99)
+            advanceUntilIdle()
+            coVerify(exactly = 0) { anyConstructed<PreguntaRepository>().listarDelCurso(any()) }
+        }
+    }
+
+    "recargar el curso vuelve a pedir las preguntas" {
+        runTest {
+            val vm = CapacitacionDetalleViewModel(app)
+            vm.cargarCapacitacion(1)
+            advanceUntilIdle()
+            vm.recargarCapacitacion(1)
+            advanceUntilIdle()
+            coVerify(exactly = 2) { anyConstructed<PreguntaRepository>().listarDelCurso(1) }
+        }
+    }
+
+    "si fallan las preguntas el curso se muestra igual y se puede reintentar" {
+        runTest {
+            coEvery { anyConstructed<PreguntaRepository>().listarDelCurso(1) } returns
+                Result.failure(Exception("No se pudo conectar con el servidor de inscripciones (9093)"))
+            val vm = CapacitacionDetalleViewModel(app)
+            vm.cargarCapacitacion(1)
+            advanceUntilIdle()
+            vm.uiState.value.capacitacion shouldBe cursoGratis
+            vm.uiState.value.errorPreguntas shouldBe "No se pudo conectar con el servidor de inscripciones (9093)"
+
+            coEvery { anyConstructed<PreguntaRepository>().listarDelCurso(1) } returns Result.success(listOf(miPregunta))
+            vm.cargarPreguntas(1)
+            vm.uiState.value.cargandoPreguntas.shouldBeTrue()
+            advanceUntilIdle()
+
+            vm.uiState.value.errorPreguntas.shouldBeNull()
+            vm.uiState.value.preguntas shouldBe listOf(miPregunta)
+        }
+    }
+
+    "el texto de la pregunta se corta en 500 caracteres y borra el error" {
+        runTest {
+            coEvery { anyConstructed<InscripcionRepository>().misInscripciones(5) } returns Result.success(listOf(miInscripcion))
+            val vm = CapacitacionDetalleViewModel(app)
+            vm.cargarCapacitacion(1)
+            advanceUntilIdle()
+            vm.enviarPregunta()
+            vm.uiState.value.errorPregunta shouldBe "Escribe tu pregunta antes de enviarla"
+
+            vm.onTextoPreguntaChange("a".repeat(600))
+            vm.uiState.value.textoPregunta.length shouldBe 500
+            vm.uiState.value.errorPregunta.shouldBeNull()
+        }
+    }
+
+    "enviar una pregunta vacía o sin curso no llama al servidor" {
+        runTest {
+            val vm = CapacitacionDetalleViewModel(app)
+            vm.onTextoPreguntaChange("Hola")
+            vm.enviarPregunta()
+
+            coEvery { anyConstructed<InscripcionRepository>().misInscripciones(5) } returns Result.success(listOf(miInscripcion))
+            vm.cargarCapacitacion(1)
+            advanceUntilIdle()
+            vm.onTextoPreguntaChange("    ")
+            vm.enviarPregunta()
+            advanceUntilIdle()
+
+            vm.uiState.value.errorPregunta shouldBe "Escribe tu pregunta antes de enviarla"
+            coVerify(exactly = 0) { anyConstructed<PreguntaRepository>().preguntar(any(), any(), any()) }
+        }
+    }
+
+    "sin inscripción no se puede enviar una pregunta" {
+        runTest {
+            val vm = CapacitacionDetalleViewModel(app)
+            vm.cargarCapacitacion(1)
+            advanceUntilIdle()
+            vm.onTextoPreguntaChange("¿Puedo preguntar?")
+            vm.enviarPregunta()
+            vm.uiState.value.errorPregunta shouldBe "Inscríbete para hacer preguntas"
+            coVerify(exactly = 0) { anyConstructed<PreguntaRepository>().preguntar(any(), any(), any()) }
+        }
+    }
+
+    "sin sesión se pide iniciar sesión para preguntar" {
+        runTest {
+            coEvery { anyConstructed<InscripcionRepository>().misInscripciones(5) } returns Result.success(listOf(miInscripcion))
+            val vm = CapacitacionDetalleViewModel(app)
+            vm.cargarCapacitacion(1)
+            advanceUntilIdle()
+            every { anyConstructed<AlmacenamientoLocal>().obtenerIdUsuario() } returns null
+            vm.onTextoPreguntaChange("¿Puedo preguntar?")
+            vm.enviarPregunta()
+            vm.uiState.value.errorPregunta shouldBe "Debes iniciar sesión para hacer preguntas"
+        }
+    }
+
+    "enviar una pregunta la agrega primero, limpia el campo y avisa con un Snackbar" {
+        runTest {
+            coEvery { anyConstructed<InscripcionRepository>().misInscripciones(5) } returns Result.success(listOf(miInscripcion))
+            coEvery { anyConstructed<PreguntaRepository>().listarDelCurso(1) } returns Result.success(listOf(preguntaAjena))
+            coEvery { anyConstructed<PreguntaRepository>().preguntar(5, 1, "¿Sirve otro chocolate?") } returns
+                Result.success(miPregunta)
+            val vm = CapacitacionDetalleViewModel(app)
+            vm.cargarCapacitacion(1)
+            advanceUntilIdle()
+            vm.onTextoPreguntaChange("  ¿Sirve otro chocolate?  ")
+
+            vm.enviarPregunta()
+            vm.uiState.value.enviandoPregunta.shouldBeTrue()
+            vm.enviarPregunta()
+            advanceUntilIdle()
+
+            val estado = vm.uiState.value
+            estado.enviandoPregunta.shouldBeFalse()
+            estado.preguntas shouldBe listOf(miPregunta, preguntaAjena)
+            estado.textoPregunta shouldBe ""
+            estado.mensajeSnackbar shouldBe "Tu pregunta fue enviada al instructor"
+            coVerify(exactly = 1) { anyConstructed<PreguntaRepository>().preguntar(any(), any(), any()) }
+        }
+    }
+
+    "si el servidor rechaza la pregunta se conserva el texto y se muestra el error" {
+        runTest {
+            coEvery { anyConstructed<InscripcionRepository>().misInscripciones(5) } returns Result.success(listOf(miInscripcion))
+            coEvery { anyConstructed<PreguntaRepository>().preguntar(any(), any(), any()) } returns
+                Result.failure(ServidorException(403, "Debes inscribirte en el curso para hacer preguntas"))
+            val vm = CapacitacionDetalleViewModel(app)
+            vm.cargarCapacitacion(1)
+            advanceUntilIdle()
+            vm.onTextoPreguntaChange("¿Puedo preguntar?")
+
+            vm.enviarPregunta()
+            advanceUntilIdle()
+
+            vm.uiState.value.enviandoPregunta.shouldBeFalse()
+            vm.uiState.value.textoPregunta shouldBe "¿Puedo preguntar?"
+            vm.uiState.value.mensajeSnackbar shouldBe "Debes inscribirte en el curso para hacer preguntas"
+
+            vm.snackbarMostrado()
+            vm.uiState.value.mensajeSnackbar.shouldBeNull()
+        }
+    }
+
+    "solo el autor o el administrador pueden eliminar una pregunta" {
+        val vm = CapacitacionDetalleViewModel(app)
+        vm.puedeEliminarPregunta(miPregunta).shouldBeTrue()
+        vm.puedeEliminarPregunta(preguntaAjena).shouldBeFalse()
+
+        every { anyConstructed<AlmacenamientoLocal>().obtenerIdUsuario() } returns null
+        vm.puedeEliminarPregunta(miPregunta).shouldBeFalse()
+
+        every { anyConstructed<AlmacenamientoLocal>().obtenerRol() } returns Rol.Administrador
+        vm.puedeEliminarPregunta(preguntaAjena).shouldBeTrue()
+    }
+
+    "el diálogo de eliminar pregunta se abre y se cierra" {
+        val vm = CapacitacionDetalleViewModel(app)
+        vm.abrirConfirmacionEliminarPregunta(miPregunta)
+        vm.uiState.value.preguntaAEliminar shouldBe miPregunta
+        vm.cerrarConfirmacionEliminarPregunta()
+        vm.uiState.value.preguntaAEliminar.shouldBeNull()
+    }
+
+    "eliminar una pregunta la quita de la lista y avisa con un Snackbar" {
+        runTest {
+            coEvery { anyConstructed<PreguntaRepository>().listarDelCurso(1) } returns
+                Result.success(listOf(preguntaAjena, miPregunta))
+            coEvery { anyConstructed<PreguntaRepository>().eliminar(5, 80) } returns Result.success(Unit)
+            val vm = CapacitacionDetalleViewModel(app)
+            vm.cargarCapacitacion(1)
+            advanceUntilIdle()
+
+            vm.abrirConfirmacionEliminarPregunta(miPregunta)
+            vm.eliminarPregunta()
+            vm.uiState.value.preguntaAEliminar.shouldBeNull()
+            advanceUntilIdle()
+
+            vm.uiState.value.preguntas shouldBe listOf(preguntaAjena)
+            vm.uiState.value.mensajeSnackbar shouldBe "Pregunta eliminada"
+        }
+    }
+
+    "si falla eliminar la pregunta se mantiene y se muestra el error" {
+        runTest {
+            coEvery { anyConstructed<PreguntaRepository>().listarDelCurso(1) } returns Result.success(listOf(miPregunta))
+            coEvery { anyConstructed<PreguntaRepository>().eliminar(any(), any()) } returns
+                Result.failure(ServidorException(403, "No tienes permiso"))
+            val vm = CapacitacionDetalleViewModel(app)
+            vm.cargarCapacitacion(1)
+            advanceUntilIdle()
+
+            vm.abrirConfirmacionEliminarPregunta(miPregunta)
+            vm.eliminarPregunta()
+            advanceUntilIdle()
+
+            vm.uiState.value.preguntas shouldBe listOf(miPregunta)
+            vm.uiState.value.mensajeSnackbar shouldBe "No tienes permiso"
+        }
+    }
+
+    "eliminar sin pregunta elegida o sin sesión no llama al servidor" {
+        runTest {
+            val vm = CapacitacionDetalleViewModel(app)
+            vm.eliminarPregunta()
+
+            every { anyConstructed<AlmacenamientoLocal>().obtenerIdUsuario() } returns null
+            vm.abrirConfirmacionEliminarPregunta(miPregunta)
+            vm.eliminarPregunta()
+            advanceUntilIdle()
+
+            vm.uiState.value.mensajeSnackbar shouldBe "Debes iniciar sesión para eliminar preguntas"
+            coVerify(exactly = 0) { anyConstructed<PreguntaRepository>().eliminar(any(), any()) }
         }
     }
 

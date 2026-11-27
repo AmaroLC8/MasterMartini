@@ -9,10 +9,10 @@ import io.kotest.matchers.shouldBe
 // Usa el catálogo local real de recetas (no necesita mocks)
 class BuscarViewModelTest : StringSpec({
 
-    "al abrir no hay resultados y se sugieren las cinco categorías" {
+    "al abrir no hay resultados y se sugieren las seis categorías" {
         val estado = BuscarViewModel().uiState.value
         estado.resultados.shouldBeEmpty()
-        estado.categorias shouldHaveSize 5
+        estado.categorias shouldHaveSize 6
     }
 
     "busca por insumo sin importar mayúsculas" {
@@ -25,7 +25,7 @@ class BuscarViewModelTest : StringSpec({
     "busca por categoría aunque se escriba sin tilde" {
         val vm = BuscarViewModel()
         vm.onTextoChange("pasteleria")
-        vm.uiState.value.resultados.map { it.id } shouldContainAll listOf(6, 8, 9)
+        vm.uiState.value.resultados.map { it.id } shouldContainAll listOf(6, 8)
     }
 
     "busca dentro de los ingredientes" {

@@ -20,9 +20,9 @@ class CatalogoRepositoriosTest : StringSpec({
         cursos.all { it.pasos.isNotEmpty() && it.ingredientes.isNotEmpty() } shouldBe true
     }
 
-    "CursoRepository entrega las cinco categorías" {
+    "CursoRepository entrega las seis categorías" {
         CursoRepository().obtenerCategorias() shouldContainExactly
-            listOf("Chocolatería", "Pastelería", "Panadería", "Heladería", "Decoración")
+            listOf("Chocolatería", "Pastelería", "Panadería", "Heladería", "Decoración", "Cocina")
     }
 
     "CursoRepository busca una receta por id y devuelve null si no existe" {

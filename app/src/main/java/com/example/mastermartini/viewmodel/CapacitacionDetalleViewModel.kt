@@ -6,11 +6,14 @@ import androidx.lifecycle.viewModelScope
 import com.example.mastermartini.data.AlmacenamientoLocal
 import com.example.mastermartini.data.CapacitacionRepository
 import com.example.mastermartini.data.InscripcionRepository
+import com.example.mastermartini.data.PreguntaRepository
 import com.example.mastermartini.data.ServidorException
 import com.example.mastermartini.data.ProductoRepository
 import com.example.mastermartini.model.Capacitacion
 import com.example.mastermartini.model.Inscripcion
+import com.example.mastermartini.model.Pregunta
 import com.example.mastermartini.model.Producto
+import com.example.mastermartini.model.Rol
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -31,7 +34,15 @@ data class CapacitacionDetalleUiState(
     val inscripcion: Inscripcion? = null,
     val procesando: Boolean = false,
     val mostrarConfirmacionCancelar: Boolean = false,
-    val mensajeErrorInscripcion: String? = null
+    val mensajeErrorInscripcion: String? = null,
+    val preguntas: List<Pregunta> = emptyList(),
+    val cargandoPreguntas: Boolean = false,
+    val errorPreguntas: String? = null,
+    val textoPregunta: String = "",
+    val errorPregunta: String? = null,
+    val enviandoPregunta: Boolean = false,
+    val preguntaAEliminar: Pregunta? = null,
+    val mensajeSnackbar: String? = null
 ) {
     val estaInscrito: Boolean
         get() = inscripcion != null
@@ -53,6 +64,7 @@ class CapacitacionDetalleViewModel(application: Application) : AndroidViewModel(
     private val inscripcionRepository = InscripcionRepository()
     private val almacenamiento = AlmacenamientoLocal(application)
     private val productoRepository = ProductoRepository()
+    private val preguntaRepository = PreguntaRepository()
 
     private val _uiState = MutableStateFlow(CapacitacionDetalleUiState())
     val uiState: StateFlow<CapacitacionDetalleUiState> = _uiState.asStateFlow()
@@ -81,6 +93,9 @@ class CapacitacionDetalleViewModel(application: Application) : AndroidViewModel(
                 puedeEliminar = calcularPuedeEliminar(capacitacionEncontrada),
                 inscripcion = buscarMiInscripcion(id)
             )
+            if (capacitacionEncontrada != null) {
+                cargarPreguntas(id)
+            }
         }
     }
 
@@ -102,6 +117,9 @@ class CapacitacionDetalleViewModel(application: Application) : AndroidViewModel(
                     puedeEliminar = calcularPuedeEliminar(capacitacionActualizada),
                     inscripcion = buscarMiInscripcion(id)
                 )
+            }
+            if (capacitacionActualizada != null) {
+                cargarPreguntas(id)
             }
         }
     }
@@ -272,6 +290,125 @@ class CapacitacionDetalleViewModel(application: Application) : AndroidViewModel(
             return error.mensajeServidor ?: error.message ?: "No se pudo completar la acción"
         }
         return error.message ?: "No se pudo completar la acción"
+    }
+
+    // ---------- Preguntas al instructor ----------
+
+    // Pide al servidor las preguntas del curso; también sirve para reintentar
+    fun cargarPreguntas(cursoId: Int) {
+        _uiState.update { it.copy(cargandoPreguntas = true, errorPreguntas = null) }
+        viewModelScope.launch {
+            val resultado = preguntaRepository.listarDelCurso(cursoId)
+            resultado.fold(
+                onSuccess = { lista ->
+                    _uiState.update { it.copy(cargandoPreguntas = false, preguntas = lista) }
+                },
+                onFailure = { error ->
+                    _uiState.update {
+                        it.copy(cargandoPreguntas = false, errorPreguntas = textoErrorInscripcion(error))
+                    }
+                }
+            )
+        }
+    }
+
+    // Guarda lo que escribe el usuario sin pasar del límite de caracteres
+    fun onTextoPreguntaChange(texto: String) {
+        _uiState.update {
+            it.copy(textoPregunta = texto.take(Pregunta.MAX_CARACTERES), errorPregunta = null)
+        }
+    }
+
+    // Valida el texto y envía la pregunta; si sale bien la agrega al inicio de la lista
+    fun enviarPregunta() {
+        val estado = _uiState.value
+        val capacitacion = estado.capacitacion ?: return
+        if (estado.enviandoPregunta) return
+
+        val texto = estado.textoPregunta.trim()
+        if (texto.isEmpty()) {
+            _uiState.update { it.copy(errorPregunta = "Escribe tu pregunta antes de enviarla") }
+            return
+        }
+        if (!estado.estaInscrito) {
+            _uiState.update { it.copy(errorPregunta = "Inscríbete para hacer preguntas") }
+            return
+        }
+        val usuarioId = almacenamiento.obtenerIdUsuario()
+        if (usuarioId == null) {
+            _uiState.update { it.copy(errorPregunta = "Debes iniciar sesión para hacer preguntas") }
+            return
+        }
+
+        _uiState.update { it.copy(enviandoPregunta = true, errorPregunta = null) }
+        viewModelScope.launch {
+            val resultado = preguntaRepository.preguntar(usuarioId, capacitacion.id, texto)
+            resultado.fold(
+                onSuccess = { preguntaNueva ->
+                    _uiState.update {
+                        it.copy(
+                            enviandoPregunta = false,
+                            preguntas = listOf(preguntaNueva) + it.preguntas,
+                            textoPregunta = "",
+                            mensajeSnackbar = "Tu pregunta fue enviada al instructor"
+                        )
+                    }
+                },
+                onFailure = { error ->
+                    _uiState.update {
+                        it.copy(enviandoPregunta = false, mensajeSnackbar = textoErrorInscripcion(error))
+                    }
+                }
+            )
+        }
+    }
+
+    // Solo el autor de la pregunta o el administrador ven el botón de eliminar
+    fun puedeEliminarPregunta(pregunta: Pregunta): Boolean {
+        if (almacenamiento.obtenerRol() == Rol.Administrador) return true
+        val usuarioId = almacenamiento.obtenerIdUsuario() ?: return false
+        return pregunta.usuarioId == usuarioId
+    }
+
+    fun abrirConfirmacionEliminarPregunta(pregunta: Pregunta) {
+        _uiState.update { it.copy(preguntaAEliminar = pregunta) }
+    }
+
+    fun cerrarConfirmacionEliminarPregunta() {
+        _uiState.update { it.copy(preguntaAEliminar = null) }
+    }
+
+    // Borra en el servidor la pregunta confirmada en el diálogo
+    fun eliminarPregunta() {
+        val pregunta = _uiState.value.preguntaAEliminar ?: return
+        _uiState.update { it.copy(preguntaAEliminar = null) }
+        val usuarioId = almacenamiento.obtenerIdUsuario()
+        if (usuarioId == null) {
+            _uiState.update { it.copy(mensajeSnackbar = "Debes iniciar sesión para eliminar preguntas") }
+            return
+        }
+
+        viewModelScope.launch {
+            val resultado = preguntaRepository.eliminar(usuarioId, pregunta.id)
+            resultado.fold(
+                onSuccess = {
+                    _uiState.update {
+                        it.copy(
+                            preguntas = it.preguntas.filter { actual -> actual.id != pregunta.id },
+                            mensajeSnackbar = "Pregunta eliminada"
+                        )
+                    }
+                },
+                onFailure = { error ->
+                    _uiState.update { it.copy(mensajeSnackbar = textoErrorInscripcion(error)) }
+                }
+            )
+        }
+    }
+
+    // La pantalla avisa que ya mostró el Snackbar para no repetirlo
+    fun snackbarMostrado() {
+        _uiState.update { it.copy(mensajeSnackbar = null) }
     }
 
     fun estaVista(indiceModulo: Int, indiceLeccion: Int): Boolean {
