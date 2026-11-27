@@ -29,13 +29,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.mastermartini.ui.components.CargandoContenido
 import com.example.mastermartini.ui.components.ChipOpcion
+import com.example.mastermartini.ui.components.TarjetaError
 import com.example.mastermartini.ui.components.TarjetaReceta
 import com.example.mastermartini.ui.theme.BlancoHueso
 import com.example.mastermartini.ui.theme.BlancoPuro
 import com.example.mastermartini.ui.theme.TextoOscuro
 import com.example.mastermartini.ui.theme.VerdeItaliano
 import com.example.mastermartini.ui.theme.VerdeOscuro
+import com.example.mastermartini.viewmodel.EstadoUi
 import com.example.mastermartini.viewmodel.OrdenRecetas
 import com.example.mastermartini.viewmodel.RecetasViewModel
 
@@ -136,7 +139,12 @@ fun RecetasScreen(
                     .fillMaxWidth()
                     .weight(1f)
             ) {
-                if (uiState.recetas.isEmpty()) {
+                val estado = uiState.estado
+                if (estado is EstadoUi.Cargando) {
+                    item { CargandoContenido() }
+                } else if (estado is EstadoUi.Error) {
+                    item { TarjetaError(mensaje = estado.mensaje, onReintentar = { viewModel.reintentar() }) }
+                } else if (uiState.recetas.isEmpty()) {
                     item {
                         Text(
                             text = if (uiState.soloVeganas) {

@@ -37,7 +37,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.mastermartini.model.Producto
 import com.example.mastermartini.ui.components.BotonCatalogoPdf
+import com.example.mastermartini.ui.components.CargandoContenido
 import com.example.mastermartini.ui.components.EtiquetaVegana
+import com.example.mastermartini.ui.components.TarjetaError
 import com.example.mastermartini.ui.components.ImagenCabeceraCatalogo
 import com.example.mastermartini.ui.theme.BlancoHueso
 import com.example.mastermartini.ui.theme.BlancoPuro
@@ -45,6 +47,7 @@ import com.example.mastermartini.ui.theme.GrisBorde
 import com.example.mastermartini.ui.theme.TextoOscuro
 import com.example.mastermartini.ui.theme.VerdeItaliano
 import com.example.mastermartini.ui.theme.VerdeOscuro
+import com.example.mastermartini.viewmodel.EstadoUi
 import com.example.mastermartini.viewmodel.ProductosViewModel
 
 // Catálogo de productos Master Martini agrupados por línea
@@ -55,7 +58,7 @@ fun ProductosScreen(
     onVolver: () -> Unit,
     onVerProducto: (Int) -> Unit
 ) {
-    val productosPorLinea by viewModel.productosPorLinea.collectAsState()
+    val estadoProductos by viewModel.productosPorLinea.collectAsState()
 
     Scaffold(
         containerColor = BlancoHueso,
@@ -89,6 +92,16 @@ fun ProductosScreen(
                 BotonCatalogoPdf()
             }
 
+            // Cargando, Error con Reintentar o los productos agrupados por línea
+            when (val estado = estadoProductos) {
+                is EstadoUi.Cargando -> item { CargandoContenido() }
+                is EstadoUi.Error -> item {
+                    TarjetaError(mensaje = estado.mensaje, onReintentar = { viewModel.reintentar() })
+                }
+                is EstadoUi.Exito -> Unit
+            }
+
+            val productosPorLinea = (estadoProductos as? EstadoUi.Exito)?.datos ?: emptyMap()
             productosPorLinea.forEach { (linea, productos) ->
                 item(key = "linea_$linea") {
                     Text(

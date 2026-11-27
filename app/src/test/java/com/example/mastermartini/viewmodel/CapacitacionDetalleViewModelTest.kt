@@ -5,9 +5,11 @@ import com.example.mastermartini.data.AlmacenamientoLocal
 import com.example.mastermartini.data.CapacitacionRepository
 import com.example.mastermartini.data.InscripcionRepository
 import com.example.mastermartini.data.PreguntaRepository
+import com.example.mastermartini.data.ProductoRepository
 import com.example.mastermartini.data.ServidorException
 import com.example.mastermartini.data.cursoGratisDePrueba
 import com.example.mastermartini.data.cursoProDePrueba
+import com.example.mastermartini.data.productosDePrueba
 import com.example.mastermartini.model.Inscripcion
 import com.example.mastermartini.model.Pregunta
 import com.example.mastermartini.model.Rol
@@ -38,6 +40,8 @@ class CapacitacionDetalleViewModelTest : StringSpec({
     val cursoGratis = cursoGratisDePrueba
     val cursoPro = cursoProDePrueba
     val noEncontrado = ServidorException(404, "Curso no encontrado")
+    // Producto inventado con el mismo nombre que el insumo del curso gratis
+    val productoDelCurso = productosDePrueba[0].copy(nombre = cursoGratisDePrueba.insumoPrincipal)
     val miInscripcion = Inscripcion(id = 50, usuarioId = 5, cursoId = 1, leccionesCompletadas = listOf("0-0", "0-1"))
     val miPregunta = Pregunta(id = 80, cursoId = 1, usuarioId = 5, autorNombre = "Alumno de prueba", texto = "¿Sirve otro chocolate?")
     val preguntaAjena = Pregunta(
@@ -50,8 +54,12 @@ class CapacitacionDetalleViewModelTest : StringSpec({
         // Los repositorios y AlmacenamientoLocal se crean dentro del ViewModel
         mockkConstructor(
             CapacitacionRepository::class, InscripcionRepository::class,
-            PreguntaRepository::class, AlmacenamientoLocal::class
+            PreguntaRepository::class, AlmacenamientoLocal::class, ProductoRepository::class
         )
+        // El producto principal viene del servidor simulado; solo existe el del curso gratis
+        coEvery { anyConstructed<ProductoRepository>().obtenerProductoPorNombre(any()) } returns Result.success(null)
+        coEvery { anyConstructed<ProductoRepository>().obtenerProductoPorNombre(cursoGratis.insumoPrincipal) } returns
+            Result.success(productoDelCurso)
         coEvery { anyConstructed<PreguntaRepository>().listarDelCurso(any()) } returns Result.success(emptyList())
         coEvery { anyConstructed<CapacitacionRepository>().obtenerCapacitacionPorIdRemoto(1) } returns Result.success(cursoGratis)
         coEvery { anyConstructed<CapacitacionRepository>().obtenerCapacitacionPorIdRemoto(4) } returns Result.success(cursoPro)
@@ -79,10 +87,35 @@ class CapacitacionDetalleViewModelTest : StringSpec({
             val estado = vm.uiState.value
             estado.cargando.shouldBeFalse()
             estado.capacitacion shouldBe cursoGratis
-            estado.producto?.nombre shouldBe "Chocolate Ariba"
+            estado.producto shouldBe productoDelCurso
             estado.modulosAbiertos shouldBe setOf(0)
             estado.estaInscrito.shouldBeFalse()
             estado.porcentaje shouldBe 0
+        }
+    }
+
+    "si el producto principal no se puede cargar, el curso se muestra igual sin su tarjeta" {
+        runTest {
+            coEvery { anyConstructed<ProductoRepository>().obtenerProductoPorNombre(any()) } returns
+                Result.failure(Exception(MENSAJE_SIN_CONEXION))
+            val vm = CapacitacionDetalleViewModel(app)
+            vm.cargarCapacitacion(1)
+            advanceUntilIdle()
+            val estado = vm.uiState.value
+            estado.capacitacion shouldBe cursoGratis
+            estado.producto.shouldBeNull()
+            estado.errorCarga.shouldBeNull()
+            estado.cursoNoExiste.shouldBeFalse()
+        }
+    }
+
+    "un curso cuyo insumo no es un producto del catálogo se muestra sin producto" {
+        runTest {
+            val vm = CapacitacionDetalleViewModel(app)
+            vm.cargarCapacitacion(4)
+            advanceUntilIdle()
+            vm.uiState.value.capacitacion shouldBe cursoPro
+            vm.uiState.value.producto.shouldBeNull()
         }
     }
 

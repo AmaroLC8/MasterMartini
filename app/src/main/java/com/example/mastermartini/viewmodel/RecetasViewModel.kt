@@ -1,11 +1,16 @@
 package com.example.mastermartini.viewmodel
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.example.mastermartini.data.CursoRepository
+import com.example.mastermartini.data.categoriasDeRecetas
+import com.example.mastermartini.data.textoDeError
 import com.example.mastermartini.model.Curso
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 
 // Modos de ordenamiento disponibles para las recetas
 enum class OrdenRecetas {
@@ -15,29 +20,65 @@ enum class OrdenRecetas {
 
 // Estado de la pantalla de recetas
 data class RecetasUiState(
+    // Cargando, Error (con Reintentar) o Exito con las recetas ya filtradas y ordenadas
+    val estado: EstadoUi<List<Curso>> = EstadoUi.Cargando,
     val categorias: List<String> = emptyList(),
     val categoriaSeleccionada: String? = null,
     val orden: OrdenRecetas = OrdenRecetas.ALFABETICO,
     val soloVeganas: Boolean = false,
-    val recetas: List<Curso> = emptyList(),
     val secciones: Map<String, List<Curso>> = emptyMap()
-)
+) {
+    // Recetas que se ven ahora (vacía mientras carga o si hubo error)
+    val recetas: List<Curso>
+        get() = (estado as? EstadoUi.Exito)?.datos ?: emptyList()
+}
 
-// ViewModel que filtra por categoría/vegano y ordena el catálogo de recetas
+// ViewModel que trae las recetas del servidor, las filtra por categoría/vegano y las ordena
 class RecetasViewModel : ViewModel() {
 
     private val cursoRepository = CursoRepository()
 
-    private val todosLosCursos: List<Curso> = cursoRepository.obtenerCursos()
-    private val categorias: List<String> = cursoRepository.obtenerCategorias()
+    private var todosLosCursos: List<Curso> = emptyList()
+    private var categorias: List<String> = emptyList()
 
-    private val _uiState = MutableStateFlow(
-        armarEstado(categoriaSeleccionada = null, orden = OrdenRecetas.ALFABETICO, soloVeganas = false)
-    )
-
+    private val _uiState = MutableStateFlow(RecetasUiState())
     val uiState: StateFlow<RecetasUiState> = _uiState.asStateFlow()
 
+    init {
+        cargarRecetas(forzarRecarga = false)
+    }
+
+    // Acción del botón Reintentar
+    fun reintentar() {
+        cargarRecetas(forzarRecarga = true)
+    }
+
+    // Pide las recetas y arma el estado con los filtros que ya estaban elegidos
+    private fun cargarRecetas(forzarRecarga: Boolean) {
+        _uiState.update { it.copy(estado = EstadoUi.Cargando) }
+        viewModelScope.launch {
+            cursoRepository.obtenerRecetas(forzarRecarga).fold(
+                onSuccess = { lista ->
+                    todosLosCursos = lista
+                    // Las categorías salen de las recetas que llegaron
+                    categorias = categoriasDeRecetas(lista)
+                    val actual = _uiState.value
+                    // Si la categoría elegida ya no existe en el servidor, se vuelve a "Todas"
+                    val categoria = actual.categoriaSeleccionada?.takeIf { it in categorias }
+                    _uiState.value = armarEstado(categoria, actual.orden, actual.soloVeganas)
+                },
+                onFailure = { error ->
+                    _uiState.update { it.copy(estado = EstadoUi.Error(textoDeError(error))) }
+                }
+            )
+        }
+    }
+
+    // Los filtros solo se aplican cuando ya llegaron las recetas
+    private fun hayRecetas(): Boolean = _uiState.value.estado is EstadoUi.Exito
+
     fun seleccionarCategoria(categoria: String?) {
+        if (!hayRecetas()) return
         _uiState.value = armarEstado(
             categoriaSeleccionada = categoria,
             orden = _uiState.value.orden,
@@ -46,6 +87,7 @@ class RecetasViewModel : ViewModel() {
     }
 
     fun cambiarOrden(orden: OrdenRecetas) {
+        if (!hayRecetas()) return
         _uiState.value = armarEstado(
             categoriaSeleccionada = _uiState.value.categoriaSeleccionada,
             orden = orden,
@@ -54,6 +96,7 @@ class RecetasViewModel : ViewModel() {
     }
 
     fun alternarSoloVeganas() {
+        if (!hayRecetas()) return
         _uiState.value = armarEstado(
             categoriaSeleccionada = _uiState.value.categoriaSeleccionada,
             orden = _uiState.value.orden,
@@ -68,11 +111,11 @@ class RecetasViewModel : ViewModel() {
     ): RecetasUiState {
         val recetas = filtrarYOrdenar(categoriaSeleccionada, orden, soloVeganas)
         return RecetasUiState(
+            estado = EstadoUi.Exito(recetas),
             categorias = categorias,
             categoriaSeleccionada = categoriaSeleccionada,
             orden = orden,
             soloVeganas = soloVeganas,
-            recetas = recetas,
             secciones = agruparPorSeccion(recetas)
         )
     }
@@ -105,7 +148,7 @@ class RecetasViewModel : ViewModel() {
         return curso.duracion.filter { it.isDigit() }.toIntOrNull() ?: 0
     }
 
-    // Agrupa las recetas respetando el orden de categorías del repositorio
+    // Agrupa las recetas respetando el orden de las categorías que llegaron del servidor
     private fun agruparPorSeccion(recetas: List<Curso>): Map<String, List<Curso>> {
         val agrupadas = recetas.groupBy { curso -> curso.categoria }
 

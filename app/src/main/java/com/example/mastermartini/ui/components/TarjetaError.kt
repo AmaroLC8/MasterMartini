@@ -2,6 +2,7 @@ package com.example.mastermartini.ui.components
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -18,6 +19,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -72,7 +74,39 @@ fun TarjetaCursoNoExiste(
     )
 }
 
-// Diseño común de las dos tarjetas: ícono, título, mensaje y un botón grande
+// Tarjeta para una receta o producto que el servidor ya no tiene (404), con el botón "Volver"
+@Composable
+fun TarjetaNoDisponible(
+    titulo: String,
+    onVolver: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    TarjetaAviso(
+        icono = Icons.Filled.SearchOff,
+        colorIcono = VerdeOscuro,
+        titulo = titulo,
+        mensaje = "Puede que la hayan quitado del catálogo. Vuelve atrás para ver lo que hay disponible.",
+        textoBoton = "Volver",
+        iconoBoton = null,
+        onClick = onVolver,
+        modifier = modifier
+    )
+}
+
+// Ruedita de carga centrada, mientras llegan los datos del servidor
+@Composable
+fun CargandoContenido(modifier: Modifier = Modifier) {
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(vertical = 48.dp)
+    ) {
+        CircularProgressIndicator(color = VerdeItaliano)
+    }
+}
+
+// Diseño común de las tarjetas: ícono, título, mensaje y un botón grande
 @Composable
 private fun TarjetaAviso(
     icono: ImageVector,

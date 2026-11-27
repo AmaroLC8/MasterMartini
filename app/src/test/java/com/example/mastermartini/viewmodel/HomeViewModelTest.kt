@@ -1,15 +1,19 @@
 package com.example.mastermartini.viewmodel
 
+import com.example.mastermartini.data.CursoRepository
+import com.example.mastermartini.data.ServidorException
 import com.example.mastermartini.data.local.FavoritoDao
 import com.example.mastermartini.data.local.FavoritoEntity
 import com.example.mastermartini.data.local.MasterMartiniDatabase
+import com.example.mastermartini.data.recetasDePrueba
 import io.kotest.core.spec.style.StringSpec
-import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
 import io.mockk.clearMocks
+import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.mockkConstructor
 import io.mockk.mockkObject
 import io.mockk.unmockkAll
 import kotlinx.coroutines.Dispatchers
@@ -37,6 +41,8 @@ class HomeViewModelTest : StringSpec({
         every { baseDeDatos.favoritoDao() } returns favoritoDao
         every { favoritoDao.obtenerIdsFavoritos() } returns flowOf(listOf(2))
         every { favoritoDao.contarFavoritos() } returns flowOf(1)
+        mockkConstructor(CursoRepository::class)
+        coEvery { anyConstructed<CursoRepository>().obtenerRecetas(any()) } returns Result.success(recetasDePrueba)
     }
 
     afterTest {
@@ -44,8 +50,30 @@ class HomeViewModelTest : StringSpec({
         unmockkAll()
     }
 
-    "al abrir se cargan las 10 recetas" {
-        HomeViewModel(app).cursos.value shouldHaveSize 10
+    "al abrir parte en Cargando y luego muestra las recetas del servidor" {
+        runTest {
+            val vm = HomeViewModel(app)
+            vm.cursos.value shouldBe EstadoUi.Cargando
+            advanceUntilIdle()
+            vm.cursos.value shouldBe EstadoUi.Exito(recetasDePrueba)
+            coVerify(exactly = 1) { anyConstructed<CursoRepository>().obtenerRecetas(false) }
+        }
+    }
+
+    "si el servidor no responde se muestra el error y Reintentar fuerza la recarga" {
+        runTest {
+            coEvery { anyConstructed<CursoRepository>().obtenerRecetas(false) } returns
+                Result.failure(ServidorException(503, "Servicio en mantención"))
+            val vm = HomeViewModel(app)
+            advanceUntilIdle()
+            vm.cursos.value shouldBe EstadoUi.Error("Servicio en mantención")
+
+            vm.reintentar()
+            vm.cursos.value shouldBe EstadoUi.Cargando
+            advanceUntilIdle()
+            vm.cursos.value shouldBe EstadoUi.Exito(recetasDePrueba)
+            coVerify(exactly = 1) { anyConstructed<CursoRepository>().obtenerRecetas(true) }
+        }
     }
 
     "los favoritos y su total se leen desde Room mientras la pantalla los observa" {
