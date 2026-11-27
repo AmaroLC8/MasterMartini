@@ -8,6 +8,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.mastermartini.data.AlmacenamientoLocal
 import com.example.mastermartini.data.CapacitacionRepository
 import com.example.mastermartini.data.CloudinaryRepository
+import com.example.mastermartini.data.MENSAJE_SIN_CONEXION
 import com.example.mastermartini.data.ServidorException
 import com.example.mastermartini.model.Capacitacion
 import com.example.mastermartini.model.Leccion
@@ -37,7 +38,10 @@ data class CrearCursoUiState(
     val cargando: Boolean = false,
     val mensajeError: String? = null,
     val guardadoExitoso: Boolean = false,
-    val idEditando: Int? = null
+    val idEditando: Int? = null,
+    val cargandoCurso: Boolean = false,
+    val cursoNoExiste: Boolean = false,
+    val errorCarga: String? = null
 ) {
     val esEdicion: Boolean
         get() = idEditando != null
@@ -102,33 +106,63 @@ class CrearCursoViewModel(application: Application) : AndroidViewModel(applicati
         }
     }
 
-    // Carga los datos del curso remoto para precargar el formulario en modo edición
+    // Carga el curso del servidor para llenar el formulario en modo edición
     fun cargarParaEditar(id: Int) {
         if (_uiState.value.idEditando == id) return
+        _uiState.update { it.copy(idEditando = id) }
+        pedirCursoParaEditar(id)
+    }
 
-        _uiState.update { it.copy(idEditando = id, cargando = true, mensajeError = null) }
-        viewModelScope.launch {
-            val curso = repository.obtenerCapacitacionPorIdRemoto(id)
-            if (curso == null) {
-                _uiState.update { it.copy(cargando = false, mensajeError = "No encontramos el curso para editar") }
-                return@launch
-            }
-            cursoOriginal = curso
-            _uiState.update {
-                it.copy(
-                    cargando = false,
-                    titulo = curso.titulo,
-                    descripcion = curso.descripcion,
-                    categoria = curso.categoria,
-                    nivel = curso.nivel,
-                    esGratis = curso.esGratis,
-                    duracionTotal = curso.duracionTotal,
-                    insumoPrincipal = curso.insumoPrincipal,
-                    videoUrl = curso.videoResumenUrl ?: "",
-                    errorVideo = null
-                )
-            }
+    // Acción del botón Reintentar cuando no se pudo cargar el curso a editar
+    fun reintentarCarga() {
+        val id = _uiState.value.idEditando ?: return
+        pedirCursoParaEditar(id)
+    }
+
+    private fun pedirCursoParaEditar(id: Int) {
+        _uiState.update {
+            it.copy(cargandoCurso = true, cursoNoExiste = false, errorCarga = null, mensajeError = null)
         }
+        viewModelScope.launch {
+            val resultado = repository.obtenerCapacitacionPorIdRemoto(id)
+            resultado.fold(
+                onSuccess = { curso ->
+                    cursoOriginal = curso
+                    _uiState.update {
+                        it.copy(
+                            cargandoCurso = false,
+                            titulo = curso.titulo,
+                            descripcion = curso.descripcion,
+                            categoria = curso.categoria,
+                            nivel = curso.nivel,
+                            esGratis = curso.esGratis,
+                            duracionTotal = curso.duracionTotal,
+                            insumoPrincipal = curso.insumoPrincipal,
+                            videoUrl = curso.videoResumenUrl ?: "",
+                            errorVideo = null
+                        )
+                    }
+                },
+                onFailure = { error ->
+                    // 404: el curso ya no existe; cualquier otro error se puede reintentar
+                    val noExiste = error is ServidorException && error.codigo == 404
+                    _uiState.update {
+                        it.copy(
+                            cargandoCurso = false,
+                            cursoNoExiste = noExiste,
+                            errorCarga = if (noExiste) null else textoErrorCarga(error)
+                        )
+                    }
+                }
+            )
+        }
+    }
+
+    private fun textoErrorCarga(error: Throwable): String {
+        if (error is ServidorException) {
+            return error.mensajeServidor ?: error.message ?: MENSAJE_SIN_CONEXION
+        }
+        return error.message ?: MENSAJE_SIN_CONEXION
     }
 
     // Valida los campos del formulario y crea o actualiza el curso en el microservicio

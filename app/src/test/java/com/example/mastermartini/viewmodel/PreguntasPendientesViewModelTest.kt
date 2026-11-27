@@ -1,5 +1,6 @@
 package com.example.mastermartini.viewmodel
 
+import com.example.mastermartini.data.MENSAJE_SIN_CONEXION
 import com.example.mastermartini.data.AlmacenamientoLocal
 import com.example.mastermartini.data.PreguntaRepository
 import com.example.mastermartini.data.ServidorException
@@ -84,8 +85,8 @@ class PreguntasPendientesViewModelTest : StringSpec({
             val casos = listOf(
                 ServidorException(403, "No tienes permiso") to "No tienes permiso",
                 ServidorException(500, null) to "Error 500: verifica permisos o campos",
-                Exception("No se pudo conectar con el servidor de inscripciones (9093)") to
-                    "No se pudo conectar con el servidor de inscripciones (9093)",
+                Exception(MENSAJE_SIN_CONEXION) to
+                    MENSAJE_SIN_CONEXION,
                 Exception() to "No se pudo completar la acción"
             )
             for ((error, mensaje) in casos) {

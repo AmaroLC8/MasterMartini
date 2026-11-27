@@ -86,6 +86,8 @@ import com.example.mastermartini.ui.components.ErrorConReintentar
 import com.example.mastermartini.ui.components.EtiquetaAcceso
 import com.example.mastermartini.ui.components.EtiquetaVegana
 import com.example.mastermartini.ui.components.IconoValidacion
+import com.example.mastermartini.ui.components.TarjetaCursoNoExiste
+import com.example.mastermartini.ui.components.TarjetaError
 import com.example.mastermartini.ui.theme.BlancoHueso
 import com.example.mastermartini.ui.theme.BlancoPuro
 import com.example.mastermartini.ui.theme.GrisBorde
@@ -172,7 +174,8 @@ fun CapacitacionDetalleScreen(
                     CircularProgressIndicator(color = VerdeItaliano)
                 }
             }
-            capacitacion == null -> {
+            uiState.errorCarga != null -> {
+                // Falló la conexión o el servidor: se puede volver a intentar
                 Box(
                     contentAlignment = Alignment.Center,
                     modifier = Modifier
@@ -180,12 +183,22 @@ fun CapacitacionDetalleScreen(
                         .padding(innerPadding)
                         .padding(16.dp)
                 ) {
-                    Text(
-                        text = "Curso no encontrado",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = TextoOscuro
+                    TarjetaError(
+                        mensaje = uiState.errorCarga ?: "",
+                        onReintentar = { viewModel.reintentarCarga(capacitacionId) }
                     )
+                }
+            }
+            uiState.cursoNoExiste || capacitacion == null -> {
+                // El servidor respondió 404: reintentar no sirve, se ofrece volver
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding)
+                        .padding(16.dp)
+                ) {
+                    TarjetaCursoNoExiste(onVolver = onVolver)
                 }
             }
             else -> {

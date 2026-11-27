@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.mastermartini.data.AlmacenamientoLocal
 import com.example.mastermartini.data.CapacitacionRepository
 import com.example.mastermartini.data.InscripcionRepository
+import com.example.mastermartini.data.MENSAJE_SIN_CONEXION
 import com.example.mastermartini.data.PreguntaRepository
 import com.example.mastermartini.data.ServidorException
 import com.example.mastermartini.data.ProductoRepository
@@ -24,6 +25,8 @@ import kotlinx.coroutines.launch
 data class CapacitacionDetalleUiState(
     val cargando: Boolean = true,
     val capacitacion: Capacitacion? = null,
+    val cursoNoExiste: Boolean = false,
+    val errorCarga: String? = null,
     val producto: Producto? = null,
     val modulosAbiertos: Set<Int> = emptySet(),
     val puedeEditar: Boolean = false,
@@ -69,69 +72,104 @@ class CapacitacionDetalleViewModel(application: Application) : AndroidViewModel(
     private val _uiState = MutableStateFlow(CapacitacionDetalleUiState())
     val uiState: StateFlow<CapacitacionDetalleUiState> = _uiState.asStateFlow()
 
-    // Carga el curso remoto, su insumo asociado, permisos del rol e inscripción vigente
+    // Carga el curso por primera vez; si ya está cargado no lo vuelve a pedir
     fun cargarCapacitacion(id: Int) {
         if (_uiState.value.capacitacion?.id == id) return
+        pedirCapacitacion(id)
+    }
 
-        _uiState.update { it.copy(cargando = true) }
+    // Acción del botón Reintentar cuando falló la conexión
+    fun reintentarCarga(id: Int) {
+        pedirCapacitacion(id)
+    }
+
+    // Pide el curso al servidor y arma el estado con su insumo, permisos e inscripción
+    private fun pedirCapacitacion(id: Int) {
+        _uiState.update { it.copy(cargando = true, cursoNoExiste = false, errorCarga = null) }
 
         viewModelScope.launch {
-            val capacitacionEncontrada = capacitacionRepository.obtenerCapacitacionPorIdRemoto(id)
-
-            val productoEncontrado = if (capacitacionEncontrada != null) {
-                productoRepository.obtenerProductoPorNombre(capacitacionEncontrada.insumoPrincipal)
-            } else {
-                null
-            }
-
-            _uiState.value = CapacitacionDetalleUiState(
-                cargando = false,
-                capacitacion = capacitacionEncontrada,
-                producto = productoEncontrado,
-                modulosAbiertos = setOf(0),
-                puedeEditar = calcularPuedeEditar(capacitacionEncontrada),
-                puedeEliminar = calcularPuedeEliminar(capacitacionEncontrada),
-                inscripcion = buscarMiInscripcion(id)
+            val resultado = capacitacionRepository.obtenerCapacitacionPorIdRemoto(id)
+            resultado.fold(
+                onSuccess = { capacitacion ->
+                    _uiState.value = CapacitacionDetalleUiState(
+                        cargando = false,
+                        capacitacion = capacitacion,
+                        producto = productoRepository.obtenerProductoPorNombre(capacitacion.insumoPrincipal),
+                        modulosAbiertos = setOf(0),
+                        puedeEditar = calcularPuedeEditar(capacitacion),
+                        puedeEliminar = calcularPuedeEliminar(),
+                        inscripcion = buscarMiInscripcion(id)
+                    )
+                    cargarPreguntas(id)
+                },
+                onFailure = { error ->
+                    _uiState.update {
+                        it.copy(
+                            cargando = false,
+                            capacitacion = null,
+                            cursoNoExiste = esCursoNoEncontrado(error),
+                            errorCarga = if (esCursoNoEncontrado(error)) null else textoErrorCarga(error)
+                        )
+                    }
+                }
             )
-            if (capacitacionEncontrada != null) {
-                cargarPreguntas(id)
-            }
         }
     }
 
-    // Recarga los datos del curso conservando los módulos desplegados por el usuario
+    // Recarga el curso al volver de editarlo, conservando los módulos abiertos
     fun recargarCapacitacion(id: Int) {
         viewModelScope.launch {
-            val capacitacionActualizada = capacitacionRepository.obtenerCapacitacionPorIdRemoto(id)
-            val productoEncontrado = if (capacitacionActualizada != null) {
-                productoRepository.obtenerProductoPorNombre(capacitacionActualizada.insumoPrincipal)
-            } else {
-                null
-            }
-            _uiState.update {
-                it.copy(
-                    cargando = false,
-                    capacitacion = capacitacionActualizada,
-                    producto = productoEncontrado,
-                    puedeEditar = calcularPuedeEditar(capacitacionActualizada),
-                    puedeEliminar = calcularPuedeEliminar(capacitacionActualizada),
-                    inscripcion = buscarMiInscripcion(id)
-                )
-            }
-            if (capacitacionActualizada != null) {
-                cargarPreguntas(id)
-            }
+            val resultado = capacitacionRepository.obtenerCapacitacionPorIdRemoto(id)
+            resultado.fold(
+                onSuccess = { capacitacion ->
+                    _uiState.update {
+                        it.copy(
+                            cargando = false,
+                            capacitacion = capacitacion,
+                            cursoNoExiste = false,
+                            errorCarga = null,
+                            producto = productoRepository.obtenerProductoPorNombre(capacitacion.insumoPrincipal),
+                            puedeEditar = calcularPuedeEditar(capacitacion),
+                            puedeEliminar = calcularPuedeEliminar(),
+                            inscripcion = buscarMiInscripcion(id)
+                        )
+                    }
+                    cargarPreguntas(id)
+                },
+                onFailure = { error ->
+                    if (esCursoNoEncontrado(error)) {
+                        // Lo borraron mientras estaba abierto
+                        _uiState.update { it.copy(cargando = false, capacitacion = null, cursoNoExiste = true) }
+                    } else if (_uiState.value.capacitacion != null) {
+                        // Se mantiene lo que ya se ve y se avisa con un Snackbar
+                        _uiState.update { it.copy(mensajeSnackbar = textoErrorCarga(error)) }
+                    } else {
+                        _uiState.update { it.copy(cargando = false, errorCarga = textoErrorCarga(error)) }
+                    }
+                }
+            )
         }
     }
 
-    private fun calcularPuedeEditar(capacitacion: Capacitacion?): Boolean {
-        if (capacitacion == null) return false
+    // El servidor responde 404 cuando el curso no existe o fue eliminado
+    private fun esCursoNoEncontrado(error: Throwable): Boolean {
+        return error is ServidorException && error.codigo == 404
+    }
+
+    private fun textoErrorCarga(error: Throwable): String {
+        if (error is ServidorException) {
+            return error.mensajeServidor ?: error.message ?: MENSAJE_SIN_CONEXION
+        }
+        return error.message ?: MENSAJE_SIN_CONEXION
+    }
+
+    private fun calcularPuedeEditar(capacitacion: Capacitacion): Boolean {
         val rol = almacenamiento.obtenerRol()
         return rol.puedeEditarCurso(capacitacion.instructorId, almacenamiento.obtenerIdUsuario())
     }
 
-    private fun calcularPuedeEliminar(capacitacion: Capacitacion?): Boolean {
-        if (capacitacion == null) return false
+    // Eliminar no depende del curso: solo el administrador puede hacerlo
+    private fun calcularPuedeEliminar(): Boolean {
         return almacenamiento.obtenerRol().puedeEliminarCursos
     }
 

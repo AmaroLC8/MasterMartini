@@ -3,6 +3,7 @@ package com.example.mastermartini.ui.screens
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
@@ -25,6 +26,7 @@ import androidx.compose.material.icons.filled.WorkspacePremium
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
@@ -47,6 +49,7 @@ import com.example.mastermartini.ui.components.ChipOpcion
 import com.example.mastermartini.ui.components.EtiquetaAcceso
 import com.example.mastermartini.ui.components.EtiquetaVegana
 import com.example.mastermartini.ui.components.ImagenCabeceraCatalogo
+import com.example.mastermartini.ui.components.TarjetaError
 import com.example.mastermartini.ui.theme.BlancoHueso
 import com.example.mastermartini.ui.theme.BlancoPuro
 import com.example.mastermartini.ui.theme.DoradoCalidad
@@ -56,6 +59,7 @@ import com.example.mastermartini.ui.theme.TextoOscuro
 import com.example.mastermartini.ui.theme.VerdeItaliano
 import com.example.mastermartini.ui.theme.VerdeOscuro
 import com.example.mastermartini.viewmodel.CapacitacionesViewModel
+import com.example.mastermartini.viewmodel.EstadoUi
 import com.example.mastermartini.viewmodel.MiCurso
 import androidx.compose.runtime.LaunchedEffect
 
@@ -100,67 +104,112 @@ fun CapacitacionesScreen(
                 )
             }
 
-            item {
-                Text(
-                    text = "Mis cursos",
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = VerdeOscuro
-                )
-            }
-            if (uiState.misCursos.isEmpty()) {
-                item {
-                    Text(
-                        text = "Aún no te inscribes en ningún curso",
-                        fontSize = 16.sp,
-                        color = TextoOscuro
-                    )
+            when (val estado = uiState.estado) {
+                is EstadoUi.Cargando -> {
+                    item {
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 48.dp)
+                        ) {
+                            CircularProgressIndicator(color = VerdeItaliano)
+                        }
+                    }
                 }
-            } else {
-                items(uiState.misCursos, key = { miCurso -> "mi-${miCurso.cursoId}" }) { miCurso ->
-                    TarjetaMiCurso(
-                        miCurso = miCurso,
-                        onAbrir = { onVerCapacitacion(miCurso.cursoId) }
-                    )
-                }
-            }
 
-            item {
-                TarjetaPlanPro(precio = uiState.precioPlanPro)
-            }
-
-            item {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(rememberScrollState())
-                ) {
-                    uiState.filtros.forEach { filtro ->
-                        ChipOpcion(
-                            texto = filtro,
-                            seleccionado = uiState.filtroSeleccionado == filtro,
-                            onClick = { viewModel.seleccionarFiltro(filtro) }
+                is EstadoUi.Error -> {
+                    item {
+                        TarjetaError(
+                            mensaje = estado.mensaje,
+                            onReintentar = { viewModel.recargarCapacitaciones() }
                         )
                     }
                 }
-            }
 
-            if (uiState.capacitaciones.isEmpty()) {
-                item {
-                    Text(
-                        text = "Todavía no hay cursos en esta sección.",
-                        fontSize = 18.sp,
-                        color = TextoOscuro
-                    )
-                }
-            } else {
-                items(uiState.capacitaciones, key = { capacitacion -> capacitacion.id }) { capacitacion ->
-                    TarjetaCapacitacion(
-                        capacitacion = capacitacion,
-                        onVerCapacitacion = onVerCapacitacion,
-                        modifier = Modifier.animateItem()
-                    )
+                is EstadoUi.Exito -> {
+                    item {
+                        Text(
+                            text = "Mis cursos",
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = VerdeOscuro
+                        )
+                    }
+                    val errorMisCursos = uiState.errorMisCursos
+                    if (errorMisCursos != null) {
+                        item {
+                            TarjetaError(
+                                mensaje = errorMisCursos,
+                                onReintentar = { viewModel.recargarCapacitaciones() }
+                            )
+                        }
+                    } else if (uiState.misCursos.isEmpty()) {
+                        item {
+                            Text(
+                                text = "Aún no te inscribes en ningún curso",
+                                fontSize = 16.sp,
+                                color = TextoOscuro
+                            )
+                        }
+                    } else {
+                        items(uiState.misCursos, key = { miCurso -> "mi-${miCurso.cursoId}" }) { miCurso ->
+                            TarjetaMiCurso(
+                                miCurso = miCurso,
+                                onAbrir = { onVerCapacitacion(miCurso.cursoId) }
+                            )
+                        }
+                    }
+
+                    item {
+                        TarjetaPlanPro(precio = uiState.precioPlanPro)
+                    }
+
+                    if (uiState.totalCursos == 0) {
+                        // El servidor respondió bien, pero todavía no hay cursos publicados
+                        item {
+                            Text(
+                                text = "Aún no hay cursos publicados. Vuelve pronto.",
+                                fontSize = 18.sp,
+                                color = TextoOscuro
+                            )
+                        }
+                    } else {
+                        item {
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .horizontalScroll(rememberScrollState())
+                            ) {
+                                uiState.filtros.forEach { filtro ->
+                                    ChipOpcion(
+                                        texto = filtro,
+                                        seleccionado = uiState.filtroSeleccionado == filtro,
+                                        onClick = { viewModel.seleccionarFiltro(filtro) }
+                                    )
+                                }
+                            }
+                        }
+
+                        if (estado.datos.isEmpty()) {
+                            item {
+                                Text(
+                                    text = "Todavía no hay cursos en esta sección.",
+                                    fontSize = 18.sp,
+                                    color = TextoOscuro
+                                )
+                            }
+                        } else {
+                            items(estado.datos, key = { capacitacion -> capacitacion.id }) { capacitacion ->
+                                TarjetaCapacitacion(
+                                    capacitacion = capacitacion,
+                                    onVerCapacitacion = onVerCapacitacion,
+                                    modifier = Modifier.animateItem()
+                                )
+                            }
+                        }
+                    }
                 }
             }
         }

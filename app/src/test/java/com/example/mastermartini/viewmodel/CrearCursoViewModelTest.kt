@@ -2,10 +2,12 @@ package com.example.mastermartini.viewmodel
 
 import android.content.Context
 import android.net.Uri
+import com.example.mastermartini.data.MENSAJE_SIN_CONEXION
 import com.example.mastermartini.data.AlmacenamientoLocal
 import com.example.mastermartini.data.CapacitacionRepository
 import com.example.mastermartini.data.CloudinaryRepository
 import com.example.mastermartini.data.ServidorException
+import com.example.mastermartini.data.cursoProDePrueba
 import com.example.mastermartini.model.Capacitacion
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.booleans.shouldBeFalse
@@ -35,14 +37,16 @@ class CrearCursoViewModelTest : StringSpec({
     val app = aplicacionDePrueba()
     val contexto = mockk<Context>()
     val video = mockk<Uri>()
-    val cursoExistente = CapacitacionRepository().obtenerCapacitaciones().first { it.id == 2 }
+    // Curso Plan Pro de CursosDePrueba.kt con id 2 (Panadería, Master Export Horneo)
+    val cursoExistente = cursoProDePrueba.copy(id = 2)
+    val noEncontrado = ServidorException(404, "Curso no encontrado")
 
     beforeTest {
         Dispatchers.setMain(StandardTestDispatcher())
         mockkConstructor(AlmacenamientoLocal::class, CapacitacionRepository::class, CloudinaryRepository::class)
         every { anyConstructed<AlmacenamientoLocal>().obtenerIdUsuario() } returns 2L
         every { anyConstructed<AlmacenamientoLocal>().obtenerNombre() } returns "Chef Ana"
-        coEvery { anyConstructed<CapacitacionRepository>().obtenerCapacitacionPorIdRemoto(2) } returns cursoExistente
+        coEvery { anyConstructed<CapacitacionRepository>().obtenerCapacitacionPorIdRemoto(2) } returns Result.success(cursoExistente)
     }
 
     afterTest {
@@ -198,8 +202,8 @@ class CrearCursoViewModelTest : StringSpec({
                 ServidorException(403, null) to "Solo instructores o administradores pueden crear cursos",
                 ServidorException(503, null) to "El servicio de usuarios no está disponible",
                 ServidorException(400, "El título es muy corto") to "El título es muy corto",
-                Exception("No se pudo conectar con el servidor de cursos (9092)") to
-                    "No se pudo conectar con el servidor de cursos (9092)",
+                Exception(MENSAJE_SIN_CONEXION) to
+                    MENSAJE_SIN_CONEXION,
                 Exception() to "No se pudo crear el curso"
             )
             for ((error, mensaje) in casos) {
@@ -219,12 +223,12 @@ class CrearCursoViewModelTest : StringSpec({
         runTest {
             val vm = CrearCursoViewModel(app)
             vm.cargarParaEditar(2)
-            vm.uiState.value.cargando.shouldBeTrue()
+            vm.uiState.value.cargandoCurso.shouldBeTrue()
             advanceUntilIdle()
 
             val estado = vm.uiState.value
             estado.esEdicion.shouldBeTrue()
-            estado.cargando.shouldBeFalse()
+            estado.cargandoCurso.shouldBeFalse()
             estado.titulo shouldBe cursoExistente.titulo
             estado.categoria shouldBe "Panadería"
             estado.insumoPrincipal shouldBe "Master Export Horneo"
@@ -243,14 +247,74 @@ class CrearCursoViewModelTest : StringSpec({
         }
     }
 
-    "si el curso a editar no existe se avisa" {
+    "si el curso a editar ya no existe (404) se avisa sin ofrecer Reintentar" {
         runTest {
-            coEvery { anyConstructed<CapacitacionRepository>().obtenerCapacitacionPorIdRemoto(99) } returns null
+            coEvery { anyConstructed<CapacitacionRepository>().obtenerCapacitacionPorIdRemoto(99) } returns Result.failure(noEncontrado)
             val vm = CrearCursoViewModel(app)
             vm.cargarParaEditar(99)
             advanceUntilIdle()
-            vm.uiState.value.mensajeError shouldBe "No encontramos el curso para editar"
-            vm.uiState.value.cargando.shouldBeFalse()
+            vm.uiState.value.cursoNoExiste.shouldBeTrue()
+            vm.uiState.value.errorCarga.shouldBeNull()
+            vm.uiState.value.cargandoCurso.shouldBeFalse()
+        }
+    }
+
+    "sin conexión al traer el curso a editar se muestra el error para reintentar" {
+        runTest {
+            coEvery { anyConstructed<CapacitacionRepository>().obtenerCapacitacionPorIdRemoto(2) } returns
+                Result.failure(Exception(MENSAJE_SIN_CONEXION))
+            val vm = CrearCursoViewModel(app)
+            vm.cargarParaEditar(2)
+            advanceUntilIdle()
+            vm.uiState.value.errorCarga shouldBe MENSAJE_SIN_CONEXION
+            vm.uiState.value.cursoNoExiste.shouldBeFalse()
+        }
+    }
+
+    "un error del servidor al traer el curso muestra su mensaje o uno genérico" {
+        runTest {
+            val vm = CrearCursoViewModel(app)
+            vm.cargarParaEditar(2)
+            val casos = listOf(
+                ServidorException(500, "Falla interna") to "Falla interna",
+                ServidorException(503, null) to "Error 503: verifica permisos o campos",
+                Exception() to MENSAJE_SIN_CONEXION
+            )
+            for ((error, mensaje) in casos) {
+                coEvery { anyConstructed<CapacitacionRepository>().obtenerCapacitacionPorIdRemoto(2) } returns
+                    Result.failure(error)
+                vm.reintentarCarga()
+                advanceUntilIdle()
+                vm.uiState.value.errorCarga shouldBe mensaje
+            }
+        }
+    }
+
+    "Reintentar vuelve a pedir el curso y llena el formulario" {
+        runTest {
+            coEvery { anyConstructed<CapacitacionRepository>().obtenerCapacitacionPorIdRemoto(2) } returns
+                Result.failure(Exception(MENSAJE_SIN_CONEXION))
+            val vm = CrearCursoViewModel(app)
+            vm.cargarParaEditar(2)
+            advanceUntilIdle()
+            coEvery { anyConstructed<CapacitacionRepository>().obtenerCapacitacionPorIdRemoto(2) } returns
+                Result.success(cursoExistente)
+
+            vm.reintentarCarga()
+            vm.uiState.value.errorCarga.shouldBeNull()
+            advanceUntilIdle()
+
+            vm.uiState.value.titulo shouldBe cursoExistente.titulo
+            vm.uiState.value.errorCarga.shouldBeNull()
+        }
+    }
+
+    "Reintentar al crear un curso nuevo no hace nada" {
+        runTest {
+            val vm = CrearCursoViewModel(app)
+            vm.reintentarCarga()
+            advanceUntilIdle()
+            coVerify(exactly = 0) { anyConstructed<CapacitacionRepository>().obtenerCapacitacionPorIdRemoto(any()) }
         }
     }
 
@@ -292,7 +356,7 @@ class CrearCursoViewModelTest : StringSpec({
 
     "si no se pudo cargar el curso original no se guarda la edición" {
         runTest {
-            coEvery { anyConstructed<CapacitacionRepository>().obtenerCapacitacionPorIdRemoto(99) } returns null
+            coEvery { anyConstructed<CapacitacionRepository>().obtenerCapacitacionPorIdRemoto(99) } returns Result.failure(noEncontrado)
             val vm = CrearCursoViewModel(app)
             vm.cargarParaEditar(99)
             advanceUntilIdle()

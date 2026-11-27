@@ -1,10 +1,13 @@
 package com.example.mastermartini.viewmodel
 
+import com.example.mastermartini.data.MENSAJE_SIN_CONEXION
 import com.example.mastermartini.data.AlmacenamientoLocal
 import com.example.mastermartini.data.CapacitacionRepository
 import com.example.mastermartini.data.InscripcionRepository
 import com.example.mastermartini.data.PreguntaRepository
 import com.example.mastermartini.data.ServidorException
+import com.example.mastermartini.data.cursoGratisDePrueba
+import com.example.mastermartini.data.cursoProDePrueba
 import com.example.mastermartini.model.Inscripcion
 import com.example.mastermartini.model.Pregunta
 import com.example.mastermartini.model.Rol
@@ -31,9 +34,10 @@ import kotlinx.coroutines.test.setMain
 class CapacitacionDetalleViewModelTest : StringSpec({
 
     val app = aplicacionDePrueba()
-    // Cursos reales del catálogo local: el 1 es gratis y el 4 es Plan Pro
-    val cursoGratis = CapacitacionRepository().obtenerCapacitaciones().first { it.id == 1 }
-    val cursoPro = CapacitacionRepository().obtenerCapacitaciones().first { it.id == 4 }
+    // Cursos inventados de CursosDePrueba.kt: el 1 es gratis y el 4 es Plan Pro
+    val cursoGratis = cursoGratisDePrueba
+    val cursoPro = cursoProDePrueba
+    val noEncontrado = ServidorException(404, "Curso no encontrado")
     val miInscripcion = Inscripcion(id = 50, usuarioId = 5, cursoId = 1, leccionesCompletadas = listOf("0-0", "0-1"))
     val miPregunta = Pregunta(id = 80, cursoId = 1, usuarioId = 5, autorNombre = "Alumno de prueba", texto = "¿Sirve otro chocolate?")
     val preguntaAjena = Pregunta(
@@ -49,9 +53,10 @@ class CapacitacionDetalleViewModelTest : StringSpec({
             PreguntaRepository::class, AlmacenamientoLocal::class
         )
         coEvery { anyConstructed<PreguntaRepository>().listarDelCurso(any()) } returns Result.success(emptyList())
-        coEvery { anyConstructed<CapacitacionRepository>().obtenerCapacitacionPorIdRemoto(1) } returns cursoGratis
-        coEvery { anyConstructed<CapacitacionRepository>().obtenerCapacitacionPorIdRemoto(4) } returns cursoPro
-        coEvery { anyConstructed<CapacitacionRepository>().obtenerCapacitacionPorIdRemoto(99) } returns null
+        coEvery { anyConstructed<CapacitacionRepository>().obtenerCapacitacionPorIdRemoto(1) } returns Result.success(cursoGratis)
+        coEvery { anyConstructed<CapacitacionRepository>().obtenerCapacitacionPorIdRemoto(4) } returns Result.success(cursoPro)
+        coEvery { anyConstructed<CapacitacionRepository>().obtenerCapacitacionPorIdRemoto(99) } returns
+            Result.failure(noEncontrado)
         every { anyConstructed<AlmacenamientoLocal>().obtenerIdUsuario() } returns 5L
         every { anyConstructed<AlmacenamientoLocal>().obtenerRol() } returns Rol.Cliente
         coEvery { anyConstructed<InscripcionRepository>().misInscripciones(5) } returns Result.success(emptyList())
@@ -106,7 +111,7 @@ class CapacitacionDetalleViewModelTest : StringSpec({
         runTest {
             every { anyConstructed<AlmacenamientoLocal>().obtenerRol() } returns Rol.Instructor
             coEvery { anyConstructed<CapacitacionRepository>().obtenerCapacitacionPorIdRemoto(1) } returns
-                cursoGratis.copy(instructorId = 5)
+                Result.success(cursoGratis.copy(instructorId = 5))
             val vm = CapacitacionDetalleViewModel(app)
             vm.cargarCapacitacion(1)
             advanceUntilIdle()
@@ -115,7 +120,7 @@ class CapacitacionDetalleViewModelTest : StringSpec({
         }
     }
 
-    "si el curso no existe no hay curso, producto ni permisos" {
+    "si el servidor responde 404 se muestra que el curso ya no existe, sin permisos" {
         runTest {
             every { anyConstructed<AlmacenamientoLocal>().obtenerRol() } returns Rol.Administrador
             val vm = CapacitacionDetalleViewModel(app)
@@ -123,6 +128,8 @@ class CapacitacionDetalleViewModelTest : StringSpec({
             advanceUntilIdle()
             val estado = vm.uiState.value
             estado.cargando.shouldBeFalse()
+            estado.cursoNoExiste.shouldBeTrue()
+            estado.errorCarga.shouldBeNull()
             estado.capacitacion.shouldBeNull()
             estado.producto.shouldBeNull()
             estado.puedeEditar.shouldBeFalse()
@@ -190,7 +197,7 @@ class CapacitacionDetalleViewModelTest : StringSpec({
             advanceUntilIdle()
             vm.alternarModulo(2)
             coEvery { anyConstructed<CapacitacionRepository>().obtenerCapacitacionPorIdRemoto(1) } returns
-                cursoGratis.copy(titulo = "Título editado")
+                Result.success(cursoGratis.copy(titulo = "Título editado"))
 
             vm.recargarCapacitacion(1)
             advanceUntilIdle()
@@ -207,6 +214,114 @@ class CapacitacionDetalleViewModelTest : StringSpec({
             advanceUntilIdle()
             vm.uiState.value.capacitacion.shouldBeNull()
             vm.uiState.value.producto.shouldBeNull()
+            vm.uiState.value.cursoNoExiste.shouldBeTrue()
+        }
+    }
+
+    // ---------- Estados de carga: error de conexión y Reintentar ----------
+
+    "al abrir parte en Cargando" {
+        CapacitacionDetalleViewModel(app).uiState.value.cargando.shouldBeTrue()
+    }
+
+    "sin conexión se muestra el error para reintentar, no el aviso de curso inexistente" {
+        runTest {
+            coEvery { anyConstructed<CapacitacionRepository>().obtenerCapacitacionPorIdRemoto(1) } returns
+                Result.failure(Exception(MENSAJE_SIN_CONEXION))
+            val vm = CapacitacionDetalleViewModel(app)
+            vm.cargarCapacitacion(1)
+            advanceUntilIdle()
+
+            val estado = vm.uiState.value
+            estado.cargando.shouldBeFalse()
+            estado.errorCarga shouldBe MENSAJE_SIN_CONEXION
+            estado.cursoNoExiste.shouldBeFalse()
+            estado.capacitacion.shouldBeNull()
+            coVerify(exactly = 0) { anyConstructed<PreguntaRepository>().listarDelCurso(any()) }
+        }
+    }
+
+    "un error del servidor muestra su mensaje o uno genérico" {
+        runTest {
+            val vm = CapacitacionDetalleViewModel(app)
+            val casos = listOf(
+                ServidorException(500, "Falla interna") to "Falla interna",
+                ServidorException(503, null) to "Error 503: verifica permisos o campos",
+                Exception() to MENSAJE_SIN_CONEXION
+            )
+            for ((error, mensaje) in casos) {
+                coEvery { anyConstructed<CapacitacionRepository>().obtenerCapacitacionPorIdRemoto(1) } returns
+                    Result.failure(error)
+                vm.reintentarCarga(1)
+                advanceUntilIdle()
+                vm.uiState.value.errorCarga shouldBe mensaje
+            }
+        }
+    }
+
+    "Reintentar vuelve a pedir el curso y, si responde, lo muestra" {
+        runTest {
+            coEvery { anyConstructed<CapacitacionRepository>().obtenerCapacitacionPorIdRemoto(1) } returns
+                Result.failure(Exception(MENSAJE_SIN_CONEXION))
+            val vm = CapacitacionDetalleViewModel(app)
+            vm.cargarCapacitacion(1)
+            advanceUntilIdle()
+            coEvery { anyConstructed<CapacitacionRepository>().obtenerCapacitacionPorIdRemoto(1) } returns
+                Result.success(cursoGratis)
+
+            vm.reintentarCarga(1)
+            vm.uiState.value.cargando.shouldBeTrue()
+            vm.uiState.value.errorCarga.shouldBeNull()
+            advanceUntilIdle()
+
+            vm.uiState.value.capacitacion shouldBe cursoGratis
+            vm.uiState.value.errorCarga.shouldBeNull()
+            coVerify(exactly = 2) { anyConstructed<CapacitacionRepository>().obtenerCapacitacionPorIdRemoto(1) }
+        }
+    }
+
+    "si falla la recarga con el curso en pantalla, se mantiene y se avisa con un Snackbar" {
+        runTest {
+            val vm = CapacitacionDetalleViewModel(app)
+            vm.cargarCapacitacion(1)
+            advanceUntilIdle()
+            coEvery { anyConstructed<CapacitacionRepository>().obtenerCapacitacionPorIdRemoto(1) } returns
+                Result.failure(Exception(MENSAJE_SIN_CONEXION))
+
+            vm.recargarCapacitacion(1)
+            advanceUntilIdle()
+
+            vm.uiState.value.capacitacion shouldBe cursoGratis
+            vm.uiState.value.errorCarga.shouldBeNull()
+            vm.uiState.value.mensajeSnackbar shouldBe MENSAJE_SIN_CONEXION
+        }
+    }
+
+    "si falla la recarga sin curso en pantalla, se muestra el error para reintentar" {
+        runTest {
+            coEvery { anyConstructed<CapacitacionRepository>().obtenerCapacitacionPorIdRemoto(1) } returns
+                Result.failure(Exception(MENSAJE_SIN_CONEXION))
+            val vm = CapacitacionDetalleViewModel(app)
+            vm.recargarCapacitacion(1)
+            advanceUntilIdle()
+            vm.uiState.value.cargando.shouldBeFalse()
+            vm.uiState.value.errorCarga shouldBe MENSAJE_SIN_CONEXION
+        }
+    }
+
+    "si borran el curso mientras está abierto, la recarga muestra que ya no existe" {
+        runTest {
+            val vm = CapacitacionDetalleViewModel(app)
+            vm.cargarCapacitacion(1)
+            advanceUntilIdle()
+            coEvery { anyConstructed<CapacitacionRepository>().obtenerCapacitacionPorIdRemoto(1) } returns
+                Result.failure(noEncontrado)
+
+            vm.recargarCapacitacion(1)
+            advanceUntilIdle()
+
+            vm.uiState.value.capacitacion.shouldBeNull()
+            vm.uiState.value.cursoNoExiste.shouldBeTrue()
         }
     }
 
@@ -276,8 +391,8 @@ class CapacitacionDetalleViewModelTest : StringSpec({
                 ServidorException(503, null) to "El servicio de usuarios no está disponible",
                 ServidorException(404, "Curso no encontrado") to "Curso no encontrado",
                 ServidorException(500, null) to "Error 500: verifica permisos o campos",
-                Exception("No se pudo conectar con el servidor de cursos (9092)") to
-                    "No se pudo conectar con el servidor de cursos (9092)",
+                Exception(MENSAJE_SIN_CONEXION) to
+                    MENSAJE_SIN_CONEXION,
                 Exception() to "No se pudo eliminar el curso"
             )
             for ((error, mensaje) in casos) {
@@ -378,8 +493,8 @@ class CapacitacionDetalleViewModelTest : StringSpec({
             val casos = listOf(
                 ServidorException(500, "Falla interna") to "Falla interna",
                 ServidorException(400, null) to "Error 400: verifica permisos o campos",
-                Exception("No se pudo conectar con el servidor de inscripciones (9093)") to
-                    "No se pudo conectar con el servidor de inscripciones (9093)",
+                Exception(MENSAJE_SIN_CONEXION) to
+                    MENSAJE_SIN_CONEXION,
                 Exception() to "No se pudo completar la acción"
             )
             for ((error, mensaje) in casos) {
@@ -470,7 +585,7 @@ class CapacitacionDetalleViewModelTest : StringSpec({
         runTest {
             coEvery { anyConstructed<InscripcionRepository>().misInscripciones(5) } returns Result.success(listOf(miInscripcion))
             coEvery { anyConstructed<InscripcionRepository>().cancelar(any(), any()) } returns
-                Result.failure(Exception("No se pudo conectar con el servidor de inscripciones (9093)"))
+                Result.failure(Exception(MENSAJE_SIN_CONEXION))
             val vm = CapacitacionDetalleViewModel(app)
             vm.cargarCapacitacion(1)
             advanceUntilIdle()
@@ -479,7 +594,7 @@ class CapacitacionDetalleViewModelTest : StringSpec({
             advanceUntilIdle()
 
             vm.uiState.value.inscripcion shouldBe miInscripcion
-            vm.uiState.value.mensajeErrorInscripcion shouldBe "No se pudo conectar con el servidor de inscripciones (9093)"
+            vm.uiState.value.mensajeErrorInscripcion shouldBe MENSAJE_SIN_CONEXION
         }
     }
 
@@ -522,12 +637,12 @@ class CapacitacionDetalleViewModelTest : StringSpec({
     "si fallan las preguntas el curso se muestra igual y se puede reintentar" {
         runTest {
             coEvery { anyConstructed<PreguntaRepository>().listarDelCurso(1) } returns
-                Result.failure(Exception("No se pudo conectar con el servidor de inscripciones (9093)"))
+                Result.failure(Exception(MENSAJE_SIN_CONEXION))
             val vm = CapacitacionDetalleViewModel(app)
             vm.cargarCapacitacion(1)
             advanceUntilIdle()
             vm.uiState.value.capacitacion shouldBe cursoGratis
-            vm.uiState.value.errorPreguntas shouldBe "No se pudo conectar con el servidor de inscripciones (9093)"
+            vm.uiState.value.errorPreguntas shouldBe MENSAJE_SIN_CONEXION
 
             coEvery { anyConstructed<PreguntaRepository>().listarDelCurso(1) } returns Result.success(listOf(miPregunta))
             vm.cargarPreguntas(1)

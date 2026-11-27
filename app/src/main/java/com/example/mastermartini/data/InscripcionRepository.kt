@@ -5,12 +5,12 @@ import com.example.mastermartini.data.remote.dto.InscripcionRequest
 import com.example.mastermartini.data.remote.dto.ProgresoLeccionRequest
 import com.example.mastermartini.data.remote.leerMensajeError
 import com.example.mastermartini.model.Inscripcion
+import kotlin.coroutines.cancellation.CancellationException
 
 // Repositorio de inscripciones y avance de lecciones conectado al microservicio de interacciones
 class InscripcionRepository {
 
     private val api = RetrofitClient.interaccionesApi
-    private val mensajeSinConexion = "No se pudo conectar con el servidor de inscripciones (9093)"
 
     // Registra la inscripción del usuario en un curso mediante Retrofit
     suspend fun inscribirse(usuarioId: Long, cursoId: Int): Result<Inscripcion> {
@@ -22,8 +22,10 @@ class InscripcionRepository {
             } else {
                 Result.failure(ServidorException(response.code(), leerMensajeError(response)))
             }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
-            Result.failure(Exception(mensajeSinConexion))
+            Result.failure(Exception(MENSAJE_SIN_CONEXION))
         }
     }
 
@@ -37,8 +39,10 @@ class InscripcionRepository {
             } else {
                 Result.failure(ServidorException(response.code(), leerMensajeError(response)))
             }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
-            Result.failure(Exception(mensajeSinConexion))
+            Result.failure(Exception(MENSAJE_SIN_CONEXION))
         }
     }
 
@@ -59,8 +63,10 @@ class InscripcionRepository {
             } else {
                 Result.failure(ServidorException(response.code(), leerMensajeError(response)))
             }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
-            Result.failure(Exception(mensajeSinConexion))
+            Result.failure(Exception(MENSAJE_SIN_CONEXION))
         }
     }
 
@@ -73,8 +79,10 @@ class InscripcionRepository {
             } else {
                 Result.failure(ServidorException(response.code(), leerMensajeError(response)))
             }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
-            Result.failure(Exception(mensajeSinConexion))
+            Result.failure(Exception(MENSAJE_SIN_CONEXION))
         }
     }
 }

@@ -66,7 +66,12 @@ class ApoyoDatosTest : StringSpec({
         UsuarioException.ErrorServidor("Falla puntual").message shouldBe "Falla puntual"
     }
 
-    "ProveedorRepositorios entrega el repositorio remoto porque USAR_BACKEND es true" {
+    "SinConexion usa el mismo mensaje compartido que los repositorios de cursos e interacciones" {
+        UsuarioException.SinConexion().message shouldBe MENSAJE_SIN_CONEXION
+        MENSAJE_SIN_CONEXION shouldBe "No pudimos conectarnos. Revisa tu internet e inténtalo otra vez."
+    }
+
+    "ProveedorRepositorios siempre entrega el repositorio remoto de usuarios" {
         mockkObject(RetrofitClient)
         every { RetrofitClient.usuariosApi } returns mockk<UsuarioApi>()
 

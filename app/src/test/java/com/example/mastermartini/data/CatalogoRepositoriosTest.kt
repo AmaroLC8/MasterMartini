@@ -6,10 +6,9 @@ import io.kotest.matchers.collections.shouldContainAll
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.nulls.shouldBeNull
-import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 
-// Catálogos locales: recetas (CursoRepository), productos y capacitaciones sin red
+// Catálogos locales que siguen en la app: recetas (CursoRepository) y productos
 class CatalogoRepositoriosTest : StringSpec({
 
     // ---------- CursoRepository ----------
@@ -63,28 +62,5 @@ class CatalogoRepositoriosTest : StringSpec({
         val repo = ProductoRepository()
         val vitaFrit = repo.obtenerProductoPorNombre("Vita Frit")!!
         repo.obtenerRecetasQueUsan(vitaFrit).shouldBeEmpty()
-    }
-
-    // ---------- CapacitacionRepository (datos locales) ----------
-
-    "CapacitacionRepository local tiene 6 cursos: 3 gratis y 3 Plan Pro" {
-        val capacitaciones = CapacitacionRepository().obtenerCapacitaciones()
-        capacitaciones shouldHaveSize 6
-        capacitaciones.count { it.esGratis } shouldBe 3
-    }
-
-    "CapacitacionRepository entrega las cinco categorías" {
-        CapacitacionRepository().obtenerCategorias() shouldHaveSize 5
-    }
-
-    "la capacitación 1 tiene 9 lecciones y su primer módulo dura 30 minutos" {
-        val capacitacion = CapacitacionRepository().obtenerCapacitacionPorId(1)
-        capacitacion.shouldNotBeNull()
-        capacitacion.totalLecciones shouldBe 9
-        capacitacion.modulos.first().totalMinutos shouldBe 30
-    }
-
-    "obtenerCapacitacionPorId devuelve null si el id no existe" {
-        CapacitacionRepository().obtenerCapacitacionPorId(99).shouldBeNull()
     }
 })
