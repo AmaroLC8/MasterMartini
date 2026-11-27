@@ -5,9 +5,11 @@ import com.google.gson.Gson
 import retrofit2.Response
 
 // Extrae el mensaje del cuerpo ErrorDto ante respuestas HTTP de error en Retrofit
+// En un 400 de validación prefiere el primer error de "campos" (más claro que "Datos inválidos")
 fun leerMensajeError(response: Response<*>): String? {
     return try {
-        Gson().fromJson(response.errorBody()?.string(), ErrorDto::class.java)?.mensaje
+        val error = Gson().fromJson(response.errorBody()?.string(), ErrorDto::class.java)
+        error?.campos?.values?.firstOrNull() ?: error?.mensaje
     } catch (e: Exception) {
         null
     }
